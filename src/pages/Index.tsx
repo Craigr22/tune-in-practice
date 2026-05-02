@@ -728,7 +728,6 @@ const DrillsTab = ({ song }: { song: Song }) => {
         <div className="bam-card">
           <div className="bam-card-title">Right-hand pattern <span className="pill">5 min</span></div>
           <DrillCard
-            drillId="fs"
             title="Thumb · Index · Middle · Ring"
             beatCount={4}
             meta={<>
@@ -763,7 +762,6 @@ const DrillsTab = ({ song }: { song: Song }) => {
           return (
             <DrillCard
               key={i}
-              drillId={`d-${i}`}
               title={`${d.name} · ${d.desc}`}
               beatCount={8}
               meta={<>
