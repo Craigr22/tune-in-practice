@@ -521,10 +521,6 @@ const SongOverlay = ({ song, close, logPlay }: { song: Song; close: () => void; 
   // reset tab when song changes
   useEffect(() => { setTab("warmup"); }, [song.id]);
 
-  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).id === "songOverlay") close();
-  };
-
   return (
     <div className="song-page" id="songOverlay">
       <div className="song-page-content">
