@@ -1183,12 +1183,15 @@ a { color: inherit; text-decoration: none; }
 .bam-phone--page {
   width: 100%;
   height: auto;
-  min-height: 70vh;
+  min-height: auto;
   border-radius: 16px;
   box-shadow: var(--shadow-md);
   background: var(--paper);
+  overflow: visible;
 }
 .bam-phone--page .bam-header { border-radius: 16px 16px 0 0; }
+.bam-phone--page .bam-notch,
+.bam-phone--page .bam-status { display: none; }
 .bam-content--page {
   padding: 24px 28px 32px;
   max-width: none;
