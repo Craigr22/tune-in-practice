@@ -526,14 +526,9 @@ const SongOverlay = ({ song, close, logPlay }: { song: Song; close: () => void; 
   };
 
   return (
-    <div className="song-overlay active" id="songOverlay" onClick={handleBackdrop}>
-      <div className="song-overlay-content" onClick={(e) => e.stopPropagation()}>
-        <div className="bam-phone">
-          <div className="bam-notch"></div>
-          <div className="bam-status">
-            <span>9:41</span>
-            <span>●●● ▮</span>
-          </div>
+    <div className="song-page" id="songOverlay">
+      <div className="song-page-content">
+        <div className="bam-phone bam-phone--page">
           <SongHeader song={song} close={close} />
           <div className="bam-tabs">
             {(["warmup", "drills", "song", "plan"] as Tab[]).map((t) => (
@@ -543,7 +538,7 @@ const SongOverlay = ({ song, close, logPlay }: { song: Song; close: () => void; 
               </div>
             ))}
           </div>
-          <div className="bam-content">
+          <div className="bam-content bam-content--page">
             {tab === "warmup" && <WarmupTab song={song} setTab={setTab} />}
             {tab === "drills" && <DrillsTab song={song} />}
             {tab === "song" && <SongTab song={song} />}
