@@ -1165,7 +1165,38 @@ a { color: inherit; text-decoration: none; }
   .foundations-nav { position: static; }
 }
 
-/* shadcn border helper */
+/* ==================== SONG AS FULL PAGE (replaces phone overlay) ==================== */
+.song-page {
+  background: var(--paper-cool);
+  min-height: calc(100vh - 64px);
+  padding: 24px 32px 64px;
+  animation: fadeIn 0.2s ease;
+}
+.song-page-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: start;
+}
+.bam-phone--page {
+  width: 100%;
+  height: auto;
+  min-height: 70vh;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  background: var(--paper);
+}
+.bam-phone--page .bam-header { border-radius: 16px 16px 0 0; }
+.bam-content--page {
+  padding: 24px 28px 32px;
+  max-width: none;
+}
+@media (max-width: 980px) {
+  .song-page { padding: 16px; }
+  .song-page-content { grid-template-columns: 1fr; gap: 20px; }
+}
 @layer base {
   * { border-color: hsl(var(--ring) / 0); }
 }
