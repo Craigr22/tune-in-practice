@@ -662,7 +662,7 @@ const WarmupTab = ({ song, setTab }: { song: Song; setTab: (t: Tab) => void }) =
   );
 };
 
-const DrillBeatRow = ({ drillId, beatCount }: { drillId: string; beatCount: number }) => {
+const DrillCard = ({ title, beatCount, meta }: { title: string; beatCount: number; meta: React.ReactNode }) => {
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const intervalRef = useRef<number | null>(null);
@@ -687,33 +687,19 @@ const DrillBeatRow = ({ drillId, beatCount }: { drillId: string; beatCount: numb
     }, 375);
   };
 
-  const beatTpl = Array.from({ length: beatCount }, (_, i) => ({ down: i % 4 === 0 }));
-
-  return {
-    button: (
-      <button className={`drill-play ${playing ? "playing" : ""}`} onClick={toggle} aria-label="Toggle drill">
-        {playing ? "■" : "▶"}
-      </button>
-    ),
-    row: (
-      <div className="beat-row" id={`beat-${drillId}`}>
-        {beatTpl.map((b, i) => (
-          <div key={i} className={`beat ${b.down ? "down" : ""} ${activeIdx === i ? "active" : ""}`}></div>
-        ))}
-      </div>
-    ),
-  };
-};
-
-const DrillCard = ({ drillId, title, beatCount, meta }: { drillId: string; title: string; beatCount: number; meta: React.ReactNode }) => {
-  const { button, row } = DrillBeatRow({ drillId, beatCount });
   return (
     <div className="drill">
       <div className="drill-head">
         <div className="drill-title">{title}</div>
-        {button}
+        <button className={`drill-play ${playing ? "playing" : ""}`} onClick={toggle} aria-label="Toggle drill">
+          {playing ? "■" : "▶"}
+        </button>
       </div>
-      {row}
+      <div className="beat-row">
+        {Array.from({ length: beatCount }, (_, i) => (
+          <div key={i} className={`beat ${i % 4 === 0 ? "down" : ""} ${activeIdx === i ? "active" : ""}`}></div>
+        ))}
+      </div>
       <div className="drill-meta">{meta}</div>
     </div>
   );
