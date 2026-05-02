@@ -1070,7 +1070,7 @@ const SidePanel = ({ song }: { song: Song }) => (
       </p>
     </div>
 
-    <div className="side-close">Tap outside the phone to close.</div>
+    <div className="side-close">Use the back arrow to return to the course.</div>
   </div>
 );
 
