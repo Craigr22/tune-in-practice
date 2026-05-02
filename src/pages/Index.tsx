@@ -36,12 +36,12 @@ const Index = () => {
       return;
     }
     setOpenSongId(id);
-    document.body.style.overflow = "hidden";
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
   const closeSong = () => {
     setOpenSongId(null);
-    document.body.style.overflow = "";
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
   const logPlay = (songId: string) => {
@@ -90,27 +90,28 @@ const Index = () => {
 
   const openSongObj = openSongId ? songs.find((s) => s.id === openSongId) ?? null : null;
 
+  const songOpen = !!openSongObj;
   return (
     <>
       <TopNav view={view} role={role} navigateTo={navigateTo} setRole={setRoleAndNav} />
       <main id="app">
-        <section className={`view view-home ${view === "home" ? "active" : ""}`}>
+        <section className={`view view-home ${view === "home" && !songOpen ? "active" : ""}`}>
           <HomeView songs={songs} foundationsState={foundationsState} navigateTo={navigateTo} openSong={openSong} />
         </section>
-        <section className={`view view-foundations ${view === "foundations" ? "active" : ""}`}>
+        <section className={`view view-foundations ${view === "foundations" && !songOpen ? "active" : ""}`}>
           <FoundationsView
             foundationsState={foundationsState}
             navigateTo={navigateTo}
             markComplete={markFoundationsComplete}
           />
         </section>
-        <section className={`view view-teacher ${view === "teacher" ? "active" : ""}`}>
+        <section className={`view view-teacher ${view === "teacher" && !songOpen ? "active" : ""}`}>
           <TeacherView />
         </section>
+        {openSongObj && (
+          <SongOverlay song={openSongObj} close={closeSong} logPlay={logPlay} />
+        )}
       </main>
-      {openSongObj && (
-        <SongOverlay song={openSongObj} close={closeSong} logPlay={logPlay} />
-      )}
     </>
   );
 };
