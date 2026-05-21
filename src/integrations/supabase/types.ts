@@ -191,6 +191,27 @@ export type Database = {
           },
         ]
       }
+      foundation_progress: {
+        Row: {
+          completed_at: string
+          foundation_id: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          completed_at?: string
+          foundation_id: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          completed_at?: string
+          foundation_id?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       instruments: {
         Row: {
           id: string
@@ -292,6 +313,7 @@ export type Database = {
           self_rated_badge: number | null
           song_id: string
           student_id: string
+          tuning_check_completed: boolean
         }
         Insert: {
           created_at?: string
@@ -301,6 +323,7 @@ export type Database = {
           self_rated_badge?: number | null
           song_id: string
           student_id: string
+          tuning_check_completed?: boolean
         }
         Update: {
           created_at?: string
@@ -310,6 +333,7 @@ export type Database = {
           self_rated_badge?: number | null
           song_id?: string
           student_id?: string
+          tuning_check_completed?: boolean
         }
         Relationships: [
           {
