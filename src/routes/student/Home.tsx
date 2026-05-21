@@ -1,122 +1,168 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { FOUNDATIONS } from "@/data/foundations";
 import { useSongs } from "@/hooks/useSongs";
-import SongCard from "@/components/shared/SongCard";
+import { useStudentMe } from "@/hooks/useStudentMe";
+import { usePracticeLogs, useSongProgress, computeStreak, minutesThisWeek, songsInProgress } from "@/hooks/useStudentProgress";
+import { SONGS } from "@/data/songs";
+import BadgeDisplay from "@/components/shared/BadgeDisplay";
+import { getBadge, nextBadge } from "@/lib/badges";
+
+// The teacher's "focus song" for this week is the first non-mastered, non-locked song
+// in the curriculum order. If we later wire a real teacher assignment, swap this out.
+function pickFocusSong() {
+  const ordered = [...SONGS].filter((s) => !s.fingerstyle).sort((a, b) => (a.track as number) - (b.track as number) || a.order - b.order);
+  return ordered.find((s) => s.state === "in-progress" || s.state === "next") || ordered[0];
+}
 
 const Home = () => {
   const navigate = useNavigate();
-  const { songs, foundationsState, openSong } = useSongs();
+  const { openSong } = useSongs();
+  const { data: student } = useStudentMe();
+  const { data: logs = [] } = usePracticeLogs();
+  const { data: progress = [] } = useSongProgress();
 
-  const tracks = [
-    { num: "Track I",  title: "First chords",    sub: "2–3 chords · simple downstrum", t: 1 as const, total: 2, done: 1.5, pct: 75 },
-    { num: "Track II", title: "Adding minors",   sub: "4 chords · introduces Am, E7",  t: 2 as const, total: 2, done: 0,   pct: 0 },
-    { num: "Track III",title: "Wider vocabulary",sub: "4–5 chords · syncopated strumming", t: 3 as const, total: 2, done: 0, pct: 0 },
-    { num: "Track IV", title: "Em & beyond",     sub: "6+ chords · stretch territory", t: 4 as const, total: 2, done: 0,   pct: 0 },
-  ];
+  const focusSong = useMemo(pickFocusSong, []);
+  const streak = useMemo(() => computeStreak(logs), [logs]);
+  const minsWeek = useMemo(() => minutesThisWeek(logs), [logs]);
+  const inProgress = useMemo(() => songsInProgress(progress), [progress]);
+
+  const lastLog = logs[0];
+  const currentSong = useMemo(() => {
+    if (lastLog) return SONGS.find((s) => s.id === lastLog.song_id) || focusSong;
+    return focusSong;
+  }, [lastLog, focusSong]);
+  const currentProgress = currentSong ? progress.find((p) => p.song_id === currentSong.id) : undefined;
+  const currentBadge = getBadge(currentProgress?.teacher_badge);
+  const nextGoal = nextBadge(currentProgress?.teacher_badge);
+
+  const firstName = (student?.name || "").split(" ")[0] || "there";
 
   return (
     <section className="view view-home active">
-      <div className="home">
-        <header className="hero">
-          <div className="hero-titlewrap">
-            <div className="hero-eyebrow">Semester 1 · Ukulele · Cohort B-24</div>
-            <h1 className="hero-title">Discover the music<br /><em>in you.</em></h1>
-            <p className="hero-sub">Eight songs, eleven students, daily reps. A practice-first companion that meets you between Saturday classes — log a play after each run-through, hit your daily target, and approve the day.</p>
-          </div>
-          <div className="hero-stats">
-            <div className="hero-stats-row">
-              <div>
-                <div className="hero-stat-num">3<span className="of">/11</span></div>
-                <div className="hero-stat-lbl">Songs</div>
+      <div className="home" style={{ paddingBottom: 100 }}>
+        {/* ===== TODAY CARD ===== */}
+        <section
+          className="rounded-3xl p-7 md:p-10 mb-5"
+          style={{
+            background: "linear-gradient(135deg, #0b2a3f 0%, #0085C7 60%, #36A2D9 100%)",
+            color: "#fff",
+            boxShadow: "0 24px 60px -20px rgba(0,133,199,0.45)",
+          }}
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="flex-1 min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#FBE48A" }}>
+                Today · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
               </div>
-              <div>
-                <div className="hero-stat-num">12</div>
-                <div className="hero-stat-lbl">Day streak</div>
-              </div>
-              <div>
-                <div className="hero-stat-num">68%</div>
-                <div className="hero-stat-lbl">Sem 1</div>
+              <h1 className="mt-2 text-3xl md:text-4xl font-bold leading-tight">
+                Hi {firstName}, your next 10 minutes
+              </h1>
+              <p className="mt-3 text-white/85 text-sm md:text-base max-w-lg">
+                {focusSong
+                  ? <>Practice <span className="font-semibold text-white">{focusSong.title}</span> for 10 minutes — small reps, big difference by Saturday.</>
+                  : "Pick any song below and log a 10-minute session."}
+              </p>
+              <div className="mt-5 flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => focusSong && openSong(focusSong.id)}
+                  className="inline-flex items-center gap-3 rounded-full px-5 py-3 font-semibold text-sm transition-transform hover:scale-[1.02] active:scale-95"
+                  style={{ background: "var(--gold)", color: "#1A2332", boxShadow: "0 10px 24px -8px rgba(244,208,63,0.6)" }}
+                >
+                  <span className="inline-flex items-center justify-center rounded-full" style={{ width: 30, height: 30, background: "#1A2332", color: "var(--gold)" }}>▶</span>
+                  Start practice
+                </button>
+                <button
+                  onClick={() => navigate("/student/songs")}
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium border border-white/30 hover:bg-white/10"
+                >
+                  Free practice →
+                </button>
               </div>
             </div>
-            <button className="practice-cta" onClick={() => openSong("sunshine")}>
-              <div className="practice-cta-icon">▶</div>
-              <div>
-                <div>Continue: You Are My Sunshine</div>
-                <div style={{ fontSize: 11, fontWeight: 500, opacity: 0.85, marginTop: 1 }}>2 of 4 plays today · 2 to go</div>
-              </div>
-              <div className="practice-cta-meta">Wed</div>
-            </button>
-          </div>
-        </header>
-
-        <div className="foundations-bar">
-          <div>
-            <div className="foundations-eyebrow">Before song 1 · about 25 minutes</div>
-            <div className="foundations-title">
-              Get the basics{" "}
-              <em style={{ fontFamily: "var(--font-script)", fontWeight: 700, color: "var(--gold)", fontSize: "1.2em" }}>right.</em>
-            </div>
-            <div className="foundations-sub">
-              Five micro-modules the book never includes: tuning, posture, reading a chord box, your first strum, and how to actually <em>switch</em> between chords.
-            </div>
-          </div>
-          <div className="foundations-modules">
-            {FOUNDATIONS.map((f) => {
-              const done = foundationsState.find((x) => x.id === f.id)?.done;
-              const label = f.title.replace(/^How to (the )?/i, "").replace(/^Read a /, "").replace(/^Tune your ukulele$/, "Tune");
-              const compact: Record<string, string> = {
-                hold: "Hold", tune: "Tune", "chord-box": "Chord box", "first-strum": "First strum", transitions: "Transitions",
-              };
-              return (
-                <div key={f.id} className={`foundations-pill ${done ? "done" : "todo"}`}>
-                  {compact[f.id] ?? label}
+            <div className="md:text-right">
+              <div
+                className="inline-flex flex-col items-start md:items-end rounded-2xl px-5 py-4"
+                style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(6px)" }}
+              >
+                <div className="text-[11px] uppercase tracking-wider text-white/70">Streak</div>
+                <div className="text-3xl font-bold mt-1">🔥 {streak}</div>
+                <div className="text-xs text-white/85 mt-1 max-w-[220px] md:text-right">
+                  {streak === 0
+                    ? "Practice today to start a streak."
+                    : streak === 1
+                    ? "Day 1 — practice again tomorrow to grow it."
+                    : `Practice today to keep your ${streak}-day streak 🔥`}
                 </div>
-              );
-            })}
-            <button className="foundations-open-btn" onClick={() => navigate("/student/foundations")}>Open →</button>
-          </div>
-        </div>
-
-        {tracks.map((tr) => (
-          <section className="track-section" key={tr.t}>
-            <div className="track-head">
-              <div className="track-num">{tr.num}</div>
-              <div className="track-title">{tr.title}</div>
-              <div className="track-sub">{tr.sub}</div>
-              <div className="track-progress">
-                <div className="track-progress-bar"><div className="track-progress-fill" style={{ width: `${tr.pct}%` }}></div></div>
-                <span>{tr.done} / {tr.total}</span>
               </div>
             </div>
-            <div className="song-grid">
-              {songs.filter((s) => s.track === tr.t).map((s) => (
-                <SongCard key={s.id} song={s} onOpen={() => openSong(s.id)} />
-              ))}
-            </div>
-          </section>
-        ))}
-
-        <section className="track-section fingerstyle-track">
-          <div className="track-head">
-            <div className="track-num">Bonus</div>
-            <div className="track-title">Fingerstyle</div>
-            <div className="track-sub">A different skill — read tab, pluck strings individually</div>
-            <div className="track-progress">
-              <div className="track-progress-bar"><div className="track-progress-fill" style={{ width: "0%" }}></div></div>
-              <span>0 / 4</span>
-            </div>
-          </div>
-          <div className="song-grid">
-            {songs.filter((s) => s.track === "fs").map((s) => (
-              <SongCard key={s.id} song={s} onOpen={() => openSong(s.id)} />
-            ))}
           </div>
         </section>
 
-        <footer className="home-footer">
-          <div className="footer-brand">BAM Music · Semester 1 Ukulele Coursebook · Online Edition</div>
-          <div>Next class: Saturday · 10:30 AM with Anjali</div>
-        </footer>
+        {/* ===== CURRENT SONG CARD ===== */}
+        {currentSong && (
+          <section
+            className="rounded-3xl p-6 md:p-8 mb-5 cursor-pointer transition-shadow hover:shadow-lg"
+            onClick={() => openSong(currentSong.id)}
+            style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}
+          >
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--gold-deep)" }}>
+                  Current song
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold mt-1" style={{ color: "var(--ink)" }}>{currentSong.title}</h2>
+                <div className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>{currentSong.artist}</div>
+                <div className="mt-4 flex items-center gap-3 text-xs" style={{ color: "var(--ink-soft)" }}>
+                  <span className="px-2 py-1 rounded-md" style={{ background: "var(--paper-cool)" }}>
+                    {logs.filter((l) => l.song_id === currentSong.id).length} sessions logged
+                  </span>
+                  {currentProgress?.last_practiced && (
+                    <span>Last practiced {currentProgress.last_practiced}</span>
+                  )}
+                </div>
+              </div>
+              <div className="shrink-0 flex flex-col items-center" style={{ minWidth: 180 }}>
+                <BadgeDisplay level={currentProgress?.teacher_badge ?? null} size="hero" showLabel={false} animate />
+                <div className="mt-2 text-sm font-bold" style={{ color: "var(--ink)" }}>
+                  {currentBadge ? `${currentBadge.name}` : "Not graded yet"}
+                </div>
+                {nextGoal && currentBadge && (
+                  <div className="mt-1 text-[11px] text-center max-w-[180px]" style={{ color: "var(--ink-soft)" }}>
+                    Next: <span className="font-semibold" style={{ color: "var(--ink)" }}>{nextGoal.emoji} {nextGoal.name}</span> — {nextGoal.blurb.toLowerCase()}
+                  </div>
+                )}
+                {!currentBadge && (
+                  <div className="mt-1 text-[11px] text-center max-w-[180px]" style={{ color: "var(--ink-soft)" }}>
+                    Log a session to earn your first 🦥 badge.
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ===== STREAK STRIP ===== */}
+        <button
+          onClick={() => navigate("/student/journey")}
+          className="w-full rounded-2xl px-5 py-4 flex items-center justify-between gap-4 text-left transition-colors hover:bg-[var(--paper-warm)]"
+          style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+        >
+          <div className="flex items-center gap-6 flex-wrap">
+            <div>
+              <div className="text-[11px] uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>Streak</div>
+              <div className="text-lg font-bold" style={{ color: "var(--ink)" }}>🔥 {streak} {streak === 1 ? "day" : "days"}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>This week</div>
+              <div className="text-lg font-bold" style={{ color: "var(--ink)" }}>{minsWeek} min</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>In progress</div>
+              <div className="text-lg font-bold" style={{ color: "var(--ink)" }}>{inProgress} {inProgress === 1 ? "song" : "songs"}</div>
+            </div>
+          </div>
+          <span className="text-sm font-semibold" style={{ color: "var(--navy)" }}>See journey →</span>
+        </button>
       </div>
     </section>
   );
