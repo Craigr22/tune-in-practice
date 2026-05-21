@@ -167,20 +167,34 @@ const SongDetail = () => {
                   )}
                 </div>
               )}
-              <div className="bam-tabs">
-                {(["warmup", "drills", "song", "plan"] as TabKey[]).map((t) => (
-                  <div key={t} className={`bam-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
-                    <span className="ic">{ { warmup: "🎯", drills: "🔁", song: "🎵", plan: "📅" }[t] }</span>
-                    {{ warmup: "Warm Up", drills: "Drills", song: "Song", plan: "Plan" }[t]}
+              {planSession ? (
+                <SegmentedPracticeView
+                  session={planSession}
+                  focusContent={<SongTab song={song} />}
+                  onAllDone={() => {
+                    completeSeg.mutate({ id: planSession.id, segment: "focus" });
+                    markComplete.mutate(planSession.id);
+                    handleLogPlay(song.id);
+                  }}
+                />
+              ) : (
+                <>
+                  <div className="bam-tabs">
+                    {(["warmup", "drills", "song", "plan"] as TabKey[]).map((t) => (
+                      <div key={t} className={`bam-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
+                        <span className="ic">{ { warmup: "🎯", drills: "🔁", song: "🎵", plan: "📅" }[t] }</span>
+                        {{ warmup: "Warm Up", drills: "Drills", song: "Song", plan: "Plan" }[t]}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="bam-content bam-content--page">
-                {tab === "warmup" && <WarmupTab song={song} setTab={setTab} />}
-                {tab === "drills" && <DrillsTab song={song} />}
-                {tab === "song" && <SongTab song={song} />}
-                {tab === "plan" && <PlanTab song={song} logPlay={handleLogPlay} />}
-              </div>
+                  <div className="bam-content bam-content--page">
+                    {tab === "warmup" && <WarmupTab song={song} setTab={setTab} />}
+                    {tab === "drills" && <DrillsTab song={song} />}
+                    {tab === "song" && <SongTab song={song} />}
+                    {tab === "plan" && <PlanTab song={song} logPlay={handleLogPlay} />}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
