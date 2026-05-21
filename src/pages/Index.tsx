@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SONGS, SONG_REASONING, type Song } from "@/data/songs";
 import { FOUNDATIONS } from "@/data/foundations";
 import { STUDENTS, RECORDINGS } from "@/data/students";
+import Tuner from "@/components/Tuner";
 
-type View = "home" | "foundations" | "teacher";
+type View = "home" | "foundations" | "teacher" | "tuner";
 type Tab = "warmup" | "drills" | "song" | "plan";
 
 /* =====================================================================
@@ -108,6 +109,9 @@ const Index = () => {
         <section className={`view view-teacher ${view === "teacher" && !songOpen ? "active" : ""}`}>
           <TeacherView />
         </section>
+        <section className={`view view-tuner ${view === "tuner" && !songOpen ? "active" : ""}`}>
+          <Tuner />
+        </section>
         {openSongObj && (
           <SongOverlay song={openSongObj} close={closeSong} logPlay={logPlay} />
         )}
@@ -130,6 +134,7 @@ const TopNav = ({
     <div className="nav-links">
       <a className={`nav-link ${view === "home" ? "active" : ""}`} onClick={() => navigateTo("home")}>Course</a>
       <a className={`nav-link ${view === "foundations" ? "active" : ""}`} onClick={() => navigateTo("foundations")}>Foundations</a>
+      <a className={`nav-link ${view === "tuner" ? "active" : ""}`} onClick={() => navigateTo("tuner")}>Tuner</a>
       <a className="nav-link">Library</a>
       <a className="nav-link">My class</a>
     </div>
