@@ -29,7 +29,7 @@ const TopNav = () => {
           <>
             <a className={`nav-link ${isActive("/student", true) ? "active" : ""}`} onClick={() => go("/student")}>Home</a>
             <a className={`nav-link ${isActive("/student/journey") ? "active" : ""}`} onClick={() => go("/student/journey")}>Journey</a>
-            <a className={`nav-link ${isActive("/student/songs") ? "active" : ""}`} onClick={() => go("/student/songs")}>Songs</a>
+            
             <a className={`nav-link ${isActive("/student/foundations") || isActive("/student/tuner") ? "active" : ""}`} onClick={() => go("/student/foundations")}>Foundations</a>
           </>
         )}
