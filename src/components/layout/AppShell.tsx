@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
+import FloatingTuner from "@/components/shared/FloatingTuner";
 
 const TopNav = () => {
   const location = useLocation();
@@ -8,7 +9,7 @@ const TopNav = () => {
   const { user, role, signOut } = useAuth();
 
   const path = location.pathname;
-  const isActive = (p: string) => (p === "/student" ? path === "/student" : path.startsWith(p));
+  const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
 
   const go = (to: string) => {
     navigate(to);
@@ -27,17 +28,17 @@ const TopNav = () => {
       <div className="nav-links">
         {role !== "teacher" && (
           <>
-            <a className={`nav-link ${isActive("/student") ? "active" : ""}`} onClick={() => go("/student")}>Course</a>
-            <a className={`nav-link ${isActive("/student/foundations") ? "active" : ""}`} onClick={() => go("/student/foundations")}>Foundations</a>
-            <a className={`nav-link ${isActive("/student/tuner") ? "active" : ""}`} onClick={() => go("/student/tuner")}>Tuner</a>
-            <a className="nav-link">Library</a>
+            <a className={`nav-link ${isActive("/student", true) ? "active" : ""}`} onClick={() => go("/student")}>Home</a>
+            <a className={`nav-link ${isActive("/student/journey") ? "active" : ""}`} onClick={() => go("/student/journey")}>Journey</a>
+            <a className={`nav-link ${isActive("/student/songs") ? "active" : ""}`} onClick={() => go("/student/songs")}>Songs</a>
+            <a className={`nav-link ${isActive("/student/foundations") || isActive("/student/tuner") ? "active" : ""}`} onClick={() => go("/student/foundations")}>Foundations</a>
           </>
         )}
         {(role === "teacher" || role === "admin") && (
           <a className={`nav-link ${isActive("/teacher") ? "active" : ""}`} onClick={() => go("/teacher")}>My class</a>
         )}
       </div>
-      <div className="streak-chip">🔥 12-day streak</div>
+      <div className="streak-chip">🔥 keep it up</div>
       <div className="role-toggle" title={user?.email ?? ""}>
         <span className="role-btn active" style={{ pointerEvents: "none" }}>{roleLabel}</span>
         <button className="role-btn" onClick={signOut}>{initials} · Sign out</button>
@@ -52,14 +53,20 @@ const RoleHome = () => {
   return <Navigate to="/student" replace />;
 };
 
-const AppShell = () => (
-  <SongsProvider>
-    <TopNav />
-    <main id="app">
-      <Outlet />
-    </main>
-  </SongsProvider>
-);
+const AppShell = () => {
+  const { role } = useAuth();
+  const location = useLocation();
+  const showFloatingTuner = role !== "teacher" && location.pathname.startsWith("/student");
+  return (
+    <SongsProvider>
+      <TopNav />
+      <main id="app">
+        <Outlet />
+      </main>
+      {showFloatingTuner && <FloatingTuner />}
+    </SongsProvider>
+  );
+};
 
 export { RoleHome };
 export default AppShell;
