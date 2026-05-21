@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useTeacherStudents, useStudentDetail } from "@/hooks/useTeacherStudents";
 import { computeRetention } from "@/lib/retention";
 import { getBadge } from "@/lib/badges";
+import { sentimentStrip, CHECK_IN_COLOR, type CheckIn } from "@/hooks/useStudentProgress";
+import { useSignedRecordingUrl } from "@/hooks/useSignedRecordingUrl";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SONGS } from "@/data/songs";
@@ -27,7 +29,34 @@ function dailyMinutes(practice: { played_on: string; duration_min: number }[]) {
   return arr;
 }
 
-function StudentRow({ student, batchId }: { student: any; batchId: string }) {
+function SentimentDots({ logs }: { logs: { played_on: string; check_in: CheckIn | null }[] }) {
+  const strip = sentimentStrip(logs, 7);
+  return (
+    <div className="flex items-center gap-1">
+      {strip.map((d) => (
+        <span
+          key={d.date}
+          title={`${d.date} · ${d.checkIn ?? "no practice"}`}
+          className={`w-2.5 h-2.5 rounded-full ${CHECK_IN_COLOR[d.checkIn ?? "none"]}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RecordingItem({ path, log }: { path: string; log: any }) {
+  const url = useSignedRecordingUrl(path);
+  const song = SONGS.find((s) => s.id === log.song_id);
+  if (!url) return null;
+  return (
+    <div className="border rounded p-2 mb-2">
+      <div className="text-xs text-muted-foreground">{log.played_on} · {song?.title ?? log.song_id}</div>
+      <audio controls src={url} className="w-full mt-1" />
+    </div>
+  );
+}
+
+function StudentRow({ student, onNeedHelpChange }: { student: any; onNeedHelpChange: (id: string, flagged: boolean) => void }) {
   const [openDetail, setOpenDetail] = useState(false);
   const [openFlag, setOpenFlag] = useState(false);
   const { data } = useStudentDetail(student.id);
@@ -44,10 +73,20 @@ function StudentRow({ student, batchId }: { student: any; batchId: string }) {
   )[0];
   const badge = getBadge(activeProgress?.teacher_badge);
 
+  const last7 = useMemo(() => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+    return (data?.practice ?? []).filter((p: any) => new Date(p.played_on) >= cutoff);
+  }, [data]);
+  const flaggedNeedHelp = last7.some((p: any) => p.check_in === "need_help");
+
+  useMemo(() => onNeedHelpChange(student.id, flaggedNeedHelp), [flaggedNeedHelp, student.id]);
+
+  const recordings = (data?.practice ?? []).filter((p: any) => p.recording_url);
+
   return (
     <>
       <div
-        className="grid grid-cols-[1.5fr_1fr_0.8fr_0.8fr_auto] items-center gap-4 p-3 border-b cursor-pointer hover:bg-muted/30"
+        className="grid grid-cols-[1.4fr_0.9fr_0.8fr_0.9fr_0.9fr_auto] items-center gap-3 p-3 border-b cursor-pointer hover:bg-muted/30"
         onClick={() => setOpenDetail(true)}
       >
         <div className="flex items-center gap-3">
@@ -55,12 +94,15 @@ function StudentRow({ student, batchId }: { student: any; batchId: string }) {
             {student.name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <div className="font-medium">{student.name}</div>
+            <div className="font-medium">{student.name} {flaggedNeedHelp && <span className="text-red-500" title="Flagged need help">●</span>}</div>
             <div className="text-xs text-muted-foreground">Joined {student.joined_on}</div>
           </div>
         </div>
         <div className="text-muted-foreground"><Sparkline values={spark} /></div>
-        <div className="text-sm">{attendancePct}% <span className="text-xs text-muted-foreground">attended</span></div>
+        <div className="text-sm">{attendancePct}%</div>
+        <div onClick={(e) => e.stopPropagation()}>
+          <SentimentDots logs={data?.practice ?? []} />
+        </div>
         <div className="text-sm">
           {badge ? <>{badge.emoji} {badge.name}</> : <span className="text-muted-foreground">—</span>}
         </div>
@@ -114,7 +156,10 @@ function StudentRow({ student, batchId }: { student: any; batchId: string }) {
               <div className="space-y-1 max-h-60 overflow-y-auto">
                 {(data?.practice ?? []).slice().reverse().map((p: any) => (
                   <div key={p.id} className="flex justify-between text-xs">
-                    <span>{p.played_on} · {SONGS.find((s) => s.id === p.song_id)?.title ?? p.song_id}</span>
+                    <span>
+                      {p.played_on} · {SONGS.find((s) => s.id === p.song_id)?.title ?? p.song_id}
+                      {p.check_in && <span className={`ml-2 inline-block w-2 h-2 rounded-full ${CHECK_IN_COLOR[p.check_in as CheckIn]}`} />}
+                    </span>
                     <span>{p.duration_min}m {p.tuning_check_completed ? "🎵" : ""}</span>
                   </div>
                 ))}
@@ -122,17 +167,11 @@ function StudentRow({ student, batchId }: { student: any; batchId: string }) {
               </div>
             </section>
             <section>
-              <h3 className="font-semibold mb-2">Recordings</h3>
-              {(data?.attendance ?? []).filter((a: any) => a.recording_url).map((a: any) => (
-                <div key={a.id} className="border rounded p-2 mb-2">
-                  <div className="text-xs text-muted-foreground">{a.session_date}</div>
-                  <audio controls src={a.recording_url} className="w-full" />
-                  {a.teacher_comment && <div className="text-xs mt-1">💬 {a.teacher_comment}</div>}
-                </div>
+              <h3 className="font-semibold mb-2">Optional clips</h3>
+              {recordings.length === 0 && <div className="text-muted-foreground">No clips submitted.</div>}
+              {recordings.map((p: any) => (
+                <RecordingItem key={p.id} path={p.recording_url} log={p} />
               ))}
-              {!(data?.attendance ?? []).some((a: any) => a.recording_url) && (
-                <div className="text-muted-foreground">No recordings.</div>
-              )}
             </section>
           </div>
         </SheetContent>
@@ -143,28 +182,44 @@ function StudentRow({ student, batchId }: { student: any; batchId: string }) {
 
 export default function MyStudents() {
   const { data: groups = [], isLoading } = useTeacherStudents();
+  const [onlyNeedHelp, setOnlyNeedHelp] = useState(false);
+  const [needHelpMap, setNeedHelpMap] = useState<Record<string, boolean>>({});
+  const onNeedHelpChange = (id: string, v: boolean) =>
+    setNeedHelpMap((m) => (m[id] === v ? m : { ...m, [id]: v }));
 
   return (
     <section className="view view-teacher active">
       <div className="teacher-view">
-        <header className="teacher-header">
+        <header className="teacher-header flex justify-between items-center">
           <h1 className="teacher-title">My students</h1>
+          <label className="text-xs flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={onlyNeedHelp} onChange={(e) => setOnlyNeedHelp(e.target.checked)} />
+            Only "Need help" (last 7d)
+          </label>
         </header>
         {isLoading && <div className="p-4 text-sm">Loading…</div>}
-        {groups.map((g: any) => (
-          <div key={g.batch.id} className="teacher-class mb-6">
-            <div className="p-3 border-b bg-muted/30">
-              <div className="font-semibold">{g.batch.locations?.name} · {g.batch.instruments?.name}</div>
-              <div className="text-xs text-muted-foreground">{g.students.length} students</div>
+        {groups.map((g: any) => {
+          const filtered = onlyNeedHelp ? g.students.filter((s: any) => needHelpMap[s.id]) : g.students;
+          return (
+            <div key={g.batch.id} className="teacher-class mb-6">
+              <div className="p-3 border-b bg-muted/30">
+                <div className="font-semibold">{g.batch.locations?.name} · {g.batch.instruments?.name}</div>
+                <div className="text-xs text-muted-foreground">{filtered.length} of {g.students.length} students</div>
+              </div>
+              <div className="grid grid-cols-[1.4fr_0.9fr_0.8fr_0.9fr_0.9fr_auto] gap-3 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
+                <div>Student</div><div>Practice 30d</div><div>Attended</div><div>Recent check-ins</div><div>Badge</div><div></div>
+              </div>
+              {filtered.length === 0 && (
+                <div className="p-4 text-sm text-muted-foreground">No matching students.</div>
+              )}
+              {g.students.map((s: any) => (
+                <div key={s.id} style={{ display: onlyNeedHelp && !needHelpMap[s.id] ? "none" : undefined }}>
+                  <StudentRow student={s} onNeedHelpChange={onNeedHelpChange} />
+                </div>
+              ))}
             </div>
-            {g.students.length === 0 && (
-              <div className="p-4 text-sm text-muted-foreground">No active enrollments.</div>
-            )}
-            {g.students.map((s: any) => (
-              <StudentRow key={s.id} student={s} batchId={g.batch.id} />
-            ))}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
