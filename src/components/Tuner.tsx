@@ -175,7 +175,7 @@ export default function Tuner() {
       analyser.fftSize = 2048;
       src.connect(analyser);
       analyserRef.current = analyser;
-      bufRef.current = new Float32Array(analyser.fftSize);
+      bufRef.current = new Float32Array(new ArrayBuffer(analyser.fftSize * 4));
       setRunning(true);
 
       const loop = () => {
