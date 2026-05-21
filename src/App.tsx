@@ -14,6 +14,11 @@ import SongDetail from "@/routes/student/SongDetail";
 import Today from "@/routes/teacher/Today";
 import MyStudents from "@/routes/teacher/MyStudents";
 import Recordings from "@/routes/teacher/Recordings";
+import AdminDashboard from "@/routes/admin/Dashboard";
+import FinanceLayout from "@/routes/admin/Finance/Layout";
+import FinanceOverview from "@/routes/admin/Finance/Overview";
+import FinancePayments from "@/routes/admin/Finance/Payments";
+import FinancePayouts from "@/routes/admin/Finance/Payouts";
 import Login from "@/pages/Login";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -47,6 +52,12 @@ const App = () => (
                 <Route path="/teacher/today" element={<Today />} />
                 <Route path="/teacher/students" element={<MyStudents />} />
                 <Route path="/teacher/recordings" element={<Recordings />} />
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/finance" element={<FinanceLayout />}>
+                  <Route index element={<FinanceOverview />} />
+                  <Route path="payments" element={<FinancePayments />} />
+                  <Route path="payouts" element={<FinancePayouts />} />
+                </Route>
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
