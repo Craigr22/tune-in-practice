@@ -49,9 +49,25 @@ const TopNav = () => {
         )}
       </div>
       <div className="streak-chip">🔥 keep it up</div>
+      {actualRole === "admin" && (
+        <div className="role-toggle" title="View the app as a different role">
+          <button
+            className={`role-btn ${role === "admin" ? "active" : ""}`}
+            onClick={() => { setViewAs(null); go("/admin"); }}
+          >Admin</button>
+          <button
+            className={`role-btn ${role === "teacher" ? "active" : ""}`}
+            onClick={() => { setViewAs("teacher"); go("/teacher/today"); }}
+          >Teacher</button>
+          <button
+            className={`role-btn ${role === "student" ? "active" : ""}`}
+            onClick={() => { setViewAs("student"); go("/student"); }}
+          >Student</button>
+        </div>
+      )}
       <div className="role-toggle" title={user?.email ?? ""}>
-        <span className="role-btn active" style={{ pointerEvents: "none" }}>{roleLabel}</span>
-        <button className="role-btn" onClick={signOut}>{initials} · Sign out</button>
+        <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
+        <button className="role-btn" onClick={signOut}>Sign out</button>
       </div>
     </nav>
   );
