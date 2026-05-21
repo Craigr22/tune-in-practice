@@ -140,7 +140,7 @@ export default function WeeklyCalendarStrip() {
             : d.sessionCompleted
             ? "rgba(16,185,129,0.10)"
             : "var(--paper-warm)";
-          const clickable = !!d.session || d.isClass;
+          const clickable = !!d.session || d.isClass || d.isPractice;
           return (
             <button
               key={d.iso}
