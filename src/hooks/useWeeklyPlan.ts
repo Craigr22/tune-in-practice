@@ -213,10 +213,13 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       existing: [],
     });
 
-    supabase
-      .from("weekly_plan_sessions")
-      .upsert(rows, { onConflict: "student_id,week_start,session_index" })
-      .then(() => qc.invalidateQueries({ queryKey: ["weekly-plan", student.id, weekStart] }));
+    (async () => {
+      const { error } = await supabase
+        .from("weekly_plan_sessions")
+        .upsert(rows, { onConflict: "student_id,week_start,session_index" });
+      if (error) console.error("[weekly-plan] upsert failed", error);
+      qc.invalidateQueries({ queryKey: ["weekly-plan", student.id, weekStart] });
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id, existing?.length, batch?.day_of_week, weekStart]);
 }

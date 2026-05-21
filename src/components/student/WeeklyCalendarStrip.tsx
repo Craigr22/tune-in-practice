@@ -140,7 +140,7 @@ export default function WeeklyCalendarStrip() {
             : d.sessionCompleted
             ? "rgba(16,185,129,0.10)"
             : "var(--paper-warm)";
-          const clickable = !!d.session || d.isClass;
+          const clickable = !!d.session || d.isClass || d.isPractice;
           return (
             <button
               key={d.iso}
@@ -195,6 +195,10 @@ export default function WeeklyCalendarStrip() {
                 <span className="ml-2 text-[11px] font-normal" style={{ color: "var(--ink-soft)" }}>
                   {selected.session.warmup_target_min + selected.session.focus_target_min + selected.session.bonus_target_min} min
                 </span>
+              </div>
+            ) : selected.isPractice ? (
+              <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                Generating your session… give it a sec.
               </div>
             ) : (
               <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
