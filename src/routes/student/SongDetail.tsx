@@ -50,6 +50,12 @@ const SongDetail = () => {
   const [tuningChecked, setTuningChecked] = useState(false);
   const [inlineTunerOpen, setInlineTunerOpen] = useState(false);
   const [lowG] = useLowG();
+  const location = useLocation();
+  const planSessionId = (location.state as { planSessionId?: string } | null)?.planSessionId;
+  const { data: weekPlan = [] } = useWeeklyPlan();
+  const planSession = planSessionId ? weekPlan.find((s) => s.id === planSessionId) : undefined;
+  const markComplete = useMarkSessionComplete();
+  const completeSeg = useCompleteSegment();
 
   const [prompt, setPrompt] = useState(false);
   const [duration, setDuration] = useState(10);
