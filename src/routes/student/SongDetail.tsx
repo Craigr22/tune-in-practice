@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useLocation } from "react-router-dom";
+import { useWeeklyPlan, useMarkSessionComplete, useCompleteSegment } from "@/hooks/useWeeklyPlan";
+import SegmentedPracticeView from "@/components/student/SegmentedPracticeView";
 import { useSongs } from "@/hooks/useSongs";
 import { useLogPractice, CHECK_IN_LABEL, CHECK_IN_EMOJI, type CheckIn } from "@/hooks/useStudentProgress";
 import { useTuner, useLowG } from "@/hooks/useTuner";
