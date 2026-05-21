@@ -181,6 +181,77 @@ export const SONGS: Song[] = [
       { name: 'Chorus', bars: ['C','Em·F','Dm·G','C','Em·F','Dm·G','C·F','Bb·G'] }
     ]
   },
+  // ====== TRACK 5 (Semester 2 — Book 2) ======
+  { id: 'lag-ja-gale', title: 'Lag Ja Gale', artist: 'Lata Mangeshkar',
+    track: 5, order: 9, difficulty: 'Intermediate',
+    chords: ['G', 'C', 'Am', 'D'], state: 'locked' },
+  { id: 'watermelon-sugar', title: 'Watermelon Sugar', artist: 'Harry Styles',
+    track: 5, order: 10, difficulty: 'Intermediate',
+    chords: ['Am', 'C', 'G', 'Dm'], state: 'locked' },
+  // ====== TRACK 6 ======
+  { id: 'na-tum-jano', title: 'Na Tum Jano Na Hum', artist: 'Lucky Ali',
+    track: 6, order: 11, difficulty: 'Intermediate+',
+    chords: ['A', 'C#m', 'D', 'E', 'Bm'], state: 'locked' },
+  { id: 'yellow', title: 'Yellow', artist: 'Coldplay',
+    track: 6, order: 12, difficulty: 'Intermediate+',
+    chords: ['C', 'G6', 'Fmaj7', 'Am'], state: 'locked' },
+  // ====== TRACK 7 ======
+  { id: 'kal-ho-na-ho', title: 'Kal Ho Na Ho', artist: 'Sonu Nigam',
+    track: 7, order: 13, difficulty: 'Intermediate+',
+    chords: ['F', 'C', 'Gm7', 'Dm7', 'G'], state: 'locked' },
+  { id: 'cant-help-falling', title: "Can't Help Falling in Love", artist: 'Elvis Presley',
+    track: 7, order: 14, difficulty: 'Intermediate',
+    chords: ['C', 'Em', 'Am', 'F', 'G'], state: 'locked' },
+  // ====== TRACK 8 ======
+  { id: 'senorita', title: 'Señorita', artist: 'ZNMD',
+    track: 8, order: 15, difficulty: 'Advanced',
+    chords: ['A', 'D', 'E', 'F#m'], state: 'locked' },
+  { id: 'la-vie-en-rose', title: 'La Vie En Rose', artist: 'Cristin Milioti',
+    track: 8, order: 16, difficulty: 'Advanced',
+    chords: ['G', 'GMaj7', 'C', 'C6', 'D'], state: 'locked' },
+
+  // ====== TRACK 9 (Semester 3 — Book 3) ======
+  { id: 'friends-rembrandts', title: "Friends (I'll Be There for You)", artist: 'The Rembrandts',
+    track: 9, order: 17, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'aashiyaan', title: 'Aashiyaan', artist: 'Barfi! OST',
+    track: 9, order: 18, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'count-on-me', title: 'Count on Me', artist: 'Bruno Mars',
+    track: 9, order: 19, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'dooba-dooba', title: 'Dooba Dooba', artist: 'Silk Route',
+    track: 9, order: 20, difficulty: 'Advanced', chords: [], state: 'locked' },
+  // ====== TRACK 10 ======
+  { id: 'until-i-found-you', title: 'Until I Found You', artist: 'Stephen Sanchez',
+    track: 10, order: 21, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'chand-balliyan', title: 'Chand Balliyaan', artist: 'Aditya A',
+    track: 10, order: 22, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'mere-bina', title: 'Mere Bina', artist: "Nikhil D'Souza",
+    track: 10, order: 23, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'riptide', title: 'Riptide', artist: 'Vance Joy',
+    track: 10, order: 24, difficulty: 'Advanced', chords: [], state: 'locked' },
+  // ====== TRACK 11 ======
+  { id: 'hey-soul-sister', title: 'Hey, Soul Sister', artist: 'Train',
+    track: 11, order: 25, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'love-story', title: 'Love Story', artist: 'Taylor Swift',
+    track: 11, order: 26, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'gulabi-aankhein', title: 'Gulabi Aankhein', artist: 'Mohammad Rafi',
+    track: 11, order: 27, difficulty: 'Advanced', chords: [], state: 'locked' },
+  { id: 'top-of-the-world', title: 'Top of the World', artist: 'The Carpenters',
+    track: 11, order: 28, difficulty: 'Advanced', chords: [], state: 'locked' },
+  // ====== TRACK 12 ======
+  { id: 'fly-me-to-the-moon', title: 'Fly Me to the Moon', artist: 'Frank Sinatra',
+    track: 12, order: 29, difficulty: 'Stretch', chords: [], state: 'locked' },
+  { id: 'yeh-shaam-mastani', title: 'Yeh Shaam Mastaani', artist: 'Kishore Kumar',
+    track: 12, order: 30, difficulty: 'Stretch', chords: [], state: 'locked' },
+  { id: 'lemon-tree', title: 'Lemon Tree', artist: 'Fools Garden',
+    track: 12, order: 31, difficulty: 'Stretch', chords: [], state: 'locked' },
+  { id: 'yeh-chand-sa-roshan', title: 'Yeh Chand Sa Roshan Chehra', artist: 'Mohammed Rafi',
+    track: 12, order: 32, difficulty: 'Stretch', chords: [], state: 'locked' },
+  // ====== TRACK 13 ======
+  { id: 'woh-ladki-kahan', title: 'Woh Ladki Hai Kahan', artist: 'Dil Chahta Hai',
+    track: 13, order: 33, difficulty: 'Stretch', chords: [], state: 'locked' },
+  { id: 'wake-me-up', title: 'Wake Me Up', artist: 'Avicii',
+    track: 13, order: 34, difficulty: 'Stretch', chords: [], state: 'locked' },
+
   // ====== FINGERSTYLE ======
   { id: 'tab-101', title: 'Reading Tab · 101', artist: 'BAM Foundations',
     track: 'fs', order: 0, difficulty: 'Foundation',
