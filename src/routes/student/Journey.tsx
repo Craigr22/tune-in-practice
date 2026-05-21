@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SONGS } from "@/data/songs";
-import { usePracticeLogs, useSongProgress, avgCourseBadge, tuningRate } from "@/hooks/useStudentProgress";
+import { usePracticeLogs, useSongProgress, avgCourseBadge, tuningRate, sentimentStrip, CHECK_IN_COLOR, CHECK_IN_EMOJI, type CheckIn } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 
@@ -111,6 +111,11 @@ const Journey = () => {
                       </div>
                       <BadgeDisplay level={entry.teacherBadge} size="md" />
                     </div>
+                    <div className="mt-3 flex items-center gap-1" title="Last 7 days check-ins">
+                      {sentimentStrip(songLogs, 7).map((d) => (
+                        <span key={d.date} className={`w-2.5 h-2.5 rounded-full ${CHECK_IN_COLOR[d.checkIn ?? "none"]}`} />
+                      ))}
+                    </div>
                     <button
                       onClick={() => setExpanded(isOpen ? null : entry.songId)}
                       className="mt-3 text-xs font-semibold"
@@ -132,7 +137,8 @@ const Journey = () => {
                             </span>
                             <span style={{ color: "var(--ink-soft)" }}>{l.duration_min} min</span>
                             <span>
-                              {l.self_rated_badge ? getBadge(l.self_rated_badge)?.emoji : "—"}
+                              {l.check_in && <span title={l.check_in} className={`inline-block w-2 h-2 rounded-full mr-1 align-middle ${CHECK_IN_COLOR[l.check_in as CheckIn]}`} />}
+                              {l.check_in ? CHECK_IN_EMOJI[l.check_in as CheckIn] : (l.self_rated_badge ? "•" : "—")}
                             </span>
                           </li>
                         ))}
