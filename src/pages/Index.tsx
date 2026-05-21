@@ -109,6 +109,9 @@ const Index = () => {
         <section className={`view view-teacher ${view === "teacher" && !songOpen ? "active" : ""}`}>
           <TeacherView />
         </section>
+        <section className={`view view-tuner ${view === "tuner" && !songOpen ? "active" : ""}`}>
+          <Tuner />
+        </section>
         {openSongObj && (
           <SongOverlay song={openSongObj} close={closeSong} logPlay={logPlay} />
         )}
