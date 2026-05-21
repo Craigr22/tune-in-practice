@@ -6,7 +6,7 @@ import FloatingTuner from "@/components/shared/FloatingTuner";
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, role, signOut } = useAuth();
+  const { user, role, actualRole, setViewAs, signOut } = useAuth();
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
