@@ -196,6 +196,10 @@ export default function WeeklyCalendarStrip() {
                   {selected.session.warmup_target_min + selected.session.focus_target_min + selected.session.bonus_target_min} min
                 </span>
               </div>
+            ) : selected.isPractice ? (
+              <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                Generating your session… give it a sec.
+              </div>
             ) : (
               <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
             )}
