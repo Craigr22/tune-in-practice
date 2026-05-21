@@ -54,7 +54,7 @@ const Login = () => {
       background: "var(--paper)", padding: 24,
     }}>
       <form onSubmit={submit} className="bam-card" style={{ width: "100%", maxWidth: 380, padding: 28 }}>
-        <div className="brand" style={{ marginBottom: 18 }}>
+        <div className="brand text-center" style={{ marginBottom: 18 }}>
           <span className="dot"></span>bam <span className="uku">Ukulele · Sem 1</span>
         </div>
         <h2 style={{ marginBottom: 4 }}>{mode === "signup" ? "Create account" : "Sign in"}</h2>
@@ -90,7 +90,7 @@ const Login = () => {
         </button>
 
         <p style={{ fontSize: 10, color: "var(--ink-faint)", marginTop: 14, lineHeight: 1.5, textAlign: "center" }}>
-          The first account created automatically becomes the admin.
+          ​
         </p>
       </form>
     </div>

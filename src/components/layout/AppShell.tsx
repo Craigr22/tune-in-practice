@@ -21,7 +21,7 @@ const TopNav = () => {
 
   return (
     <nav className="topnav">
-      <div className="brand">
+      <div className="brand text-center">
         <span className="dot"></span>bam <span className="uku">​</span>
       </div>
       <div className="nav-spacer"></div>
