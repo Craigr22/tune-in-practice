@@ -72,29 +72,34 @@ const Home = () => {
                 Today · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
               </div>
               <h1 className="mt-2 text-3xl md:text-4xl font-bold leading-tight">
-                Hi {firstName}, your next 10 minutes
+                Hi {firstName}, {todaysSession && sessionTpl ? `today's ${sessionTpl.label} session` : "your next 10 minutes"}
               </h1>
               <p className="mt-3 text-white/85 text-sm md:text-base max-w-lg">
-                {focusSong
-                  ? <>Practice <span className="font-semibold text-white">{focusSong.title}</span> for 10 minutes — small reps, big difference by Saturday.</>
-                  : "Pick any song below and log a 10-minute session."}
+                {todaysSession && sessionSong && sessionTpl ? (
+                  <>{sessionTpl.emoji} <span className="font-semibold text-white">{sessionTpl.label}</span> · {totalMins} min · focus on <span className="font-semibold text-white">{sessionSong.title}</span> — warm-up, focus, bonus.</>
+                ) : focusSong ? (
+                  <>Practice <span className="font-semibold text-white">{focusSong.title}</span> for 10 minutes — small reps, big difference by Saturday.</>
+                ) : (
+                  "Pick any song below and log a 10-minute session."
+                )}
               </p>
               <div className="mt-5 flex items-center gap-3 flex-wrap">
                 <button
-                  onClick={() => focusSong && openSong(focusSong.id)}
+                  onClick={startSession}
                   className="inline-flex items-center gap-3 rounded-full px-5 py-3 font-semibold text-sm transition-transform hover:scale-[1.02] active:scale-95"
                   style={{ background: "var(--gold)", color: "#1A2332", boxShadow: "0 10px 24px -8px rgba(244,208,63,0.6)" }}
                 >
                   <span className="inline-flex items-center justify-center rounded-full" style={{ width: 30, height: 30, background: "#1A2332", color: "var(--gold)" }}>▶</span>
-                  Start practice
+                  {todaysSession ? "Do now" : "Start practice"}
                 </button>
                 <button
-                  onClick={() => navigate("/student/songs")}
+                  onClick={() => focusSong && openSong(focusSong.id)}
                   className="inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium border border-white/30 hover:bg-white/10"
                 >
                   Free practice →
                 </button>
               </div>
+
             </div>
             <div className="md:text-right">
               <div
