@@ -183,8 +183,8 @@ export default function Tuner() {
         const b = bufRef.current;
         const c = audioCtxRef.current;
         if (!a || !b || !c) return;
-        a.getFloatTimeDomainData(b as unknown as Float32Array);
-        const f = autoCorrelate(b as unknown as Float32Array, c.sampleRate);
+        a.getFloatTimeDomainData(b);
+        const f = autoCorrelate(b as unknown as Float32Array<ArrayBuffer>, c.sampleRate);
         if (f > 0) setFreq(f);
         rafRef.current = requestAnimationFrame(loop);
       };
