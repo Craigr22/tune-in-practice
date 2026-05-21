@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SONGS, SONG_REASONING, type Song } from "@/data/songs";
 import { FOUNDATIONS } from "@/data/foundations";
 import { STUDENTS, RECORDINGS } from "@/data/students";
+import Tuner from "@/components/Tuner";
 
-type View = "home" | "foundations" | "teacher";
+type View = "home" | "foundations" | "teacher" | "tuner";
 type Tab = "warmup" | "drills" | "song" | "plan";
 
 /* =====================================================================
