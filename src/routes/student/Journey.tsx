@@ -21,6 +21,7 @@ interface MapNode {
   title: string;
   artist: string;
   order: number;
+  track: number | "fs";
   state: NodeState;
   teacherBadge: number | null;
   selfBadge: number | null;
@@ -30,6 +31,28 @@ interface MapNode {
   lastDate?: string;
   fingerstyle?: boolean;
 }
+
+type TierKey = "beginner" | "adv-beginner" | "casual" | "fingerstyle";
+interface Tier {
+  key: TierKey;
+  name: string;
+  tagline: string;
+  emoji: string;
+  accent: string; // css var
+  accentSoft: string;
+}
+const TIERS: Tier[] = [
+  { key: "beginner",      name: "Beginner",          tagline: "First chords · steady strumming",     emoji: "🌱", accent: "#10b981", accentSoft: "#d1fae5" },
+  { key: "adv-beginner",  name: "Advanced Beginner", tagline: "New shapes · richer progressions",    emoji: "🌿", accent: "#3b82f6", accentSoft: "#dbeafe" },
+  { key: "casual",        name: "Casual Ukulelist",  tagline: "Full songs · confident performance", emoji: "🎤", accent: "#a855f7", accentSoft: "#f3e8ff" },
+  { key: "fingerstyle",   name: "Fingerstyle Path",  tagline: "Melody picking · tab reading",        emoji: "🎼", accent: "#f59e0b", accentSoft: "#fef3c7" },
+];
+const tierFor = (track: number | "fs"): TierKey => {
+  if (track === "fs") return "fingerstyle";
+  if (track <= 4) return "beginner";
+  if (track <= 8) return "adv-beginner";
+  return "casual";
+};
 
 const Journey = () => {
   const navigate = useNavigate();
@@ -72,6 +95,7 @@ const Journey = () => {
         totalMin: songLogs.reduce((a, l) => a + (l.duration_min || 0), 0),
         firstDate,
         lastDate,
+        track: s.track,
         fingerstyle: s.fingerstyle,
       };
     });
@@ -146,76 +170,133 @@ const Journey = () => {
             <rect width="100" height="100" fill="url(#dots)" opacity="0.4" />
           </svg>
 
-          <div className="relative grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
-            {nodes.map((n, i) => {
-              const isOpen = selected === n.songId;
-              const bg =
-                n.state === "mastered" ? "linear-gradient(135deg, var(--gold-bg), #fffaf0)" :
-                n.state === "current" ? "linear-gradient(135deg, #fff, var(--paper-cool))" :
-                n.state === "next" ? "#fff" :
-                "var(--paper-cool)";
-              const border =
-                n.state === "mastered" ? "var(--gold-soft)" :
-                n.state === "current" ? "var(--navy)" :
-                n.state === "next" ? "var(--border-strong)" :
-                "var(--border)";
-              const ring =
-                n.state === "current" ? "0 0 0 4px hsl(var(--primary) / 0.15), var(--shadow-md)" :
-                n.state === "mastered" ? "var(--shadow-sm)" : "none";
-              const offsetY = i % 2 === 0 ? 0 : 18; // zigzag stagger
+          <div className="relative space-y-10">
+            {TIERS.map((tier) => {
+              const tierNodes = nodes.filter((n) => tierFor(n.track) === tier.key);
+              if (tierNodes.length === 0) return null;
+              const tierMastered = tierNodes.filter((n) => n.state === "mastered").length;
+              const tierPct = Math.round((tierMastered / tierNodes.length) * 100);
+              const tierActive = tierNodes.some((n) => n.state === "current" || n.state === "next");
+              const tierComplete = tierMastered === tierNodes.length;
+              const tierLocked = !tierActive && !tierComplete && tierMastered === 0;
 
               return (
-                <button
-                  key={n.songId}
-                  onClick={() => n.state !== "locked" && setSelected(isOpen ? null : n.songId)}
-                  disabled={n.state === "locked"}
-                  className={`relative rounded-2xl p-4 text-left transition-all ${n.state !== "locked" ? "hover:-translate-y-0.5 cursor-pointer" : "cursor-not-allowed opacity-70"}`}
-                  style={{ background: bg, border: `2px solid ${border}`, boxShadow: ring, transform: `translateY(${offsetY}px)` }}
-                >
-                  {/* Stop number */}
+                <div key={tier.key} className="relative">
+                  {/* Tier banner */}
                   <div
-                    className="absolute -top-3 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                    className="rounded-2xl px-5 py-4 mb-5 flex items-center gap-4 flex-wrap"
                     style={{
-                      background: n.state === "mastered" ? "var(--gold-deep)" : n.state === "current" ? "var(--navy)" : n.state === "locked" ? "var(--border-strong)" : "var(--ink)",
-                      color: "#fff",
-                      boxShadow: "var(--shadow-sm)",
+                      background: `linear-gradient(90deg, ${tier.accentSoft}, transparent)`,
+                      borderLeft: `4px solid ${tier.accent}`,
+                      opacity: tierLocked ? 0.65 : 1,
                     }}
                   >
-                    {n.state === "locked" ? "🔒" : i + 1}
-                  </div>
-
-                  {/* Badge / state icon */}
-                  <div className="flex justify-center mb-2 mt-1" style={{ minHeight: 56 }}>
-                    {n.state === "mastered" || (n.teacherBadge ?? 0) > 0 ? (
-                      <BadgeDisplay level={n.teacherBadge ?? (n.state === "mastered" ? 5 : null)} size="md" showLabel={false} />
-                    ) : n.state === "current" ? (
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl animate-pulse" style={{ background: "hsl(var(--primary) / 0.1)" }}>⭐</div>
-                    ) : n.state === "next" ? (
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ background: "var(--paper-cool)" }}>✨</div>
-                    ) : (
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl" style={{ background: "var(--card)", opacity: 0.5 }}>🎵</div>
-                    )}
-                  </div>
-
-                  <div className="text-center">
-                    <div className="text-sm font-bold leading-tight line-clamp-2" style={{ color: n.state === "locked" ? "var(--ink-faint)" : "var(--ink)" }}>
-                      {n.state === "locked" ? "???" : n.title}
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                      style={{ background: "#fff", border: `2px solid ${tier.accent}`, boxShadow: "var(--shadow-sm)" }}
+                    >
+                      {tier.emoji}
                     </div>
-                    {n.state !== "locked" && (
-                      <div className="text-[10px] mt-0.5 line-clamp-1" style={{ color: "var(--ink-soft)" }}>{n.artist}</div>
-                    )}
-                    {n.state === "current" && (
-                      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--navy)" }}>In progress</div>
-                    )}
-                    {n.state === "next" && (
-                      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--gold-deep)" }}>Up next</div>
-                    )}
+                    <div className="flex-1 min-w-[200px]">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg md:text-xl font-bold" style={{ color: "var(--ink)" }}>{tier.name}</h3>
+                        {tierComplete && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: tier.accent, color: "#fff" }}>Complete ✓</span>
+                        )}
+                        {tierActive && !tierComplete && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full animate-pulse" style={{ background: tier.accent, color: "#fff" }}>In progress</span>
+                        )}
+                        {tierLocked && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: "var(--border-strong)", color: "#fff" }}>🔒 Locked</span>
+                        )}
+                      </div>
+                      <div className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>{tier.tagline}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs font-semibold" style={{ color: tier.accent }}>{tierMastered}/{tierNodes.length} mastered</div>
+                      <div className="w-28 h-1.5 mt-1 rounded-full overflow-hidden" style={{ background: tier.accentSoft }}>
+                        <div className="h-full transition-all" style={{ width: `${tierPct}%`, background: tier.accent }} />
+                      </div>
+                    </div>
                   </div>
 
-                  {n.fingerstyle && n.state !== "locked" && (
-                    <div className="absolute top-2 right-2 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--ink-soft)" }}>FS</div>
-                  )}
-                </button>
+                  {/* Tier stops */}
+                  <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+                    {tierNodes.map((n, i) => {
+                      const globalIndex = nodes.indexOf(n);
+                      const isOpen = selected === n.songId;
+                      const bg =
+                        n.state === "mastered" ? "linear-gradient(135deg, var(--gold-bg), #fffaf0)" :
+                        n.state === "current" ? "linear-gradient(135deg, #fff, var(--paper-cool))" :
+                        n.state === "next" ? "#fff" :
+                        "var(--paper-cool)";
+                      const border =
+                        n.state === "mastered" ? "var(--gold-soft)" :
+                        n.state === "current" ? "var(--navy)" :
+                        n.state === "next" ? "var(--border-strong)" :
+                        "var(--border)";
+                      const ring =
+                        n.state === "current" ? "0 0 0 4px hsl(var(--primary) / 0.15), var(--shadow-md)" :
+                        n.state === "mastered" ? "var(--shadow-sm)" : "none";
+                      const offsetY = i % 2 === 0 ? 0 : 18;
+
+                      return (
+                        <button
+                          key={n.songId}
+                          onClick={() => n.state !== "locked" && setSelected(isOpen ? null : n.songId)}
+                          disabled={n.state === "locked"}
+                          className={`relative rounded-2xl p-4 text-left transition-all ${n.state !== "locked" ? "hover:-translate-y-0.5 cursor-pointer" : "cursor-not-allowed opacity-70"}`}
+                          style={{ background: bg, border: `2px solid ${border}`, boxShadow: ring, transform: `translateY(${offsetY}px)` }}
+                        >
+                          <div
+                            className="absolute -top-3 -left-2 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                            style={{
+                              background: n.state === "mastered" ? "var(--gold-deep)" : n.state === "current" ? "var(--navy)" : n.state === "locked" ? "var(--border-strong)" : "var(--ink)",
+                              color: "#fff",
+                              boxShadow: "var(--shadow-sm)",
+                            }}
+                          >
+                            {n.state === "locked" ? "🔒" : globalIndex + 1}
+                          </div>
+
+                          {/* Tier accent stripe */}
+                          <div className="absolute top-0 right-0 w-1.5 h-8 rounded-bl-md" style={{ background: tier.accent, opacity: n.state === "locked" ? 0.4 : 1 }} />
+
+                          <div className="flex justify-center mb-2 mt-1" style={{ minHeight: 56 }}>
+                            {n.state === "mastered" || (n.teacherBadge ?? 0) > 0 ? (
+                              <BadgeDisplay level={n.teacherBadge ?? (n.state === "mastered" ? 5 : null)} size="md" showLabel={false} />
+                            ) : n.state === "current" ? (
+                              <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl animate-pulse" style={{ background: "hsl(var(--primary) / 0.1)" }}>⭐</div>
+                            ) : n.state === "next" ? (
+                              <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ background: "var(--paper-cool)" }}>✨</div>
+                            ) : (
+                              <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl" style={{ background: "var(--card)", opacity: 0.5 }}>🎵</div>
+                            )}
+                          </div>
+
+                          <div className="text-center">
+                            <div className="text-sm font-bold leading-tight line-clamp-2" style={{ color: n.state === "locked" ? "var(--ink-faint)" : "var(--ink)" }}>
+                              {n.state === "locked" ? "???" : n.title}
+                            </div>
+                            {n.state !== "locked" && (
+                              <div className="text-[10px] mt-0.5 line-clamp-1" style={{ color: "var(--ink-soft)" }}>{n.artist}</div>
+                            )}
+                            {n.state === "current" && (
+                              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--navy)" }}>In progress</div>
+                            )}
+                            {n.state === "next" && (
+                              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--gold-deep)" }}>Up next</div>
+                            )}
+                          </div>
+
+                          {n.fingerstyle && n.state !== "locked" && (
+                            <div className="absolute top-2 right-3 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--ink-soft)" }}>FS</div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </div>
