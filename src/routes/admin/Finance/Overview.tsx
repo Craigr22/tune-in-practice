@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useFinanceOverview, useRevenueTrend } from "@/hooks/useFinance";
-import { useTeacherStudents } from "@/hooks/useTeacherStudents";
+
 import { useStudents } from "@/hooks/useStudents";
 import { useBatches } from "@/hooks/useBatches";
 import { useTeachers } from "@/hooks/useTeachers";
