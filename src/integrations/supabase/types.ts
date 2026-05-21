@@ -475,6 +475,48 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_payouts: {
+        Row: {
+          adjustment: number
+          calculated: number
+          created_at: string
+          final: number
+          hours: number
+          id: string
+          marked_paid_by: string | null
+          month: string
+          paid_on: string | null
+          sessions: number
+          teacher_id: string
+        }
+        Insert: {
+          adjustment?: number
+          calculated?: number
+          created_at?: string
+          final?: number
+          hours?: number
+          id?: string
+          marked_paid_by?: string | null
+          month: string
+          paid_on?: string | null
+          sessions?: number
+          teacher_id: string
+        }
+        Update: {
+          adjustment?: number
+          calculated?: number
+          created_at?: string
+          final?: number
+          hours?: number
+          id?: string
+          marked_paid_by?: string | null
+          month?: string
+          paid_on?: string | null
+          sessions?: number
+          teacher_id?: string
+        }
+        Relationships: []
+      }
       teachers: {
         Row: {
           created_at: string
