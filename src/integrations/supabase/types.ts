@@ -18,23 +18,35 @@ export type Database = {
         Row: {
           id: string
           recording_url: string | null
+          reviewed_at: string | null
           session_id: string
+          song_id: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           student_id: string
+          submitted_at: string | null
+          teacher_comment: string | null
         }
         Insert: {
           id?: string
           recording_url?: string | null
+          reviewed_at?: string | null
           session_id: string
+          song_id?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           student_id: string
+          submitted_at?: string | null
+          teacher_comment?: string | null
         }
         Update: {
           id?: string
           recording_url?: string | null
+          reviewed_at?: string | null
           session_id?: string
+          song_id?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           student_id?: string
+          submitted_at?: string | null
+          teacher_comment?: string | null
         }
         Relationships: [
           {

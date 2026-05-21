@@ -35,7 +35,11 @@ const TopNav = () => {
           </>
         )}
         {(role === "teacher" || role === "admin") && (
-          <a className={`nav-link ${isActive("/teacher") ? "active" : ""}`} onClick={() => go("/teacher")}>My class</a>
+          <>
+            <a className={`nav-link ${isActive("/teacher/today") ? "active" : ""}`} onClick={() => go("/teacher/today")}>Today</a>
+            <a className={`nav-link ${isActive("/teacher/students") ? "active" : ""}`} onClick={() => go("/teacher/students")}>My Students</a>
+            <a className={`nav-link ${isActive("/teacher/recordings") ? "active" : ""}`} onClick={() => go("/teacher/recordings")}>Recordings</a>
+          </>
         )}
       </div>
       <div className="streak-chip">🔥 keep it up</div>
