@@ -9,6 +9,7 @@ export interface PracticeLog {
   played_on: string;
   duration_min: number;
   self_rated_badge: number | null;
+  tuning_check_completed: boolean;
   created_at: string;
 }
 
@@ -60,13 +61,21 @@ export function useLogPractice() {
   const qc = useQueryClient();
   const { data: student } = useStudentMe();
   return useMutation({
-    mutationFn: async ({ songId, durationMin, selfBadge }: { songId: string; durationMin: number; selfBadge: number | null }) => {
+    mutationFn: async ({
+      songId, durationMin, selfBadge, tuningCheckCompleted = false,
+    }: {
+      songId: string;
+      durationMin: number;
+      selfBadge: number | null;
+      tuningCheckCompleted?: boolean;
+    }) => {
       if (!student?.id) throw new Error("Not linked to a student record yet");
       const { error } = await supabase.from("practice_logs").insert({
         student_id: student.id,
         song_id: songId,
         duration_min: durationMin,
         self_rated_badge: selfBadge,
+        tuning_check_completed: tuningCheckCompleted,
       });
       if (error) throw error;
     },
@@ -75,6 +84,12 @@ export function useLogPractice() {
       qc.invalidateQueries({ queryKey: ["song-progress"] });
     },
   });
+}
+
+export function tuningRate(logs: PracticeLog[]): { tuned: number; total: number; pct: number } {
+  const total = logs.length;
+  const tuned = logs.filter((l) => l.tuning_check_completed).length;
+  return { tuned, total, pct: total > 0 ? Math.round((tuned / total) * 100) : 0 };
 }
 
 /* ----- helpers ----- */

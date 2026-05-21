@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SONGS } from "@/data/songs";
-import { usePracticeLogs, useSongProgress, avgCourseBadge } from "@/hooks/useStudentProgress";
+import { usePracticeLogs, useSongProgress, avgCourseBadge, tuningRate } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 
@@ -79,6 +79,9 @@ const Journey = () => {
                 {songsToNext} {songsToNext === 1 ? "song" : "songs"} to {courseNext.name} {courseNext.emoji}
               </p>
             )}
+            <p className="mt-2 text-xs" style={{ color: "var(--ink-soft)" }}>
+              🎵 Tuned before <strong style={{ color: "var(--ink)" }}>{tuningRate(logs).pct}%</strong> of practices this semester
+            </p>
           </div>
         </section>
 
@@ -123,7 +126,10 @@ const Journey = () => {
                             className="flex items-center justify-between text-xs rounded-lg px-3 py-2"
                             style={{ background: "var(--paper-cool)" }}
                           >
-                            <span style={{ color: "var(--ink)" }}>{l.played_on}</span>
+                            <span style={{ color: "var(--ink)" }}>
+                              {l.tuning_check_completed && <span title="Tuned before practice" style={{ marginRight: 6 }}>🎵</span>}
+                              {l.played_on}
+                            </span>
                             <span style={{ color: "var(--ink-soft)" }}>{l.duration_min} min</span>
                             <span>
                               {l.self_rated_badge ? getBadge(l.self_rated_badge)?.emoji : "—"}
