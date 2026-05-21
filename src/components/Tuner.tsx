@@ -104,7 +104,7 @@ export default function Tuner() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
-  const bufRef = useRef<Float32Array | null>(null);
+  const bufRef = useRef<Float32Array<ArrayBuffer> | null>(null);
   const oscRef = useRef<{ osc: OscillatorNode; gain: GainNode } | null>(null);
 
   useEffect(() => {
