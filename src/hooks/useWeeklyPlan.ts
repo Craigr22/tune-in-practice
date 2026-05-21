@@ -159,9 +159,15 @@ export function useStudentBatchDay() {
   });
 }
 
-export function useWeeklyPlan() {
+export function addWeeks(iso: string, n: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + n * 7);
+  return d.toISOString().slice(0, 10);
+}
+
+export function useWeeklyPlan(weekStartArg?: string) {
   const { data: student } = useStudentMe();
-  const weekStart = isoMonday();
+  const weekStart = weekStartArg ?? isoMonday();
   return useQuery({
     queryKey: ["weekly-plan", student?.id, weekStart],
     enabled: !!student?.id,
@@ -178,29 +184,29 @@ export function useWeeklyPlan() {
   });
 }
 
-export function useEnsureWeeklyPlan() {
+export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const qc = useQueryClient();
   const { data: student } = useStudentMe();
   const { data: batch } = useStudentBatchDay();
   const { data: progress = [] } = useSongProgress();
   const { data: logs = [] } = usePracticeLogs();
-  const { data: existing } = useWeeklyPlan();
-  const weekStart = isoMonday();
+  const weekStart = weekStartArg ?? isoMonday();
+  const { data: existing } = useWeeklyPlan(weekStart);
 
   useEffect(() => {
     if (!student?.id) return;
     if (existing === undefined) return; // still loading
     if (existing.length >= 3) return;
 
-    const weekNumber = Math.max(
-      1,
-      Math.floor((Date.now() - new Date(student.joined_on).getTime()) / (7 * 86_400_000)) + 1
+    const weeksSinceJoin = Math.floor(
+      (new Date(weekStart).getTime() - new Date(student.joined_on).getTime()) / (7 * 86_400_000)
     );
+    const weekNumber = Math.max(1, weeksSinceJoin + 1);
 
     const rows = buildWeekRows({
       studentId: student.id,
       weekStart,
-      classDayOfWeek: batch?.day_of_week ?? 6, // default Saturday
+      classDayOfWeek: batch?.day_of_week ?? 6,
       weekNumber,
       progress,
       logs,
@@ -212,7 +218,7 @@ export function useEnsureWeeklyPlan() {
       .upsert(rows, { onConflict: "student_id,week_start,session_index" })
       .then(() => qc.invalidateQueries({ queryKey: ["weekly-plan", student.id, weekStart] }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, existing?.length, batch?.day_of_week]);
+  }, [student?.id, existing?.length, batch?.day_of_week, weekStart]);
 }
 
 export function useCompleteSegment() {
