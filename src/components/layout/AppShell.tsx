@@ -22,7 +22,7 @@ const TopNav = () => {
   return (
     <nav className="topnav">
       <div className="brand">
-        <span className="dot"></span>bam <span className="uku">Ukulele · Sem 1</span>
+        <span className="dot"></span>bam <span className="uku">​</span>
       </div>
       <div className="nav-spacer"></div>
       <div className="nav-links">
