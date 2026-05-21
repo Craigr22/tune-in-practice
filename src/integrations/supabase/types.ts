@@ -592,6 +592,84 @@ export type Database = {
         }
         Relationships: []
       }
+      weekly_plan_sessions: {
+        Row: {
+          bonus_completed: boolean
+          bonus_instruction: string
+          bonus_song_id: string | null
+          bonus_target_min: number
+          bonus_type: Database["public"]["Enums"]["bonus_type"]
+          completed_at: string | null
+          created_at: string
+          focus_completed: boolean
+          focus_instruction: string
+          focus_song_id: string
+          focus_target_min: number
+          generated_at: string
+          id: string
+          scheduled_date: string
+          session_index: number
+          session_type: Database["public"]["Enums"]["session_kind"]
+          student_id: string
+          updated_at: string
+          warmup_completed: boolean
+          warmup_instruction: string
+          warmup_song_id: string | null
+          warmup_target_min: number
+          week_start: string
+        }
+        Insert: {
+          bonus_completed?: boolean
+          bonus_instruction?: string
+          bonus_song_id?: string | null
+          bonus_target_min?: number
+          bonus_type?: Database["public"]["Enums"]["bonus_type"]
+          completed_at?: string | null
+          created_at?: string
+          focus_completed?: boolean
+          focus_instruction?: string
+          focus_song_id: string
+          focus_target_min?: number
+          generated_at?: string
+          id?: string
+          scheduled_date: string
+          session_index: number
+          session_type?: Database["public"]["Enums"]["session_kind"]
+          student_id: string
+          updated_at?: string
+          warmup_completed?: boolean
+          warmup_instruction?: string
+          warmup_song_id?: string | null
+          warmup_target_min?: number
+          week_start: string
+        }
+        Update: {
+          bonus_completed?: boolean
+          bonus_instruction?: string
+          bonus_song_id?: string | null
+          bonus_target_min?: number
+          bonus_type?: Database["public"]["Enums"]["bonus_type"]
+          completed_at?: string | null
+          created_at?: string
+          focus_completed?: boolean
+          focus_instruction?: string
+          focus_song_id?: string
+          focus_target_min?: number
+          generated_at?: string
+          id?: string
+          scheduled_date?: string
+          session_index?: number
+          session_type?: Database["public"]["Enums"]["session_kind"]
+          student_id?: string
+          updated_at?: string
+          warmup_completed?: boolean
+          warmup_instruction?: string
+          warmup_song_id?: string | null
+          warmup_target_min?: number
+          week_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -632,6 +710,11 @@ export type Database = {
     Enums: {
       app_role: "admin" | "teacher" | "student"
       attendance_status: "present" | "late" | "absent"
+      bonus_type:
+        | "callback_song"
+        | "mini_challenge"
+        | "jam"
+        | "foundation_refresh"
       enrollment_status: "active" | "paused" | "dropped"
       expense_category:
         | "rent"
@@ -644,6 +727,7 @@ export type Database = {
       payment_status: "paid" | "pending" | "overdue"
       payment_type: "per_hour" | "per_session" | "fixed_monthly"
       practice_check_in: "nailed" | "got_through" | "need_help"
+      session_kind: "build" | "flow" | "stretch"
       session_status: "upcoming" | "completed" | "cancelled"
     }
     CompositeTypes: {
@@ -774,6 +858,12 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "teacher", "student"],
       attendance_status: ["present", "late", "absent"],
+      bonus_type: [
+        "callback_song",
+        "mini_challenge",
+        "jam",
+        "foundation_refresh",
+      ],
       enrollment_status: ["active", "paused", "dropped"],
       expense_category: ["rent", "utilities", "equipment", "marketing", "misc"],
       fee_cycle: ["monthly", "quarterly", "semester"],
@@ -781,6 +871,7 @@ export const Constants = {
       payment_status: ["paid", "pending", "overdue"],
       payment_type: ["per_hour", "per_session", "fixed_monthly"],
       practice_check_in: ["nailed", "got_through", "need_help"],
+      session_kind: ["build", "flow", "stretch"],
       session_status: ["upcoming", "completed", "cancelled"],
     },
   },
