@@ -134,6 +134,7 @@ const TopNav = ({
     <div className="nav-links">
       <a className={`nav-link ${view === "home" ? "active" : ""}`} onClick={() => navigateTo("home")}>Course</a>
       <a className={`nav-link ${view === "foundations" ? "active" : ""}`} onClick={() => navigateTo("foundations")}>Foundations</a>
+      <a className={`nav-link ${view === "tuner" ? "active" : ""}`} onClick={() => navigateTo("tuner")}>Tuner</a>
       <a className="nav-link">Library</a>
       <a className="nav-link">My class</a>
     </div>
