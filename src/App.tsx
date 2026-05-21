@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppShell from "@/components/layout/AppShell";
 import Home from "@/routes/student/Home";
+import Journey from "@/routes/student/Journey";
+import Songs from "@/routes/student/Songs";
 import Foundations from "@/routes/student/Foundations";
 import TunerRoute from "@/routes/student/Tuner";
 import SongDetail from "@/routes/student/SongDetail";
@@ -34,6 +36,8 @@ const App = () => (
               <Route element={<AppShell />}>
                 <Route path="/" element={<Navigate to="/student" replace />} />
                 <Route path="/student" element={<Home />} />
+                <Route path="/student/journey" element={<Journey />} />
+                <Route path="/student/songs" element={<Songs />} />
                 <Route path="/student/foundations" element={<Foundations />} />
                 <Route path="/student/tuner" element={<TunerRoute />} />
                 <Route path="/student/song/:id" element={<SongDetail />} />
