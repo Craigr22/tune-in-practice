@@ -45,7 +45,7 @@ const Home = () => {
 
   const startSession = () => {
     if (todaysSession && sessionSong) {
-      navigate(`/student/songs/${sessionSong.id}`, { state: { planSessionId: todaysSession.id } });
+      navigate(`/student/song/${sessionSong.id}`, { state: { planSessionId: todaysSession.id } });
     } else if (focusSong) {
       openSong(focusSong.id);
     }
