@@ -318,31 +318,43 @@ export type Database = {
       }
       practice_logs: {
         Row: {
+          acknowledged_at: string | null
+          check_in: Database["public"]["Enums"]["practice_check_in"] | null
           created_at: string
           duration_min: number
           id: string
           played_on: string
+          recording_url: string | null
           self_rated_badge: number | null
+          shared_with_teacher: boolean
           song_id: string
           student_id: string
           tuning_check_completed: boolean
         }
         Insert: {
+          acknowledged_at?: string | null
+          check_in?: Database["public"]["Enums"]["practice_check_in"] | null
           created_at?: string
           duration_min?: number
           id?: string
           played_on?: string
+          recording_url?: string | null
           self_rated_badge?: number | null
+          shared_with_teacher?: boolean
           song_id: string
           student_id: string
           tuning_check_completed?: boolean
         }
         Update: {
+          acknowledged_at?: string | null
+          check_in?: Database["public"]["Enums"]["practice_check_in"] | null
           created_at?: string
           duration_min?: number
           id?: string
           played_on?: string
+          recording_url?: string | null
           self_rated_badge?: number | null
+          shared_with_teacher?: boolean
           song_id?: string
           student_id?: string
           tuning_check_completed?: boolean
@@ -631,6 +643,7 @@ export type Database = {
       payment_method: "cash" | "upi" | "card" | "bank"
       payment_status: "paid" | "pending" | "overdue"
       payment_type: "per_hour" | "per_session" | "fixed_monthly"
+      practice_check_in: "nailed" | "got_through" | "need_help"
       session_status: "upcoming" | "completed" | "cancelled"
     }
     CompositeTypes: {
@@ -767,6 +780,7 @@ export const Constants = {
       payment_method: ["cash", "upi", "card", "bank"],
       payment_status: ["paid", "pending", "overdue"],
       payment_type: ["per_hour", "per_session", "fixed_monthly"],
+      practice_check_in: ["nailed", "got_through", "need_help"],
       session_status: ["upcoming", "completed", "cancelled"],
     },
   },
