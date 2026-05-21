@@ -1,8 +1,21 @@
 import { useMemo, useState } from "react";
-import { STUDENTS, RECORDINGS } from "@/data/students";
+import { STUDENTS as MOCK_STUDENTS, RECORDINGS, type Student } from "@/data/students";
+import { useStudents } from "@/hooks/useStudents";
 
 const MyClass = () => {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const { data: dbStudents } = useStudents();
+
+  // Merge DB rows (source of truth for who exists) with mock display data
+  // (attendance/workload/streak/etc. — fields not yet modeled in the schema).
+  const STUDENTS: Student[] = useMemo(() => {
+    if (!dbStudents || dbStudents.length === 0) return MOCK_STUDENTS;
+    const byName = new Map(MOCK_STUDENTS.map((s) => [s.name, s]));
+    return dbStudents.map((row) => byName.get(row.name) ?? ({
+      ...MOCK_STUDENTS[0], name: row.name, joined: `Joined ${row.joined_on}`,
+      avatar: row.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase(),
+    } as Student));
+  }, [dbStudents]);
 
   const recordingBars = useMemo(
     () =>
