@@ -6,7 +6,7 @@ import FloatingTuner from "@/components/shared/FloatingTuner";
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, role, signOut } = useAuth();
+  const { user, role, actualRole, setViewAs, signOut } = useAuth();
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
@@ -17,7 +17,6 @@ const TopNav = () => {
   };
 
   const initials = (user?.email || "?").slice(0, 2).toUpperCase();
-  const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : "—";
 
   return (
     <nav className="topnav">
@@ -49,9 +48,25 @@ const TopNav = () => {
         )}
       </div>
       <div className="streak-chip">🔥 keep it up</div>
+      {actualRole === "admin" && (
+        <div className="role-toggle" title="View the app as a different role">
+          <button
+            className={`role-btn ${role === "admin" ? "active" : ""}`}
+            onClick={() => { setViewAs(null); go("/admin"); }}
+          >Admin</button>
+          <button
+            className={`role-btn ${role === "teacher" ? "active" : ""}`}
+            onClick={() => { setViewAs("teacher"); go("/teacher/today"); }}
+          >Teacher</button>
+          <button
+            className={`role-btn ${role === "student" ? "active" : ""}`}
+            onClick={() => { setViewAs("student"); go("/student"); }}
+          >Student</button>
+        </div>
+      )}
       <div className="role-toggle" title={user?.email ?? ""}>
-        <span className="role-btn active" style={{ pointerEvents: "none" }}>{roleLabel}</span>
-        <button className="role-btn" onClick={signOut}>{initials} · Sign out</button>
+        <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
+        <button className="role-btn" onClick={signOut}>Sign out</button>
       </div>
     </nav>
   );
