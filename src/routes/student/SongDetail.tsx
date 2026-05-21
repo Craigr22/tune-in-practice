@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, useLocation } from "react-router-dom";
+import { useWeeklyPlan, useMarkSessionComplete, useCompleteSegment } from "@/hooks/useWeeklyPlan";
+import SegmentedPracticeView from "@/components/student/SegmentedPracticeView";
 import { useSongs } from "@/hooks/useSongs";
 import { useLogPractice, CHECK_IN_LABEL, CHECK_IN_EMOJI, type CheckIn } from "@/hooks/useStudentProgress";
 import { useTuner, useLowG } from "@/hooks/useTuner";
@@ -48,6 +50,12 @@ const SongDetail = () => {
   const [tuningChecked, setTuningChecked] = useState(false);
   const [inlineTunerOpen, setInlineTunerOpen] = useState(false);
   const [lowG] = useLowG();
+  const location = useLocation();
+  const planSessionId = (location.state as { planSessionId?: string } | null)?.planSessionId;
+  const { data: weekPlan = [] } = useWeeklyPlan();
+  const planSession = planSessionId ? weekPlan.find((s) => s.id === planSessionId) : undefined;
+  const markComplete = useMarkSessionComplete();
+  const completeSeg = useCompleteSegment();
 
   const [prompt, setPrompt] = useState(false);
   const [duration, setDuration] = useState(10);
@@ -159,20 +167,34 @@ const SongDetail = () => {
                   )}
                 </div>
               )}
-              <div className="bam-tabs">
-                {(["warmup", "drills", "song", "plan"] as TabKey[]).map((t) => (
-                  <div key={t} className={`bam-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
-                    <span className="ic">{ { warmup: "🎯", drills: "🔁", song: "🎵", plan: "📅" }[t] }</span>
-                    {{ warmup: "Warm Up", drills: "Drills", song: "Song", plan: "Plan" }[t]}
+              {planSession ? (
+                <SegmentedPracticeView
+                  session={planSession}
+                  focusContent={<SongTab song={song} />}
+                  onAllDone={() => {
+                    completeSeg.mutate({ id: planSession.id, segment: "focus" });
+                    markComplete.mutate(planSession.id);
+                    handleLogPlay(song.id);
+                  }}
+                />
+              ) : (
+                <>
+                  <div className="bam-tabs">
+                    {(["warmup", "drills", "song", "plan"] as TabKey[]).map((t) => (
+                      <div key={t} className={`bam-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
+                        <span className="ic">{ { warmup: "🎯", drills: "🔁", song: "🎵", plan: "📅" }[t] }</span>
+                        {{ warmup: "Warm Up", drills: "Drills", song: "Song", plan: "Plan" }[t]}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="bam-content bam-content--page">
-                {tab === "warmup" && <WarmupTab song={song} setTab={setTab} />}
-                {tab === "drills" && <DrillsTab song={song} />}
-                {tab === "song" && <SongTab song={song} />}
-                {tab === "plan" && <PlanTab song={song} logPlay={handleLogPlay} />}
-              </div>
+                  <div className="bam-content bam-content--page">
+                    {tab === "warmup" && <WarmupTab song={song} setTab={setTab} />}
+                    {tab === "drills" && <DrillsTab song={song} />}
+                    {tab === "song" && <SongTab song={song} />}
+                    {tab === "plan" && <PlanTab song={song} logPlay={handleLogPlay} />}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

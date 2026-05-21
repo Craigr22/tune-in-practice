@@ -13,6 +13,7 @@ import {
 } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
+import PracticeDiary from "@/components/student/PracticeDiary";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
@@ -115,6 +116,8 @@ const Journey = () => {
     <section className="view view-journey active">
       <div className="home" style={{ paddingBottom: 100 }}>
         <button onClick={() => navigate("/student")} className="back-link" style={{ marginBottom: 16 }}>← Back home</button>
+
+        <PracticeDiary />
 
         {/* Course-level badge / quest header */}
         <section
