@@ -116,6 +116,8 @@ const Journey = () => {
       <div className="home" style={{ paddingBottom: 100 }}>
         <button onClick={() => navigate("/student")} className="back-link" style={{ marginBottom: 16 }}>← Back home</button>
 
+        <PracticeDiary />
+
         {/* Course-level badge / quest header */}
         <section
           className="rounded-3xl p-6 md:p-8 mb-6 flex items-center gap-6 flex-wrap"
