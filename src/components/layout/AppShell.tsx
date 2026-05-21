@@ -17,7 +17,6 @@ const TopNav = () => {
   };
 
   const initials = (user?.email || "?").slice(0, 2).toUpperCase();
-  const roleLabel = role ? role.charAt(0).toUpperCase() + role.slice(1) : "—";
 
   return (
     <nav className="topnav">
