@@ -13,6 +13,7 @@ import {
 } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
+import PracticeDiary from "@/components/student/PracticeDiary";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
