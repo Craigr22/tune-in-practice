@@ -95,6 +95,7 @@ const Journey = () => {
         totalMin: songLogs.reduce((a, l) => a + (l.duration_min || 0), 0),
         firstDate,
         lastDate,
+        track: s.track,
         fingerstyle: s.fingerstyle,
       };
     });
