@@ -2,13 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FOUNDATIONS } from "@/data/foundations";
 import { useSongs } from "@/hooks/useSongs";
+import { useFoundationProgress } from "@/hooks/useFoundationProgress";
+import TuneCheckLesson from "@/components/shared/TuneCheckLesson";
 
 const Foundations = () => {
   const navigate = useNavigate();
   const { foundationsState, markFoundationsComplete } = useSongs();
+  const { data: dbCompleted = [] } = useFoundationProgress();
   const [activeId, setActiveId] = useState("hold");
   const active = FOUNDATIONS.find((f) => f.id === activeId)!;
   const moduleRef = useRef<HTMLDivElement>(null);
+
+  const isDone = (id: string) =>
+    !!foundationsState.find((x) => x.id === id)?.done ||
+    dbCompleted.some((c) => c.foundation_id === id);
 
   useEffect(() => {
     const root = moduleRef.current;
@@ -35,7 +42,7 @@ const Foundations = () => {
         <div className="foundations-grid">
           <nav className="foundations-nav">
             {FOUNDATIONS.map((f, i) => {
-              const done = foundationsState.find((x) => x.id === f.id)?.done;
+              const done = isDone(f.id);
               return (
                 <div
                   key={f.id}
@@ -47,13 +54,31 @@ const Foundations = () => {
                 </div>
               );
             })}
+            <div
+              className="foundations-nav-item"
+              style={{ marginTop: 12, opacity: 0.8 }}
+              onClick={() => navigate("/student/tuner")}
+            >
+              <div className="foundations-nav-num">🎼</div>
+              <div>Standalone tuner →</div>
+            </div>
           </nav>
           <div className="foundations-module" ref={moduleRef}>
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.18em", color: "var(--gold-deep)", marginBottom: 10 }}>
               {active.eyebrow}
             </div>
             <h2>{active.title}</h2>
-            <div dangerouslySetInnerHTML={{ __html: active.body }} />
+            {activeId === "tune" ? (
+              <>
+                <p className="lead">An out-of-tune ukulele makes everything you play sound wrong — even when you're playing it right. Let's tune together, one string at a time.</p>
+                <p style={{ marginBottom: 16, fontSize: 14, color: "var(--ink-soft)" }}>
+                  Play each string when prompted. Turn the peg slowly until the needle centers and the bar turns green. Hold for a second to confirm.
+                </p>
+                <TuneCheckLesson />
+              </>
+            ) : (
+              <div dangerouslySetInnerHTML={{ __html: active.body }} />
+            )}
           </div>
         </div>
       </div>
