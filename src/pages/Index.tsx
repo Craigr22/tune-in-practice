@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SONGS, SONG_REASONING, type Song } from "@/data/songs";
+import { SONG_AUDIO } from "@/data/audio";
 import { FOUNDATIONS } from "@/data/foundations";
 import { STUDENTS, RECORDINGS } from "@/data/students";
 import Tuner from "@/components/Tuner";
@@ -532,6 +533,22 @@ const SongOverlay = ({ song, close, logPlay }: { song: Song; close: () => void; 
       <div className="song-page-content">
         <div className="bam-phone bam-phone--page">
           <SongHeader song={song} close={close} />
+          {SONG_AUDIO[song.id] && (
+            <div style={{ padding: "12px 16px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Reference track
+              </div>
+              <audio controls preload="none" style={{ width: "100%" }} src={SONG_AUDIO[song.id].src} />
+              {SONG_AUDIO[song.id].fullSrc && (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Full audio
+                  </div>
+                  <audio controls preload="none" style={{ width: "100%" }} src={SONG_AUDIO[song.id].fullSrc} />
+                </>
+              )}
+            </div>
+          )}
           <div className="bam-tabs">
             {(["warmup", "drills", "song", "plan"] as Tab[]).map((t) => (
               <div key={t} className={`bam-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
