@@ -144,7 +144,7 @@ const Home = () => {
         {/* ===== STREAK STRIP ===== */}
         <button
           onClick={() => navigate("/student/journey")}
-          className="w-full rounded-2xl px-5 py-4 flex items-center justify-between gap-4 text-left transition-colors hover:bg-[var(--paper-warm)]"
+          className="w-full rounded-2xl px-5 py-4 flex items-center justify-between gap-4 text-left"
           style={{ background: "var(--card)", border: "1px solid var(--border)" }}
         >
           <div className="flex items-center gap-6 flex-wrap">
