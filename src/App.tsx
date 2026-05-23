@@ -13,6 +13,8 @@ import TunerRoute from "@/routes/student/Tuner";
 import SongDetail from "@/routes/student/SongDetail";
 import Today from "@/routes/teacher/Today";
 import MyStudents from "@/routes/teacher/MyStudents";
+import Schedule from "@/routes/teacher/Schedule";
+
 
 import AdminDashboard from "@/routes/admin/Dashboard";
 import FinanceLayout from "@/routes/admin/Finance/Layout";
@@ -51,6 +53,8 @@ const App = () => (
                 <Route path="/teacher" element={<Navigate to="/teacher/today" replace />} />
                 <Route path="/teacher/today" element={<Today />} />
                 <Route path="/teacher/students" element={<MyStudents />} />
+                <Route path="/teacher/schedule" element={<Schedule />} />
+
                 
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/finance" element={<FinanceLayout />}>
