@@ -13,6 +13,8 @@ import TunerRoute from "@/routes/student/Tuner";
 import SongDetail from "@/routes/student/SongDetail";
 import Today from "@/routes/teacher/Today";
 import MyStudents from "@/routes/teacher/MyStudents";
+import Schedule from "@/routes/teacher/Schedule";
+
 
 import AdminDashboard from "@/routes/admin/Dashboard";
 import FinanceLayout from "@/routes/admin/Finance/Layout";
