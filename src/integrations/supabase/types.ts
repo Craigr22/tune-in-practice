@@ -373,6 +373,7 @@ export type Database = {
         Row: {
           batch_id: string
           completed_at: string | null
+          covered_tags: string[]
           id: string
           scheduled_date: string
           status: Database["public"]["Enums"]["session_status"]
@@ -381,6 +382,7 @@ export type Database = {
         Insert: {
           batch_id: string
           completed_at?: string | null
+          covered_tags?: string[]
           id?: string
           scheduled_date: string
           status?: Database["public"]["Enums"]["session_status"]
@@ -389,6 +391,7 @@ export type Database = {
         Update: {
           batch_id?: string
           completed_at?: string | null
+          covered_tags?: string[]
           id?: string
           scheduled_date?: string
           status?: Database["public"]["Enums"]["session_status"]
