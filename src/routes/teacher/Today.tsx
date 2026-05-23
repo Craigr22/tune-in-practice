@@ -78,21 +78,13 @@ function useEnsureSession() {
       if (args.sessionId) return args.sessionId;
       const { data, error } = await supabase
         .from("sessions")
-        .insert({ batch_id: args.batchId, scheduled_date: args.date, status: "in_progress" })
+        .insert({ batch_id: args.batchId, scheduled_date: args.date, status: "upcoming" })
         .select("id")
         .single();
-      if (error) {
-        // fallback if 'in_progress' not valid enum
-        const { data: d2, error: e2 } = await supabase
-          .from("sessions")
-          .insert({ batch_id: args.batchId, scheduled_date: args.date, status: "upcoming" })
-          .select("id")
-          .single();
-        if (e2) throw e2;
-        return d2.id as string;
-      }
+      if (error) throw error;
       return data.id as string;
     },
+
     onSuccess: () => qc.invalidateQueries({ queryKey: ["teacher-next-class"] }),
   });
 }
