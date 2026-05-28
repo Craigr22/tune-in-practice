@@ -71,7 +71,7 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
   const [showRecorder, setShowRecorder] = useState(false);
   const logPractice = useLogPractice();
 
-  useEffect(() => { setTab("warmup"); setPhase("intro"); setTuningChecked(false); }, [id]);
+  useEffect(() => { setTab("warmup"); setPhase(inline ? "practice" : "intro"); setTuningChecked(false); }, [id, inline]);
 
   if (!song) {
     if (inline) return null;
