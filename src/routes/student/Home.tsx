@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SongDetail from "@/routes/student/SongDetail";
 import { useSongs } from "@/hooks/useSongs";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { usePracticeLogs, useSongProgress, computeStreak, minutesThisWeek, songsInProgress } from "@/hooks/useStudentProgress";
