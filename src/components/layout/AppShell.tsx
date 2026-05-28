@@ -26,7 +26,7 @@ const TopNav = () => {
       </div>
       <div className="nav-spacer"></div>
       <div className="nav-links">
-        {role === "student" && (
+        {role !== "teacher" && (
           <>
             <a className={`nav-link ${isActive("/student", true) ? "active" : ""}`} onClick={() => go("/student")}>Home</a>
             <a className={`nav-link ${isActive("/student/journey") ? "active" : ""}`} onClick={() => go("/student/journey")}>Journey</a>
@@ -50,6 +50,10 @@ const TopNav = () => {
       <div className="streak-chip">🔥 keep it up</div>
       {actualRole === "admin" && (
         <div className="role-toggle" title="View the app as a different role">
+          <button
+            className={`role-btn ${role === "admin" ? "active" : ""}`}
+            onClick={() => { setViewAs(null); go("/admin"); }}
+          >Admin</button>
           <button
             className={`role-btn ${role === "teacher" ? "active" : ""}`}
             onClick={() => { setViewAs("teacher"); go("/teacher/today"); }}
