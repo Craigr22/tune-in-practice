@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SongDetail from "@/routes/student/SongDetail";
 import { useSongs } from "@/hooks/useSongs";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { usePracticeLogs, useSongProgress, computeStreak, minutesThisWeek, songsInProgress } from "@/hooks/useStudentProgress";
@@ -17,7 +18,7 @@ function pickFocusSong() {
 
 const Home = () => {
   const navigate = useNavigate();
-  const { openSong } = useSongs();
+  const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
   const { data: student } = useStudentMe();
   const { data: logs = [] } = usePracticeLogs();
   const { data: progress = [] } = useSongProgress();
@@ -44,11 +45,8 @@ const Home = () => {
   const totalMins = todaysSession ? (todaysSession.warmup_target_min + todaysSession.focus_target_min + todaysSession.bonus_target_min) : 0;
 
   const startSession = () => {
-    if (todaysSession && sessionSong) {
-      navigate(`/student/song/${sessionSong.id}`, { state: { planSessionId: todaysSession.id } });
-    } else if (focusSong) {
-      openSong(focusSong.id);
-    }
+    const target = (todaysSession && sessionSong) ? sessionSong.id : focusSong?.id;
+    if (target) setExpandedSongId(target);
   };
 
   return (
@@ -107,7 +105,7 @@ const Home = () => {
         {currentSong && (
           <section
             className="rounded-3xl p-6 md:p-8 mb-5 cursor-pointer transition-shadow hover:shadow-lg"
-            onClick={() => openSong(currentSong.id)}
+            onClick={() => setExpandedSongId((cur) => cur === currentSong.id ? null : currentSong.id)}
             style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}
           >
             <div className="flex items-center justify-between gap-6">
@@ -145,6 +143,13 @@ const Home = () => {
             </div>
           </section>
         )}
+
+        {expandedSongId && (
+          <div className="mb-5 rounded-3xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--card)" }}>
+            <SongDetail songId={expandedSongId} inline onClose={() => setExpandedSongId(null)} />
+          </div>
+        )}
+
 
         {/* ===== STREAK STRIP ===== */}
         <button
