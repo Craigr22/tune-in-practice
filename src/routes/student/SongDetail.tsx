@@ -125,7 +125,7 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
     <div className="song-page" id="songOverlay">
       <div className="song-page-content">
         <div className="bam-phone bam-phone--page" style={{ position: "relative" }}>
-          <SongHeader song={song} close={closeSong} />
+          <SongHeader song={song} close={handleClose} />
 
           {phase === "intro" && (
             <div className="p-4 border-b" style={{ borderColor: "var(--border)" }}>
