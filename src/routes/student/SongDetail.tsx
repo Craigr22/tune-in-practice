@@ -53,7 +53,7 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
   const { getSong, closeSong, logPlay } = useSongs();
   const song = id ? getSong(id) : undefined;
   const [tab, setTab] = useState<TabKey>("warmup");
-  const [phase, setPhase] = useState<Phase>("intro");
+  const [phase, setPhase] = useState<Phase>(inline ? "practice" : "intro");
   const [tuningChecked, setTuningChecked] = useState(false);
   const [inlineTunerOpen, setInlineTunerOpen] = useState(false);
   const [lowG] = useLowG();
@@ -71,7 +71,7 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
   const [showRecorder, setShowRecorder] = useState(false);
   const logPractice = useLogPractice();
 
-  useEffect(() => { setTab("warmup"); setPhase("intro"); setTuningChecked(false); }, [id]);
+  useEffect(() => { setTab("warmup"); setPhase(inline ? "practice" : "intro"); setTuningChecked(false); }, [id, inline]);
 
   if (!song) {
     if (inline) return null;
