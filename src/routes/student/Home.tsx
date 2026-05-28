@@ -144,6 +144,15 @@ const Home = () => {
           </section>
         )}
 
+        {expandedSongId && (
+          <div className="mb-5 rounded-3xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--card)" }}>
+            <SongDetail songId={expandedSongId} inline onClose={() => setExpandedSongId(null)} />
+          </div>
+        )}
+
+        {false && (
+          <section>
+
         {/* ===== STREAK STRIP ===== */}
         <button
           onClick={() => navigate("/student/journey")}
