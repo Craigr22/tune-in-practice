@@ -18,7 +18,7 @@ function pickFocusSong() {
 
 const Home = () => {
   const navigate = useNavigate();
-  const { openSong } = useSongs();
+  const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
   const { data: student } = useStudentMe();
   const { data: logs = [] } = usePracticeLogs();
   const { data: progress = [] } = useSongProgress();
