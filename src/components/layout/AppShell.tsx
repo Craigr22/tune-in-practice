@@ -2,6 +2,7 @@ import { Outlet, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
+import FloatingFoundations from "@/components/shared/FloatingFoundations";
 
 const TopNav = () => {
   const location = useLocation();
@@ -29,8 +30,6 @@ const TopNav = () => {
           <>
             <a className={`nav-link ${isActive("/student", true) ? "active" : ""}`} onClick={() => go("/student")}>Home</a>
             <a className={`nav-link ${isActive("/student/journey") ? "active" : ""}`} onClick={() => go("/student/journey")}>Journey</a>
-            
-            <a className={`nav-link ${isActive("/student/foundations") || isActive("/student/tuner") ? "active" : ""}`} onClick={() => go("/student/foundations")}>Foundations</a>
           </>
         )}
         {(role === "teacher" || role === "admin") && (
@@ -89,6 +88,7 @@ const AppShell = () => {
       <main id="app">
         <Outlet />
       </main>
+      {showFloatingTuner && <FloatingFoundations />}
       {showFloatingTuner && <FloatingTuner />}
     </SongsProvider>
   );
