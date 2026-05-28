@@ -105,7 +105,7 @@ const Home = () => {
         {currentSong && (
           <section
             className="rounded-3xl p-6 md:p-8 mb-5 cursor-pointer transition-shadow hover:shadow-lg"
-            onClick={() => openSong(currentSong.id)}
+            onClick={() => setExpandedSongId((cur) => cur === currentSong.id ? null : currentSong.id)}
             style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}
           >
             <div className="flex items-center justify-between gap-6">
