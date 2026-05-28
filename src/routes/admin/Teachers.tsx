@@ -210,9 +210,12 @@ export default function AdminTeachers() {
 
   return (
     <section className="p-6 max-w-6xl mx-auto">
-      <header className="mb-4">
-        <h1 className="text-2xl font-semibold">My Teachers</h1>
-        <p className="text-sm text-muted-foreground">{teachers.length} total</p>
+      <header className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">My Teachers</h1>
+          <p className="text-sm text-muted-foreground">{teachers.length} total</p>
+        </div>
+        <AddTeacherDialog instrumentsMap={instrumentsMap} />
       </header>
 
       <div className="mb-4">
