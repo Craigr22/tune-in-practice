@@ -150,8 +150,6 @@ const Home = () => {
           </div>
         )}
 
-        {false && (
-          <section>
 
         {/* ===== STREAK STRIP ===== */}
         <button
