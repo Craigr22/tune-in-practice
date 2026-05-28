@@ -43,6 +43,8 @@ const TopNav = () => {
         {role === "admin" && (
           <>
             <a className={`nav-link ${isActive("/admin", true) ? "active" : ""}`} onClick={() => go("/admin")}>Dashboard</a>
+            <a className={`nav-link ${isActive("/admin/students") ? "active" : ""}`} onClick={() => go("/admin/students")}>My Students</a>
+            <a className={`nav-link ${isActive("/admin/teachers") ? "active" : ""}`} onClick={() => go("/admin/teachers")}>My Teachers</a>
             <a className={`nav-link ${isActive("/admin/finance") ? "active" : ""}`} onClick={() => go("/admin/finance")}>Finance</a>
           </>
         )}
