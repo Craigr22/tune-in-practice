@@ -41,8 +41,15 @@ const TunerPill = ({ lowG, active, onClick }: { lowG: boolean; active: boolean; 
   );
 };
 
-const SongDetail = () => {
-  const { id } = useParams<{ id: string }>();
+interface SongDetailProps {
+  songId?: string;
+  inline?: boolean;
+  onClose?: () => void;
+}
+
+const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {}) => {
+  const params = useParams<{ id: string }>();
+  const id = songIdProp ?? params.id;
   const { getSong, closeSong, logPlay } = useSongs();
   const song = id ? getSong(id) : undefined;
   const [tab, setTab] = useState<TabKey>("warmup");
@@ -66,7 +73,13 @@ const SongDetail = () => {
 
   useEffect(() => { setTab("warmup"); setPhase("intro"); setTuningChecked(false); }, [id]);
 
-  if (!song) return <Navigate to="/student" replace />;
+  if (!song) {
+    if (inline) return null;
+    return <Navigate to="/student" replace />;
+  }
+
+  const handleClose = onClose ?? closeSong;
+
 
   const beginTuning = () => setPhase("tune");
   const onTuneSubmit = (completed: boolean) => {
