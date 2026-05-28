@@ -26,7 +26,7 @@ const TopNav = () => {
       </div>
       <div className="nav-spacer"></div>
       <div className="nav-links">
-        {role !== "teacher" && (
+        {role === "student" && (
           <>
             <a className={`nav-link ${isActive("/student", true) ? "active" : ""}`} onClick={() => go("/student")}>Home</a>
             <a className={`nav-link ${isActive("/student/journey") ? "active" : ""}`} onClick={() => go("/student/journey")}>Journey</a>
