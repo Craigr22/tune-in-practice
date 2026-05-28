@@ -45,11 +45,8 @@ const Home = () => {
   const totalMins = todaysSession ? (todaysSession.warmup_target_min + todaysSession.focus_target_min + todaysSession.bonus_target_min) : 0;
 
   const startSession = () => {
-    if (todaysSession && sessionSong) {
-      navigate(`/student/song/${sessionSong.id}`, { state: { planSessionId: todaysSession.id } });
-    } else if (focusSong) {
-      openSong(focusSong.id);
-    }
+    const target = (todaysSession && sessionSong) ? sessionSong.id : focusSong?.id;
+    if (target) setExpandedSongId(target);
   };
 
   return (
