@@ -1,11 +1,17 @@
 import { useMemo, useState } from "react";
 import { useTeacherStudents, useStudentDetail } from "@/hooks/useTeacherStudents";
 import { computeRetention } from "@/lib/retention";
-import { getBadge } from "@/lib/badges";
+import { getBadge, BADGES } from "@/lib/badges";
 import { CHECK_IN_COLOR, type CheckIn } from "@/hooks/useStudentProgress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { SONGS } from "@/data/songs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/lib/db";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import WeeklyPlanEditor from "@/components/teacher/WeeklyPlanEditor";
 
 /* ---------- helpers ---------- */
 function dailyMinutes(practice: { played_on: string; duration_min: number }[], days: number) {
@@ -72,13 +78,68 @@ function StudentRow({ student, onOpen }: { student: any; onOpen: () => void }) {
   );
 }
 
+/* ---------- songs tab with editable teacher badge ---------- */
+function SongsEditor({ studentId, progress }: { studentId: string; progress: any[] }) {
+  const qc = useQueryClient();
+  const byId = new Map(progress.map((p) => [p.song_id, p]));
+  const semSongs = SONGS.filter((s) => !s.fingerstyle).slice(0, 12);
+
+  const setBadge = async (song_id: string, value: number | null) => {
+    const existing = byId.get(song_id);
+    const payload: any = {
+      student_id: studentId,
+      song_id,
+      teacher_badge: value,
+      last_updated: new Date().toISOString(),
+    };
+    if (existing) {
+      const { error } = await supabase
+        .from("song_progress")
+        .update({ teacher_badge: value, last_updated: payload.last_updated })
+        .eq("id", existing.id);
+      if (error) return toast.error(error.message);
+    } else {
+      const { error } = await supabase.from("song_progress").insert(payload);
+      if (error) return toast.error(error.message);
+    }
+    toast.success("Updated");
+    qc.invalidateQueries({ queryKey: ["student-detail", studentId] });
+  };
+
+  return (
+    <div className="border rounded-md divide-y">
+      {semSongs.map((s) => {
+        const p: any = byId.get(s.id);
+        const sb = getBadge(p?.self_badge);
+        return (
+          <div key={s.id} className="flex items-center justify-between px-3 py-2 gap-2">
+            <div className="truncate text-sm">{s.title}</div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">S: {sb ? sb.emoji : "—"}</span>
+              <Select
+                value={p?.teacher_badge != null ? String(p.teacher_badge) : "0"}
+                onValueChange={(v) => setBadge(s.id, Number(v) || null)}
+              >
+                <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">— none</SelectItem>
+                  {BADGES.map((b) => (
+                    <SelectItem key={b.value} value={String(b.value)}>{b.emoji} {b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ---------- detail drawer ---------- */
-function StudentDetail({ student, onClose }: { student: any | null; onClose: () => void }) {
+function StudentDetail({ student, batch, onClose }: { student: any | null; batch: any | null; onClose: () => void }) {
   const { data } = useStudentDetail(student?.id);
   if (!student) return null;
-
-  const progressBySong = new Map((data?.progress ?? []).map((p: any) => [p.song_id, p]));
-  const semSongs = SONGS.filter((s) => !s.fingerstyle).slice(0, 8);
 
   // 12-week dot grid
   const weeks = 12;
@@ -95,88 +156,87 @@ function StudentDetail({ student, onClose }: { student: any | null; onClose: () 
 
   return (
     <Sheet open={!!student} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle>{student.name}</SheetTitle>
         </SheetHeader>
-        <div className="mt-3 space-y-6 text-sm">
-          <div className="text-muted-foreground space-y-0.5">
+        <div className="mt-3 space-y-4 text-sm">
+          <div className="text-muted-foreground space-y-0.5 text-xs">
             {student.parent_name && <div>Parent: {student.parent_name}</div>}
             {student.phone && (
+              <div>Phone: <a className="text-primary underline" href={`tel:${student.phone}`}>{student.phone}</a></div>
+            )}
+            {batch && (
               <div>
-                Phone: <a className="text-primary underline" href={`tel:${student.phone}`}>{student.phone}</a>
+                Course: <span className="text-foreground">{batch.semester_start ?? "—"} → {batch.semester_end ?? "ongoing"}</span>{" "}
+                <span className="opacity-60">(admin-managed)</span>
               </div>
             )}
           </div>
 
-          <section>
-            <h3 className="font-semibold mb-2">Songs</h3>
-            <div className="border rounded-md divide-y">
-              {semSongs.map((s) => {
-                const p: any = progressBySong.get(s.id);
-                const tb = getBadge(p?.teacher_badge);
-                const sb = getBadge(p?.self_badge);
-                return (
-                  <div key={s.id} className="flex items-center justify-between px-3 py-2">
-                    <div className="truncate">{s.title}</div>
-                    <div className="flex items-center gap-3 text-xs">
-                      <span title="Teacher badge">T: {tb ? `${tb.emoji} ${tb.name}` : "—"}</span>
-                      <span className="text-muted-foreground" title="Self badge">S: {sb ? sb.emoji : "—"}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+          <Tabs defaultValue="plan">
+            <TabsList>
+              <TabsTrigger value="plan">Weekly plan</TabsTrigger>
+              <TabsTrigger value="songs">Coursework</TabsTrigger>
+              <TabsTrigger value="practice">Practice</TabsTrigger>
+              <TabsTrigger value="attendance">Attendance</TabsTrigger>
+            </TabsList>
 
-          <section>
-            <h3 className="font-semibold mb-2">Practice — last 30 days</h3>
-            {recentPractice.length === 0 ? (
-              <div className="text-muted-foreground">No practice logs.</div>
-            ) : (
-              <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
-                {recentPractice.map((p: any) => {
-                  const song = SONGS.find((s) => s.id === p.song_id);
-                  return (
-                    <div key={p.id} className="flex items-center justify-between text-xs border-b py-1">
-                      <span className="flex items-center gap-2">
-                        {p.check_in && (
-                          <span className={`inline-block w-2 h-2 rounded-full ${CHECK_IN_COLOR[p.check_in as CheckIn]}`} />
-                        )}
-                        <span>{p.played_on}</span>
-                        <span className="text-muted-foreground">· {song?.title ?? p.song_id}</span>
-                      </span>
-                      <span className="tabular-nums">{p.duration_min}m</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+            <TabsContent value="plan" className="pt-3">
+              <WeeklyPlanEditor studentId={student.id} />
+            </TabsContent>
 
-          <section>
-            <h3 className="font-semibold mb-2">Attendance — last 12 weeks</h3>
-            <div className="grid grid-cols-12 gap-1" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` }}>
-              {Array.from({ length: weeks }).map((_, w) => (
-                <div key={w} className="flex flex-col gap-1">
-                  {Array.from({ length: 7 }).map((_, d) => {
-                    const cell = dayCells[w * 7 + d];
-                    const cls =
-                      cell?.status === "present" ? "bg-emerald-500" :
-                      cell?.status === "late" ? "bg-amber-500" :
-                      cell?.status === "absent" ? "bg-red-500" :
-                      "bg-muted";
-                    return <span key={d} className={`block w-3 h-3 rounded-sm ${cls}`} title={cell?.date} />;
+            <TabsContent value="songs" className="pt-3">
+              <SongsEditor studentId={student.id} progress={data?.progress ?? []} />
+            </TabsContent>
+
+            <TabsContent value="practice" className="pt-3">
+              {recentPractice.length === 0 ? (
+                <div className="text-muted-foreground text-xs">No practice logs.</div>
+              ) : (
+                <div className="space-y-1 max-h-96 overflow-y-auto pr-1">
+                  {recentPractice.map((p: any) => {
+                    const song = SONGS.find((s) => s.id === p.song_id);
+                    return (
+                      <div key={p.id} className="flex items-center justify-between text-xs border-b py-1">
+                        <span className="flex items-center gap-2">
+                          {p.check_in && (
+                            <span className={`inline-block w-2 h-2 rounded-full ${CHECK_IN_COLOR[p.check_in as CheckIn]}`} />
+                          )}
+                          <span>{p.played_on}</span>
+                          <span className="text-muted-foreground">· {song?.title ?? p.song_id}</span>
+                        </span>
+                        <span className="tabular-nums">{p.duration_min}m</span>
+                      </div>
+                    );
                   })}
                 </div>
-              ))}
-            </div>
-            <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> present</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" /> late</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" /> absent</span>
-            </div>
-          </section>
+              )}
+            </TabsContent>
+
+            <TabsContent value="attendance" className="pt-3">
+              <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` }}>
+                {Array.from({ length: weeks }).map((_, w) => (
+                  <div key={w} className="flex flex-col gap-1">
+                    {Array.from({ length: 7 }).map((_, d) => {
+                      const cell = dayCells[w * 7 + d];
+                      const cls =
+                        cell?.status === "present" ? "bg-emerald-500" :
+                        cell?.status === "late" ? "bg-amber-500" :
+                        cell?.status === "absent" ? "bg-red-500" :
+                        "bg-muted";
+                      return <span key={d} className={`block w-3 h-3 rounded-sm ${cls}`} title={cell?.date} />;
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> present</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" /> late</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" /> absent</span>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </SheetContent>
     </Sheet>
@@ -189,6 +249,7 @@ export default function MyStudents() {
   const [search, setSearch] = useState("");
   const [batchFilter, setBatchFilter] = useState<string>("all");
   const [openStudent, setOpenStudent] = useState<any | null>(null);
+  const [openBatch, setOpenBatch] = useState<any | null>(null);
 
   const visibleGroups = useMemo(() => {
     return groups
@@ -236,7 +297,10 @@ export default function MyStudents() {
             <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
               <div>
                 <div className="font-semibold">{g.batch.locations?.name} · {g.batch.instruments?.name}</div>
-                <div className="text-xs text-muted-foreground">{g.students.length} student{g.students.length === 1 ? "" : "s"}</div>
+                <div className="text-xs text-muted-foreground">
+                  {g.students.length} student{g.students.length === 1 ? "" : "s"} ·{" "}
+                  Course: {g.batch.semester_start ?? "—"} → {g.batch.semester_end ?? "ongoing"}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-[1.4fr_1fr_0.6fr_0.7fr_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
@@ -250,14 +314,18 @@ export default function MyStudents() {
               <div className="px-4 py-4 text-sm text-muted-foreground">No matching students.</div>
             ) : (
               g.students.map((s: any) => (
-                <StudentRow key={s.id} student={s} onOpen={() => setOpenStudent(s)} />
+                <StudentRow
+                  key={s.id}
+                  student={s}
+                  onOpen={() => { setOpenBatch(g.batch); setOpenStudent(s); }}
+                />
               ))
             )}
           </div>
         ))}
       </div>
 
-      <StudentDetail student={openStudent} onClose={() => setOpenStudent(null)} />
+      <StudentDetail student={openStudent} batch={openBatch} onClose={() => { setOpenStudent(null); setOpenBatch(null); }} />
     </section>
   );
 }
