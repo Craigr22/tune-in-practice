@@ -1,0 +1,14 @@
+/* react-big-calendar theme overrides */
+.rbc-calendar { color: hsl(var(--foreground)); font-family: inherit; }
+.rbc-toolbar button {
+  color: hsl(var(--foreground));
+  background: transparent;
+  border: 1px solid hsl(var(--border));
+}
+.rbc-toolbar button:hover, .rbc-toolbar button:focus { background: hsl(var(--accent)); }
+.rbc-toolbar button.rbc-active { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.rbc-month-view, .rbc-time-view, .rbc-header, .rbc-day-bg, .rbc-month-row, .rbc-time-content, .rbc-time-header-content { border-color: hsl(var(--border)) !important; }
+.rbc-off-range-bg { background: hsl(var(--muted) / 0.3); }
+.rbc-today { background: hsl(var(--accent) / 0.3); }
+.rbc-event { border-radius: 4px; padding: 2px 4px; font-size: 12px; }
+.rbc-show-more { color: hsl(var(--primary)); }
