@@ -102,6 +102,8 @@ export default function AdminSchedule() {
           events={events}
           defaultView={Views.MONTH}
           views={[Views.MONTH, Views.WEEK, Views.DAY]}
+          min={new Date(0, 0, 0, 9, 0, 0)}
+          max={new Date(0, 0, 0, 23, 0, 0)}
           onSelectEvent={(ev) => setSelectedSession((ev as any).resource)}
           eventPropGetter={(ev) => {
             const s = (ev as any).resource as Row;
