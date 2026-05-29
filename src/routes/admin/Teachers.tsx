@@ -1,93 +1,14 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTeachers } from "@/hooks/useTeachers";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
 import { formatINR } from "@/lib/finance";
 
-function AddTeacherDialog({ instrumentsMap }: { instrumentsMap: Map<string, string> }) {
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", rate: "" });
-  const [selected, setSelected] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-
-  const toggle = (id: string) =>
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-
-  const submit = async () => {
-    if (!form.name.trim()) return toast.error("Name required");
-    setSaving(true);
-    const { error } = await supabase.from("teachers").insert({
-      name: form.name.trim(),
-      email: form.email.trim() || null,
-      phone: form.phone.trim() || null,
-      rate: Number(form.rate || 0),
-      instruments: selected,
-    });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Teacher added");
-    qc.invalidateQueries({ queryKey: ["teachers"] });
-    setForm({ name: "", email: "", phone: "", rate: "" });
-    setSelected([]);
-    setOpen(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm"><Plus className="w-4 h-4 mr-1" />Add teacher</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add teacher</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          {[
-            ["name", "Name *"],
-            ["email", "Email"],
-            ["phone", "Phone"],
-            ["rate", "Rate"],
-          ].map(([k, l]) => (
-            <div key={k} className="space-y-1">
-              <Label>{l}</Label>
-              <Input
-                type={k === "rate" ? "number" : "text"}
-                value={(form as any)[k]}
-                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-              />
-            </div>
-          ))}
-          {instrumentsMap.size > 0 && (
-            <div className="space-y-1">
-              <Label>Instruments</Label>
-              <div className="flex flex-wrap gap-2">
-                {Array.from(instrumentsMap.entries()).map(([id, name]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => toggle(id)}
-                    className={`text-xs px-2 py-1 rounded-full border ${selected.includes(id) ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-                  >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button onClick={submit} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// Add-teacher flow lives in the Users tab.
 
 function useInstrumentsMap() {
   return useQuery({
