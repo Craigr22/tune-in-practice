@@ -136,7 +136,7 @@ export default function AdminTeachers() {
           <h1 className="text-2xl font-semibold">My Teachers</h1>
           <p className="text-sm text-muted-foreground">{teachers.length} total</p>
         </div>
-        <AddTeacherDialog instrumentsMap={instrumentsMap} />
+        <Button asChild size="sm" variant="outline"><Link to="/admin/users">Add via Users</Link></Button>
       </header>
 
       <div className="mb-4">
