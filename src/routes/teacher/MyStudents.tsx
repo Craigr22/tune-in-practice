@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTeacherStudents, useStudentDetail } from "@/hooks/useTeacherStudents";
 import { computeRetention } from "@/lib/retention";
-import { getBadge, BADGES } from "@/lib/badges";
+import { getBadge, BADGE_LIST } from "@/lib/badges";
 import { CHECK_IN_COLOR, type CheckIn } from "@/hooks/useStudentProgress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
@@ -123,8 +123,8 @@ function SongsEditor({ studentId, progress }: { studentId: string; progress: any
                 <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">— none</SelectItem>
-                  {BADGES.map((b) => (
-                    <SelectItem key={b.value} value={String(b.value)}>{b.emoji} {b.name}</SelectItem>
+                  {BADGE_LIST.map((b) => (
+                    <SelectItem key={b.level} value={String(b.level)}>{b.emoji} {b.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
