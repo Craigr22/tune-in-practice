@@ -72,6 +72,19 @@ const TopNav = () => {
             onClick={() => { setViewAs("student"); go("/student"); }}
           >Student</button>
         </div>
+      {actualRole === "admin" && role === "teacher" && (
+        <select
+          className="role-btn"
+          style={{ padding: "4px 8px", fontSize: 12 }}
+          value={impersonatedId ?? ""}
+          onChange={(e) => setImpersonatedTeacherId(e.target.value || null)}
+          title="View as teacher"
+        >
+          <option value="">Own account</option>
+          {teachers.map((t: any) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
       )}
       <div className="role-toggle" title={user?.email ?? ""}>
         <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
