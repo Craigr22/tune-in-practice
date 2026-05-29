@@ -9,62 +9,7 @@ import { SONGS } from "@/data/songs";
 import { getBadge } from "@/lib/badges";
 import { formatINR } from "@/lib/finance";
 
-function AddStudentDialog() {
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", parent_name: "", fee_amount: "" });
-  const [saving, setSaving] = useState(false);
-
-  const submit = async () => {
-    if (!form.name.trim()) return toast.error("Name required");
-    setSaving(true);
-    const { error } = await supabase.from("students").insert({
-      name: form.name.trim(),
-      email: form.email.trim() || null,
-      phone: form.phone.trim() || null,
-      parent_name: form.parent_name.trim() || null,
-      fee_amount: Number(form.fee_amount || 0),
-    });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Student added");
-    qc.invalidateQueries({ queryKey: ["students"] });
-    setForm({ name: "", email: "", phone: "", parent_name: "", fee_amount: "" });
-    setOpen(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm"><Plus className="w-4 h-4 mr-1" />Add student</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add student</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          {[
-            ["name", "Name *"],
-            ["email", "Email"],
-            ["phone", "Phone"],
-            ["parent_name", "Parent name"],
-            ["fee_amount", "Fee amount"],
-          ].map(([k, l]) => (
-            <div key={k} className="space-y-1">
-              <Label>{l}</Label>
-              <Input
-                type={k === "fee_amount" ? "number" : "text"}
-                value={(form as any)[k]}
-                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-              />
-            </div>
-          ))}
-        </div>
-        <DialogFooter>
-          <Button onClick={submit} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// Add-student flow lives in the Users tab.
 
 function StudentDetail({ student, onClose }: { student: any | null; onClose: () => void }) {
   const { data } = useStudentDetail(student?.id);
