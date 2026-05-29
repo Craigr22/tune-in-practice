@@ -1,15 +1,10 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useStudents } from "@/hooks/useStudents";
 import { useStudentDetail } from "@/hooks/useTeacherStudents";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/db";
-import { toast } from "sonner";
 import { SONGS } from "@/data/songs";
 import { getBadge } from "@/lib/badges";
 import { formatINR } from "@/lib/finance";
