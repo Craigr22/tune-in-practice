@@ -19,6 +19,8 @@ import Schedule from "@/routes/teacher/Schedule";
 import AdminDashboard from "@/routes/admin/Dashboard";
 import AdminStudents from "@/routes/admin/Students";
 import AdminTeachers from "@/routes/admin/Teachers";
+import AdminSchedule from "@/routes/admin/Schedule";
+import AdminUsers from "@/routes/admin/Users";
 import FinanceLayout from "@/routes/admin/Finance/Layout";
 import FinanceOverview from "@/routes/admin/Finance/Overview";
 import FinancePayments from "@/routes/admin/Finance/Payments";
