@@ -72,6 +72,7 @@ const TopNav = () => {
             onClick={() => { setViewAs("student"); go("/student"); }}
           >Student</button>
         </div>
+      )}
       {actualRole === "admin" && role === "teacher" && (
         <select
           className="role-btn"
