@@ -93,7 +93,7 @@ export default function AdminStudents() {
           <h1 className="text-2xl font-semibold">My Students</h1>
           <p className="text-sm text-muted-foreground">{students.length} total</p>
         </div>
-        <AddStudentDialog />
+        <Button asChild size="sm" variant="outline"><Link to="/admin/users">Add via Users</Link></Button>
       </header>
 
       <div className="mb-4">
