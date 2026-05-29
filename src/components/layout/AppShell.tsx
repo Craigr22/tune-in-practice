@@ -8,13 +8,20 @@ import {
   setImpersonatedTeacherId,
   useTeacherList,
 } from "@/hooks/useTeacherImpersonation";
+import {
+  useImpersonatedStudentId,
+  setImpersonatedStudentId,
+  useStudentList,
+} from "@/hooks/useStudentImpersonation";
 
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, actualRole, setViewAs, signOut } = useAuth();
-  const impersonatedId = useImpersonatedTeacherId();
+  const impersonatedTeacherId = useImpersonatedTeacherId();
   const { data: teachers = [] } = useTeacherList(actualRole === "admin" && role === "teacher");
+  const impersonatedStudentId = useImpersonatedStudentId();
+  const { data: students = [] } = useStudentList(actualRole === "admin" && role === "student");
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
@@ -77,13 +84,27 @@ const TopNav = () => {
         <select
           className="role-btn"
           style={{ padding: "4px 8px", fontSize: 12 }}
-          value={impersonatedId ?? ""}
+          value={impersonatedTeacherId ?? ""}
           onChange={(e) => setImpersonatedTeacherId(e.target.value || null)}
           title="View as teacher"
         >
           <option value="">Own account</option>
           {teachers.map((t: any) => (
             <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      )}
+      {actualRole === "admin" && role === "student" && (
+        <select
+          className="role-btn"
+          style={{ padding: "4px 8px", fontSize: 12 }}
+          value={impersonatedStudentId ?? ""}
+          onChange={(e) => setImpersonatedStudentId(e.target.value || null)}
+          title="View as student"
+        >
+          <option value="">Own account</option>
+          {students.map((s: any) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
       )}
