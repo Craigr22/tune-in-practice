@@ -3,11 +3,18 @@ import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
 import FloatingFoundations from "@/components/shared/FloatingFoundations";
+import {
+  useImpersonatedTeacherId,
+  setImpersonatedTeacherId,
+  useTeacherList,
+} from "@/hooks/useTeacherImpersonation";
 
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, actualRole, setViewAs, signOut } = useAuth();
+  const impersonatedId = useImpersonatedTeacherId();
+  const { data: teachers = [] } = useTeacherList(actualRole === "admin" && role === "teacher");
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
