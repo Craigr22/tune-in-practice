@@ -8,13 +8,20 @@ import {
   setImpersonatedTeacherId,
   useTeacherList,
 } from "@/hooks/useTeacherImpersonation";
+import {
+  useImpersonatedStudentId,
+  setImpersonatedStudentId,
+  useStudentList,
+} from "@/hooks/useStudentImpersonation";
 
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, actualRole, setViewAs, signOut } = useAuth();
-  const impersonatedId = useImpersonatedTeacherId();
+  const impersonatedTeacherId = useImpersonatedTeacherId();
   const { data: teachers = [] } = useTeacherList(actualRole === "admin" && role === "teacher");
+  const impersonatedStudentId = useImpersonatedStudentId();
+  const { data: students = [] } = useStudentList(actualRole === "admin" && role === "student");
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
