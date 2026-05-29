@@ -3,11 +3,18 @@ import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
 import FloatingFoundations from "@/components/shared/FloatingFoundations";
+import {
+  useImpersonatedTeacherId,
+  setImpersonatedTeacherId,
+  useTeacherList,
+} from "@/hooks/useTeacherImpersonation";
 
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, role, actualRole, setViewAs, signOut } = useAuth();
+  const impersonatedId = useImpersonatedTeacherId();
+  const { data: teachers = [] } = useTeacherList(actualRole === "admin" && role === "teacher");
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
@@ -65,6 +72,20 @@ const TopNav = () => {
             onClick={() => { setViewAs("student"); go("/student"); }}
           >Student</button>
         </div>
+      )}
+      {actualRole === "admin" && role === "teacher" && (
+        <select
+          className="role-btn"
+          style={{ padding: "4px 8px", fontSize: 12 }}
+          value={impersonatedId ?? ""}
+          onChange={(e) => setImpersonatedTeacherId(e.target.value || null)}
+          title="View as teacher"
+        >
+          <option value="">Own account</option>
+          {teachers.map((t: any) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
       )}
       <div className="role-toggle" title={user?.email ?? ""}>
         <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
