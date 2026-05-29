@@ -84,13 +84,27 @@ const TopNav = () => {
         <select
           className="role-btn"
           style={{ padding: "4px 8px", fontSize: 12 }}
-          value={impersonatedId ?? ""}
+          value={impersonatedTeacherId ?? ""}
           onChange={(e) => setImpersonatedTeacherId(e.target.value || null)}
           title="View as teacher"
         >
           <option value="">Own account</option>
           {teachers.map((t: any) => (
             <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      )}
+      {actualRole === "admin" && role === "student" && (
+        <select
+          className="role-btn"
+          style={{ padding: "4px 8px", fontSize: 12 }}
+          value={impersonatedStudentId ?? ""}
+          onChange={(e) => setImpersonatedStudentId(e.target.value || null)}
+          title="View as student"
+        >
+          <option value="">Own account</option>
+          {students.map((s: any) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
       )}
