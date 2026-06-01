@@ -729,6 +729,10 @@ export type Database = {
         | "equipment"
         | "marketing"
         | "misc"
+        | "gst"
+        | "subscriptions"
+        | "salary"
+        | "instrument_purchase"
       fee_cycle: "monthly" | "quarterly" | "semester"
       payment_method: "cash" | "upi" | "card" | "bank"
       payment_status: "paid" | "pending" | "overdue"
@@ -872,7 +876,17 @@ export const Constants = {
         "foundation_refresh",
       ],
       enrollment_status: ["active", "paused", "dropped"],
-      expense_category: ["rent", "utilities", "equipment", "marketing", "misc"],
+      expense_category: [
+        "rent",
+        "utilities",
+        "equipment",
+        "marketing",
+        "misc",
+        "gst",
+        "subscriptions",
+        "salary",
+        "instrument_purchase",
+      ],
       fee_cycle: ["monthly", "quarterly", "semester"],
       payment_method: ["cash", "upi", "card", "bank"],
       payment_status: ["paid", "pending", "overdue"],
