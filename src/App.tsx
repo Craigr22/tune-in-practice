@@ -25,6 +25,8 @@ import FinanceLayout from "@/routes/admin/Finance/Layout";
 import FinanceOverview from "@/routes/admin/Finance/Overview";
 import FinancePayments from "@/routes/admin/Finance/Payments";
 import FinancePayouts from "@/routes/admin/Finance/Payouts";
+import FinanceExpenses from "@/routes/admin/Finance/Expenses";
+import FinancePnL from "@/routes/admin/Finance/PnL";
 import Login from "@/pages/Login";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -69,6 +71,8 @@ const App = () => (
                   <Route index element={<FinanceOverview />} />
                   <Route path="payments" element={<FinancePayments />} />
                   <Route path="payouts" element={<FinancePayouts />} />
+                  <Route path="expenses" element={<FinanceExpenses />} />
+                  <Route path="pnl" element={<FinancePnL />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Route>

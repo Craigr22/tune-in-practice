@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useFinanceOverview, useRevenueTrend } from "@/hooks/useFinance";
 
 import { useStudents } from "@/hooks/useStudents";
@@ -50,11 +51,16 @@ export default function Overview() {
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold">Finance · Overview</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <KPI label="Gross revenue (MTD)" value={formatINR(overview?.gross ?? 0)} hint="Paid this month" />
         <KPI label="Outstanding dues" value={formatINR(overview?.dues ?? 0)} hint="Booked − collected" />
         <KPI label="Teacher payouts" value={formatINR(overview?.payouts ?? 0)} hint="Calculated for MTD" />
-        <KPI label="Net" value={formatINR(overview?.net ?? 0)} hint="Gross − payouts − expenses" />
+        <KPI label="Expenses (MTD)" value={formatINR(overview?.expenses ?? 0)} hint="Overheads this month" />
+        <Link to="pnl" className="block rounded-lg border p-4 bg-card hover:bg-muted transition-colors">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">Net</div>
+          <div className="text-2xl font-semibold mt-1">{formatINR(overview?.net ?? 0)}</div>
+          <div className="text-xs text-primary mt-1">View full P&amp;L →</div>
+        </Link>
       </div>
 
       <section className="rounded-lg border bg-card p-4">

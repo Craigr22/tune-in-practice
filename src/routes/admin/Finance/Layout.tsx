@@ -18,6 +18,8 @@ export default function FinanceLayout() {
         {tab("/admin/finance", "Overview", true)}
         {tab("/admin/finance/payments", "Payments")}
         {tab("/admin/finance/payouts", "Payouts")}
+        {tab("/admin/finance/expenses", "Expenses")}
+        {tab("/admin/finance/pnl", "P&L")}
       </div>
       <Outlet />
     </div>
