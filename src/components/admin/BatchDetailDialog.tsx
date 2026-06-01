@@ -51,12 +51,16 @@ export default function BatchDetailDialog({ batchId, onClose }: { batchId: strin
   const enrolledIds = new Set(enrollments.map((e: any) => e.student_id));
   const available = students.filter((s: any) => !enrolledIds.has(s.id));
 
+  const cap = (batch as any)?.max_students ?? 0;
+  const atCapacity = cap > 0 && enrollments.length >= cap;
+
   const enroll = async (studentId: string) => {
     const { error } = await supabase.from("enrollments").insert({ batch_id: batchId!, student_id: studentId });
     if (error) return toast.error(error.message);
-    toast.success("Student enrolled");
+    toast.success(atCapacity ? "Enrolled (class is now over capacity)" : "Student enrolled");
     setAdding("");
     qc.invalidateQueries({ queryKey: ["batch-enrollments", batchId] });
+    qc.invalidateQueries({ queryKey: ["batch-list"] });
   };
 
   const remove = async (id: string) => {
@@ -75,7 +79,10 @@ export default function BatchDetailDialog({ batchId, onClose }: { batchId: strin
               {(batch as any).instruments?.name} · {(batch as any).teachers?.name} · {(batch as any).locations?.name}
             </div>
             <div>
-              <div className="font-medium mb-2">Enrolled students ({enrollments.length})</div>
+              <div className="font-medium mb-2">
+                Enrolled students ({enrollments.length}{cap > 0 ? ` / ${cap}` : ""})
+                {atCapacity && <span className="ml-2 text-xs text-amber-600">at capacity</span>}
+              </div>
               <div className="space-y-1">
                 {enrollments.length === 0 && <div className="text-muted-foreground">No students yet.</div>}
                 {enrollments.map((e: any) => (

@@ -5,6 +5,16 @@ import { supabase } from "@/lib/db";
 import { useAuth } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -157,6 +167,8 @@ export default function AdminUsers() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<"all" | AppRole>("all");
+  const [pending, setPending] = useState<{ userId: string; name: string; current: AppRole; next: AppRole } | null>(null);
+  const [applying, setApplying] = useState(false);
 
   const { data: instrumentsMap = new Map() } = useQuery({
     queryKey: ["instruments-map"],
@@ -210,13 +222,28 @@ export default function AdminUsers() {
 
   if (role !== "admin") return <Navigate to="/" replace />;
 
-  const setRoleFor = async (userId: string, next: AppRole) => {
-    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
-    if (delErr) return toast.error(delErr.message);
-    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: next });
+  const adminCount = useMemo(() => rows.filter((r) => r.user_id && r.role === "admin").length, [rows]);
+
+  const requestRoleChange = (userId: string, name: string, current: AppRole, next: AppRole) => {
+    if (next === current) return;
+    // Guard: never strip the last remaining admin.
+    if (current === "admin" && next !== "admin" && adminCount <= 1) {
+      return toast.error("Can't change the only admin — promote another admin first.");
+    }
+    setPending({ userId, name, current, next });
+  };
+
+  const confirmRoleChange = async () => {
+    if (!pending) return;
+    setApplying(true);
+    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", pending.userId);
+    if (delErr) { setApplying(false); return toast.error(delErr.message); }
+    const { error } = await supabase.from("user_roles").insert({ user_id: pending.userId, role: pending.next });
+    setApplying(false);
     if (error) return toast.error(error.message);
-    toast.success("Role updated");
+    toast.success(`${pending.name} is now ${pending.next}`);
     qc.invalidateQueries({ queryKey: ["admin-users"] });
+    setPending(null);
   };
 
   const filtered = useMemo(() => {
@@ -284,7 +311,7 @@ export default function AdminUsers() {
                 <td className="p-3 text-muted-foreground">{r.phone ?? "—"}</td>
                 <td className="p-3">
                   {r.user_id ? (
-                    <Select value={r.role} onValueChange={(v) => setRoleFor(r.user_id!, v as AppRole)}>
+                    <Select value={r.role} onValueChange={(v) => requestRoleChange(r.user_id!, r.name, r.role, v as AppRole)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="admin">admin</SelectItem>
@@ -317,6 +344,43 @@ export default function AdminUsers() {
           </tbody>
         </table>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        “Awaiting signup” means a teacher/student record exists but no one has signed in with that email yet.
+        When they sign up using that email, link them by setting their role here.
+      </p>
+
+      <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change role?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pending && (
+                <>
+                  <strong>{pending.name}</strong> will change from{" "}
+                  <strong>{pending.current}</strong> to <strong>{pending.next}</strong>.
+                  {pending.next === "admin" && (
+                    <span className="block mt-2 text-amber-600">
+                      Admins can view and edit everything — finances, all students, teachers, and other admins.
+                    </span>
+                  )}
+                  {pending.current === "admin" && pending.next !== "admin" && (
+                    <span className="block mt-2 text-amber-600">
+                      This person will lose admin access immediately.
+                    </span>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={applying}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmRoleChange(); }} disabled={applying}>
+              {applying ? "Updating…" : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

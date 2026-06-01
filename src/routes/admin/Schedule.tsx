@@ -9,19 +9,13 @@ import "@/styles/calendar.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useAuth } from "@/hooks/useAuth";
-import { useTeachers } from "@/hooks/useTeachers";
+import { useBatchList, useSetBatchActive } from "@/hooks/useBatches";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Pencil, Users, Archive, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import BatchDetailDialog from "@/components/admin/BatchDetailDialog";
+import BatchFormDialog from "@/components/admin/BatchFormDialog";
 
 const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -47,9 +41,11 @@ type Row = {
 export default function AdminSchedule() {
   const { role } = useAuth();
   const qc = useQueryClient();
-  const [openNew, setOpenNew] = useState(false);
+  const [view, setView] = useState<"calendar" | "classes">("calendar");
+  const [formBatch, setFormBatch] = useState<any | null | undefined>(undefined); // undefined = closed
   const [selectedSession, setSelectedSession] = useState<Row | null>(null);
   const [openBatch, setOpenBatch] = useState<string | null>(null);
+  const setActive = useSetBatchActive();
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["admin-sessions"],
@@ -63,6 +59,8 @@ export default function AdminSchedule() {
     },
     enabled: role === "admin",
   });
+
+  const { data: classes = [] } = useBatchList();
 
   const events: Event[] = useMemo(() => sessions.map((s) => {
     const b = s.batches!;
@@ -84,37 +82,129 @@ export default function AdminSchedule() {
     setSelectedSession(null);
   };
 
+  const toggleArchive = (b: any) => {
+    setActive.mutate(
+      { id: b.id, is_active: !b.is_active },
+      { onSuccess: () => toast.success(b.is_active ? "Class archived" : "Class restored") },
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-semibold">Schedule</h1>
-        <Dialog open={openNew} onOpenChange={setOpenNew}>
-          <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-1" />New Batch</Button>
-          </DialogTrigger>
-          <NewBatchDialog onClose={() => setOpenNew(false)} />
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border overflow-hidden">
+            <button
+              onClick={() => setView("calendar")}
+              className={`px-3 py-1.5 text-sm ${view === "calendar" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+            >
+              Calendar
+            </button>
+            <button
+              onClick={() => setView("classes")}
+              className={`px-3 py-1.5 text-sm ${view === "classes" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+            >
+              Classes
+            </button>
+          </div>
+          <Button onClick={() => setFormBatch(null)}><Plus className="w-4 h-4 mr-1" />New class</Button>
+        </div>
       </div>
 
-      <div className="bg-card rounded-lg p-3 border" style={{ height: 720 }}>
-        <Calendar
-          localizer={localizer}
-          events={events}
-          defaultView={Views.MONTH}
-          views={[Views.MONTH, Views.WEEK, Views.DAY]}
-          min={new Date(0, 0, 0, 9, 0, 0)}
-          max={new Date(0, 0, 0, 23, 0, 0)}
-          onSelectEvent={(ev) => setSelectedSession((ev as any).resource)}
-          eventPropGetter={(ev) => {
-            const s = (ev as any).resource as Row;
-            if (s.status === "cancelled") {
-              return { style: { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", textDecoration: "line-through", border: "none" } };
-            }
-            return { style: { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", border: "none" } };
-          }}
-          style={{ height: "100%" }}
-        />
-      </div>
+      {view === "calendar" && (
+        <div className="bg-card rounded-lg p-3 border" style={{ height: 720 }}>
+          <Calendar
+            localizer={localizer}
+            events={events}
+            defaultView={Views.MONTH}
+            views={[Views.MONTH, Views.WEEK, Views.DAY]}
+            min={new Date(0, 0, 0, 9, 0, 0)}
+            max={new Date(0, 0, 0, 23, 0, 0)}
+            onSelectEvent={(ev) => setSelectedSession((ev as any).resource)}
+            eventPropGetter={(ev) => {
+              const s = (ev as any).resource as Row;
+              if (s.status === "cancelled") {
+                return { style: { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", textDecoration: "line-through", border: "none" } };
+              }
+              return { style: { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", border: "none" } };
+            }}
+            style={{ height: "100%" }}
+          />
+        </div>
+      )}
+
+      {view === "classes" && (
+        <div className="border rounded-lg overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted">
+              <tr>
+                <th className="text-left p-3">When</th>
+                <th className="text-left p-3">Instrument</th>
+                <th className="text-left p-3">Teacher</th>
+                <th className="text-left p-3">Location</th>
+                <th className="text-left p-3 w-44">Enrolled</th>
+                <th className="text-right p-3 w-44">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {classes.map((b: any) => {
+                const cap = b.max_students ?? 0;
+                const full = cap > 0 && b.enrolled >= cap;
+                const over = cap > 0 && b.enrolled > cap;
+                const pct = cap > 0 ? Math.min(100, Math.round((b.enrolled / cap) * 100)) : 0;
+                return (
+                  <tr key={b.id} className={`border-t ${!b.is_active ? "opacity-50" : ""}`}>
+                    <td className="p-3">
+                      <div className="font-medium">{DOW[b.day_of_week]} · {(b.start_time || "").slice(0, 5)}</div>
+                      <div className="text-xs text-muted-foreground">{b.duration_min} min</div>
+                    </td>
+                    <td className="p-3">{b.instruments?.name ?? "—"}</td>
+                    <td className="p-3">{b.teachers?.name ?? "TBA"}</td>
+                    <td className="p-3 text-muted-foreground">{b.locations?.name ?? "—"}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${over ? "text-red-600" : full ? "text-amber-600" : ""}`}>
+                          {b.enrolled}{cap > 0 ? ` / ${cap}` : ""}
+                        </span>
+                        {!b.is_active && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">archived</span>
+                        )}
+                      </div>
+                      {cap > 0 && (
+                        <div className="mt-1 h-1.5 w-28 rounded-full bg-muted overflow-hidden">
+                          <div className={`h-full ${over ? "bg-red-500" : full ? "bg-amber-500" : "bg-primary"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" title="Manage students" onClick={() => setOpenBatch(b.id)}>
+                          <Users className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" title="Edit class" onClick={() => setFormBatch(b)}>
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title={b.is_active ? "Archive class" : "Restore class"}
+                          onClick={() => toggleArchive(b)}
+                        >
+                          {b.is_active ? <Archive className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {classes.length === 0 && (
+                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No classes yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <Dialog open={!!selectedSession} onOpenChange={(o) => !o && setSelectedSession(null)}>
         <DialogContent>
@@ -143,127 +233,13 @@ export default function AdminSchedule() {
         </DialogContent>
       </Dialog>
 
+      <BatchFormDialog
+        open={formBatch !== undefined}
+        batch={formBatch ?? null}
+        onClose={() => setFormBatch(undefined)}
+      />
+
       <BatchDetailDialog batchId={openBatch} onClose={() => setOpenBatch(null)} />
     </div>
-  );
-}
-
-function NewBatchDialog({ onClose }: { onClose: () => void }) {
-  const qc = useQueryClient();
-  const { data: teachers = [] } = useTeachers();
-  const { data: instruments = [] } = useQuery({
-    queryKey: ["instruments"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("instruments").select("*").eq("is_active", true);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-  const { data: locations = [] } = useQuery({
-    queryKey: ["locations"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("locations").select("*").eq("is_active", true);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const [form, setForm] = useState({
-    teacher_id: "",
-    instrument_id: "",
-    location_id: "",
-    day_of_week: "1",
-    start_time: "17:00",
-    duration_min: "60",
-    semester_start: new Date().toISOString().slice(0, 10),
-    semester_end: "",
-  });
-  const [saving, setSaving] = useState(false);
-
-  const submit = async () => {
-    if (!form.teacher_id || !form.instrument_id || !form.location_id) {
-      return toast.error("Teacher, instrument, and location are required");
-    }
-    setSaving(true);
-    const { error } = await supabase.from("batches").insert({
-      teacher_id: form.teacher_id,
-      instrument_id: form.instrument_id,
-      location_id: form.location_id,
-      day_of_week: Number(form.day_of_week),
-      start_time: form.start_time + ":00",
-      duration_min: Number(form.duration_min),
-      semester_start: form.semester_start,
-      semester_end: form.semester_end || null,
-    });
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Batch created and sessions generated");
-    qc.invalidateQueries({ queryKey: ["admin-sessions"] });
-    qc.invalidateQueries({ queryKey: ["batches"] });
-    onClose();
-  };
-
-  return (
-    <DialogContent className="max-w-lg">
-      <DialogHeader><DialogTitle>New batch</DialogTitle></DialogHeader>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <Label>Teacher</Label>
-          <Select value={form.teacher_id} onValueChange={(v) => setForm({ ...form, teacher_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger>
-            <SelectContent>
-              {teachers.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Instrument</Label>
-          <Select value={form.instrument_id} onValueChange={(v) => setForm({ ...form, instrument_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              {instruments.map((i: any) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Location</Label>
-          <Select value={form.location_id} onValueChange={(v) => setForm({ ...form, location_id: v })}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              {locations.map((l: any) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Day of week</Label>
-          <Select value={form.day_of_week} onValueChange={(v) => setForm({ ...form, day_of_week: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {DOW.map((d, i) => <SelectItem key={i} value={String(i)}>{d}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Start time</Label>
-          <Input type="time" value={form.start_time} onChange={(e) => setForm({ ...form, start_time: e.target.value })} />
-        </div>
-        <div>
-          <Label>Duration (min)</Label>
-          <Input type="number" value={form.duration_min} onChange={(e) => setForm({ ...form, duration_min: e.target.value })} />
-        </div>
-        <div>
-          <Label>Start date</Label>
-          <Input type="date" value={form.semester_start} onChange={(e) => setForm({ ...form, semester_start: e.target.value })} />
-        </div>
-        <div>
-          <Label>End date (optional)</Label>
-          <Input type="date" value={form.semester_end} onChange={(e) => setForm({ ...form, semester_end: e.target.value })} />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>Cancel</Button>
-        <Button onClick={submit} disabled={saving}>{saving ? "Creating…" : "Create batch"}</Button>
-      </DialogFooter>
-    </DialogContent>
   );
 }
