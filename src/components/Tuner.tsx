@@ -5,10 +5,24 @@ import {
 } from "@/lib/tuner";
 
 /* ============================================================
-   Ukulele Tuner — standalone page (mic + reference tones).
+   BAM Tuner — standalone page (mic + reference tones).
    Pitch primitives live in `src/lib/tuner.ts`; the new
    mode-aware hook in `src/hooks/useTuner.ts` reuses them.
 ============================================================ */
+
+function TuningFork() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M8 2v8a4 4 0 0 0 8 0V2M12 14v8M9.5 22h5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export default function Tuner() {
   const [lowG, setLowG] = useState<boolean>(() => {
@@ -148,147 +162,131 @@ export default function Tuner() {
   }
 
   const absCents = Math.abs(cents);
-  const needleColor = absCents <= 5 ? "bg-emerald-500" : absCents <= 15 ? "bg-amber-400" : "bg-rose-500";
   const needlePct = Math.max(-50, Math.min(50, cents)); // -50..50 cents range
 
   const matchedString = targetString && absCents <= 8 ? targetString.name : null;
 
+  // Brand state for color theming (drives CSS via data-state)
+  const state = !freq ? "idle" : absCents <= 5 ? "tune" : absCents <= 15 ? "near" : "off";
+  const inTune = state === "tune";
+
   return (
-    <div className="mx-auto max-w-xl px-4 py-8 font-sans text-neutral-900">
-      <header className="mb-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Ukulele tuner</h1>
-        <p className="mt-1 text-sm text-neutral-500">
-          {lowG ? "Low-G tuning · G3 C4 E4 A4" : "Standard re-entrant · G4 C4 E4 A4"}
-        </p>
+    <div className="bamt" data-state={state}>
+      <header className="bamt-head">
+        <div className="bamt-eyebrow">BAM Academy of Music</div>
+        <div className="bamt-brand">
+          <span className="bamt-fork"><TuningFork /></span>
+          <div className="bamt-titlewrap">
+            <h1 className="bamt-title"><span className="bam">BAM</span> Tuner</h1>
+            <p className="bamt-mode">
+              {lowG ? "Low-G tuning · G3 C4 E4 A4" : "Standard re-entrant · G4 C4 E4 A4"}
+            </p>
+          </div>
+        </div>
       </header>
 
-      {/* String reference buttons */}
-      <div className="grid grid-cols-4 gap-3">
-        {STRINGS.map((s) => {
-          const isPlaying = tonePlaying === s.name;
-          const isMatched = matchedString === s.name;
-          const base = "rounded-2xl border py-5 text-2xl font-semibold transition-colors select-none";
-          const tone = isMatched
-            ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-            : isPlaying
-              ? "border-sky-500 bg-sky-50 text-sky-700"
-              : "border-neutral-200 bg-white text-neutral-900 hover:border-neutral-400";
-          return (
-            <button
-              key={s.name}
-              className={`${base} ${tone}`}
-              onClick={() => (isPlaying ? stopTone() : playTone(s))}
-              aria-label={`Play reference tone ${s.octaveLabel}`}
-            >
-              {s.name}
-              <div className="mt-1 text-[11px] font-normal uppercase tracking-wider text-neutral-500">
-                {s.octaveLabel}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Note display */}
-      <div className="mt-10 text-center">
-        <div className="inline-flex items-baseline justify-center">
-          <span className="text-[7rem] font-bold leading-none tracking-tight">{displayNote}</span>
-          {displayOctave && (
-            <span className="ml-1 text-2xl font-medium text-neutral-400">{displayOctave}</span>
-          )}
+      <div className="bamt-body">
+        {/* String reference */}
+        <div className="bamt-strings">
+          {STRINGS.map((s) => {
+            const isPlaying = tonePlaying === s.name;
+            const isMatched = matchedString === s.name;
+            const cls = isMatched ? "is-matched" : isPlaying ? "is-playing" : "";
+            return (
+              <button
+                key={s.name}
+                className={`bamt-string ${cls}`}
+                onClick={() => (isPlaying ? stopTone() : playTone(s))}
+                aria-label={`Play reference tone ${s.octaveLabel}`}
+              >
+                <div className="bamt-string-note">{s.name}</div>
+                <div className="bamt-string-label">{s.octaveLabel}</div>
+              </button>
+            );
+          })}
         </div>
-        <div className="mt-2 text-sm text-neutral-500">
-          {freq ? `${freq.toFixed(2)} Hz` : running ? "Listening…" : "Mic off"}
-        </div>
-      </div>
 
-      {/* Meter */}
-      <div className="mt-8">
-        <div className="relative h-12 rounded-full bg-neutral-100">
-          {/* tick marks */}
-          <div className="absolute inset-0 flex items-center justify-between px-3 text-[10px] text-neutral-400">
-            {[-50, -25, 0, 25, 50].map((t) => (
-              <span key={t} className="flex flex-col items-center">
-                <span className="h-3 w-px bg-neutral-300" />
-              </span>
-            ))}
+        {/* Note readout */}
+        <div className="bamt-readout">
+          <div className="bamt-note-line">
+            <span className="bamt-note">{displayNote}</span>
+            {displayOctave && <span className="bamt-octave">{displayOctave}</span>}
           </div>
-          {/* center line */}
-          <div className="pointer-events-none absolute left-1/2 top-1 h-10 w-0.5 -translate-x-1/2 bg-neutral-300" />
-          {/* needle */}
-          {freq && (
-            <div
-              className={`absolute top-1 h-10 w-1 rounded-full ${needleColor}`}
-              style={{
-                left: `calc(50% + ${needlePct}%)`,
-                transform: "translateX(-50%)",
-                transition: "left 80ms linear, background-color 120ms linear",
-              }}
-            />
-          )}
-        </div>
-        <div className="mt-2 flex justify-between text-xs text-neutral-500">
-          <span>flat</span>
-          <span>in tune</span>
-          <span>sharp</span>
-        </div>
-        <div className="mt-3 text-center text-sm">
-          {freq ? (
-            <span className={absCents <= 5 ? "text-emerald-600 font-medium" : "text-neutral-600"}>
-              {cents > 0 ? `+${cents}` : cents} cents
-              {absCents > 5 && (
-                <span className="ml-2 text-neutral-500">
-                  {cents > 0 ? "Tune down ↓" : "Tune up ↑"}
-                </span>
-              )}
-              {absCents <= 5 && <span className="ml-2">· in tune</span>}
+          <div>
+            <span className="bamt-hz">
+              {freq && <span className="live-dot" />}
+              {freq ? `${freq.toFixed(2)} Hz` : running ? "Listening…" : "Mic off"}
             </span>
+          </div>
+        </div>
+
+        {/* Meter */}
+        <div className="bamt-meter-wrap">
+          <div className="bamt-meter">
+            <div className="bamt-zone" />
+            <div className="bamt-ticks">
+              {[-50, -25, 0, 25, 50].map((t) => (
+                <span key={t} className={`bamt-tick ${t === 0 ? "major" : ""}`} />
+              ))}
+            </div>
+            <div className="bamt-center" />
+            {freq && (
+              <div
+                className="bamt-needle"
+                style={{ left: `calc(50% + ${needlePct}%)`, transform: "translateX(-50%)" }}
+              />
+            )}
+          </div>
+          <div className="bamt-scale">
+            <span>Flat</span>
+            <span>In tune</span>
+            <span>Sharp</span>
+          </div>
+        </div>
+
+        {/* Cents / status */}
+        <div className="bamt-status">
+          {!freq ? (
+            <span className="bamt-cents idle">—</span>
+          ) : inTune ? (
+            <span className="bamt-intune">✓ In tune</span>
           ) : (
-            <span className="text-neutral-400">—</span>
+            <span className="bamt-cents">
+              {cents > 0 ? `+${cents}` : cents} cents
+              <span className="dir">{cents > 0 ? "Tune down ↓" : "Tune up ↑"}</span>
+            </span>
           )}
         </div>
-      </div>
 
-      {/* Controls */}
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <button
-          onClick={running ? stopMic : startMic}
-          className={`rounded-full px-6 py-2.5 text-sm font-medium transition-colors ${
-            running
-              ? "bg-rose-500 text-white hover:bg-rose-600"
-              : "bg-neutral-900 text-white hover:bg-neutral-700"
-          }`}
-        >
-          {running ? "Stop mic" : "Start mic"}
-        </button>
-        {tonePlaying && (
+        {/* Controls */}
+        <div className="bamt-controls">
           <button
-            onClick={stopTone}
-            className="rounded-full border border-neutral-300 px-5 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            onClick={running ? stopMic : startMic}
+            className={`bamt-mic ${running ? "is-running" : ""}`}
           >
-            Stop tone
+            <span className="ic">{running ? "■" : "●"}</span>
+            {running ? "Stop mic" : "Start mic"}
           </button>
-        )}
-        <label className="flex items-center gap-2 text-sm text-neutral-600">
-          <input
-            type="checkbox"
-            checked={lowG}
-            onChange={(e) => setLowG(e.target.checked)}
-            className="h-4 w-4 accent-neutral-900"
-          />
-          Low-G
-        </label>
-      </div>
-
-      {error && (
-        <div className="mt-6 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
+          {tonePlaying && (
+            <button onClick={stopTone} className="bamt-stop-tone">
+              Stop tone
+            </button>
+          )}
+          <label className="bamt-lowg">
+            <input
+              type="checkbox"
+              checked={lowG}
+              onChange={(e) => setLowG(e.target.checked)}
+            />
+            <span className="bamt-switch" />
+            Low-G
+          </label>
         </div>
-      )}
 
-      <p className="mt-8 text-center text-xs text-neutral-400">
-        Pluck one string at a time. Hold still and let the note ring.
-      </p>
+        {error && <div className="bamt-error">{error}</div>}
+
+        <p className="bamt-hint">Pluck one string at a time. Hold still and let the note ring.</p>
+      </div>
     </div>
   );
 }
