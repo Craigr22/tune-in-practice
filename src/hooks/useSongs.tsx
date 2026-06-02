@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useNavigate } from "react-router-dom";
 import { SONGS } from "@/data/songs";
 import { FOUNDATIONS } from "@/data/foundations";
+import { useSongRows, rowToSong } from "@/hooks/useSongCatalog";
 import type { Song } from "@/lib/types";
 
 interface SongsContextValue {
@@ -22,6 +23,20 @@ export function SongsProvider({ children }: { children: ReactNode }) {
   const [foundationsState, setFoundationsState] = useState(() =>
     FOUNDATIONS.map((f) => ({ id: f.id, done: f.done }))
   );
+
+  // Merge admin-managed ukulele songs from the DB on top of the built-in
+  // catalog so new/customized songs appear everywhere (Home, Journey, detail).
+  const { data: dbRows = [] } = useSongRows("ukulele");
+  useEffect(() => {
+    setSongs((prev) => {
+      const byId = new Map(prev.map((s) => [s.id, s]));
+      for (const r of dbRows) {
+        if (!r.is_active) { byId.delete(r.id); continue; }
+        byId.set(r.id, { ...(byId.get(r.id) ?? {}), ...rowToSong(r) });
+      }
+      return Array.from(byId.values());
+    });
+  }, [dbRows]);
 
   const getSong = useCallback((id: string) => songs.find((s) => s.id === id), [songs]);
 

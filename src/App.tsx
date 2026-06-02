@@ -18,6 +18,7 @@ import Schedule from "@/routes/teacher/Schedule";
 
 import AdminPeople from "@/routes/admin/People";
 import AdminSchedule from "@/routes/admin/Schedule";
+import AdminCoursework from "@/routes/admin/Coursework";
 import FinanceLayout from "@/routes/admin/Finance/Layout";
 import FinanceOverview from "@/routes/admin/Finance/Overview";
 import FinancePayments from "@/routes/admin/Finance/Payments";
@@ -63,6 +64,7 @@ const App = () => (
                 <Route path="/admin/people" element={<AdminPeople />} />
                 <Route path="/admin/people/:tab" element={<AdminPeople />} />
                 <Route path="/admin/schedule" element={<AdminSchedule />} />
+                <Route path="/admin/coursework" element={<AdminCoursework />} />
                 {/* Legacy routes → consolidated People page */}
                 <Route path="/admin/students" element={<Navigate to="/admin/people/students" replace />} />
                 <Route path="/admin/teachers" element={<Navigate to="/admin/people/teachers" replace />} />

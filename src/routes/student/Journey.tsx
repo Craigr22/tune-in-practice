@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SONGS } from "@/data/songs";
+import { useCatalogSongs } from "@/hooks/useSongCatalog";
 import {
   usePracticeLogs,
   useSongProgress,
@@ -59,10 +59,11 @@ const Journey = () => {
   const navigate = useNavigate();
   const { data: logs = [] } = usePracticeLogs();
   const { data: progress = [] } = useSongProgress();
+  const catalog = useCatalogSongs("ukulele");
   const [selected, setSelected] = useState<string | null>(null);
 
   const nodes: MapNode[] = useMemo(() => {
-    const ordered = [...SONGS].sort((a, b) => {
+    const ordered = [...catalog].sort((a, b) => {
       if (a.track !== b.track) return (a.track === "fs" ? 99 : a.track) - (b.track === "fs" ? 99 : b.track);
       return a.order - b.order;
     });
@@ -100,7 +101,7 @@ const Journey = () => {
         fingerstyle: s.fingerstyle,
       };
     });
-  }, [logs, progress]);
+  }, [logs, progress, catalog]);
 
   const avg = avgCourseBadge(progress);
   const course = getBadge(avg);

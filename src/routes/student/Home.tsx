@@ -4,17 +4,12 @@ import SongDetail from "@/routes/student/SongDetail";
 import { useSongs } from "@/hooks/useSongs";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { usePracticeLogs, useSongProgress, computeStreak, minutesThisWeek, songsInProgress } from "@/hooks/useStudentProgress";
-import { SONGS } from "@/data/songs";
+import { useCatalogSongs } from "@/hooks/useSongCatalog";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import { useEnsureWeeklyPlan, useTodaysSession } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
-
-function pickFocusSong() {
-  const ordered = [...SONGS].filter((s) => !s.fingerstyle).sort((a, b) => (a.track as number) - (b.track as number) || a.order - b.order);
-  return ordered.find((s) => s.state === "in-progress" || s.state === "next") || ordered[0];
-}
 
 const Home = () => {
   const navigate = useNavigate();
@@ -22,25 +17,29 @@ const Home = () => {
   const { data: student } = useStudentMe();
   const { data: logs = [] } = usePracticeLogs();
   const { data: progress = [] } = useSongProgress();
+  const catalog = useCatalogSongs("ukulele");
   useEnsureWeeklyPlan();
   const todaysSession = useTodaysSession();
 
-  const focusSong = useMemo(pickFocusSong, []);
+  const focusSong = useMemo(() => {
+    const ordered = [...catalog].filter((s) => !s.fingerstyle).sort((a, b) => (a.track as number) - (b.track as number) || a.order - b.order);
+    return ordered.find((s) => s.state === "in-progress" || s.state === "next") || ordered[0];
+  }, [catalog]);
   const streak = useMemo(() => computeStreak(logs), [logs]);
   const minsWeek = useMemo(() => minutesThisWeek(logs), [logs]);
   const inProgress = useMemo(() => songsInProgress(progress), [progress]);
 
   const lastLog = logs[0];
   const currentSong = useMemo(() => {
-    if (lastLog) return SONGS.find((s) => s.id === lastLog.song_id) || focusSong;
+    if (lastLog) return catalog.find((s) => s.id === lastLog.song_id) || focusSong;
     return focusSong;
-  }, [lastLog, focusSong]);
+  }, [lastLog, focusSong, catalog]);
   const currentProgress = currentSong ? progress.find((p) => p.song_id === currentSong.id) : undefined;
   const currentBadge = getBadge(currentProgress?.teacher_badge);
   const nextGoal = nextBadge(currentProgress?.teacher_badge);
 
   const firstName = (student?.name || "").split(" ")[0] || "there";
-  const sessionSong = todaysSession ? SONGS.find((s) => s.id === todaysSession.focus_song_id) : null;
+  const sessionSong = todaysSession ? catalog.find((s) => s.id === todaysSession.focus_song_id) : null;
   const sessionTpl = todaysSession ? SESSION_TEMPLATES[todaysSession.session_type] : null;
   const totalMins = todaysSession ? (todaysSession.warmup_target_min + todaysSession.focus_target_min + todaysSession.bonus_target_min) : 0;
 
