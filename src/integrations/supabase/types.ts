@@ -65,6 +65,67 @@ export type Database = {
           },
         ]
       }
+      batch_coursework: {
+        Row: {
+          batch_id: string
+          id: string
+          is_unlocked: boolean
+          song_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          id?: string
+          is_unlocked?: boolean
+          song_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          id?: string
+          is_unlocked?: boolean
+          song_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_coursework_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_settings: {
+        Row: {
+          batch_id: string
+          songs_per_session: number
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          songs_per_session?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          songs_per_session?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_settings_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           day_of_week: number
@@ -779,6 +840,7 @@ export type Database = {
         Args: { _student_id: string; _user_id: string }
         Returns: boolean
       }
+      teaches_batch: { Args: { _batch_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student"
