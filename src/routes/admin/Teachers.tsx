@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { formatINR } from "@/lib/finance";
 
@@ -364,7 +364,6 @@ export default function AdminTeachers() {
     return out;
   }, [teachers, search, status, sort]);
 
-  const openAdd = () => { setFormTeacher(null); setFormOpen(true); };
   const openEdit = (t: any) => { setFormTeacher(t); setFormOpen(true); setOpen(null); };
 
   const tabs: { value: TStatus; label: string }[] = [
@@ -382,7 +381,6 @@ export default function AdminTeachers() {
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => exportTeachersCsv(filtered, instrumentsMap)}>Export CSV</Button>
-          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add teacher</Button>
         </div>
       </header>
 

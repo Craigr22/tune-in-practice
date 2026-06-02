@@ -410,7 +410,6 @@ export default function AdminStudents() {
     setSelected(new Set());
   };
 
-  const openAdd = () => { setFormStudent(null); setFormOpen(true); };
   const openEdit = (s: any) => { setFormStudent(s); setFormOpen(true); setOpen(null); };
 
   const tabs: { value: StatusFilter; label: string }[] = [
@@ -428,7 +427,6 @@ export default function AdminStudents() {
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => exportStudentsCsv(filtered)}>Export CSV</Button>
-          <Button size="sm" onClick={openAdd}><Plus className="w-4 h-4 mr-1" />Add student</Button>
         </div>
       </header>
 
