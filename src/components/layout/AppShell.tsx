@@ -48,8 +48,7 @@ const TopNav = () => {
         )}
         {role === "teacher" && (
           <>
-            <a className={`nav-link ${isActive("/teacher/today") ? "active" : ""}`} onClick={() => go("/teacher/today")}>Today</a>
-            <a className={`nav-link ${isActive("/teacher/students") ? "active" : ""}`} onClick={() => go("/teacher/students")}>My Students</a>
+            <a className={`nav-link ${isActive("/teacher/class") ? "active" : ""}`} onClick={() => go("/teacher/classes")}>My Classes</a>
             <a className={`nav-link ${isActive("/teacher/schedule") ? "active" : ""}`} onClick={() => go("/teacher/schedule")}>Schedule</a>
           </>
         )}
@@ -72,7 +71,7 @@ const TopNav = () => {
           >Admin</button>
           <button
             className={`role-btn ${role === "teacher" ? "active" : ""}`}
-            onClick={() => { setViewAs("teacher"); go("/teacher/today"); }}
+            onClick={() => { setViewAs("teacher"); go("/teacher/classes"); }}
           >Teacher</button>
           <button
             className={`role-btn ${role === "student" ? "active" : ""}`}

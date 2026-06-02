@@ -8,6 +8,7 @@ import { usePracticeLogs, useSongProgress } from "@/hooks/useStudentProgress";
 import { SESSION_ORDER, SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { generateWarmup, generateBonus } from "@/lib/sessionSegments";
 import { SONGS } from "@/data/songs";
+import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
 
@@ -66,15 +67,29 @@ export function practiceDaysForWeek(weekStart: string, classDayOfWeek: number /*
 }
 
 /* ----- focus song pick ----- */
-function pickFocusSong(progress: SongProgress[]): typeof SONGS[number] | undefined {
-  const ordered = [...SONGS]
-    .filter((s) => !s.fingerstyle && s.state !== "locked")
-    .sort((a, b) => (Number(a.track) || 99) - (Number(b.track) || 99) || a.order - b.order);
-  const inProgress = ordered.find((s) => {
+/** Minimal shape both the static catalog and a class's effective song list satisfy. */
+export type FocusPoolSong = {
+  id: string;
+  title?: string;
+  fingerstyle?: boolean;
+  state?: string;
+  track: number | "fs";
+  order: number;
+};
+
+function pickFocusSong(progress: SongProgress[], pool?: FocusPoolSong[]): FocusPoolSong | undefined {
+  // A class pool arrives pre-filtered (unlocked only) and in the teacher's order — keep it.
+  // The static catalog needs sorting by track/order.
+  const ordered = (pool && pool.length ? pool : [...SONGS])
+    .filter((s) => !s.fingerstyle && s.state !== "locked");
+  const sorted = pool && pool.length
+    ? ordered
+    : ordered.slice().sort((a, b) => (Number(a.track) || 99) - (Number(b.track) || 99) || a.order - b.order);
+  const inProgress = sorted.find((s) => {
     const p = progress.find((pp) => pp.song_id === s.id);
     return (p?.teacher_badge ?? 0) > 0 && (p?.teacher_badge ?? 0) < 5;
   });
-  return inProgress ?? ordered.find((s) => s.state === "in-progress" || s.state === "next") ?? ordered[0];
+  return inProgress ?? sorted.find((s) => s.state === "in-progress" || s.state === "next") ?? sorted[0];
 }
 
 /* ----- main generator ----- */
@@ -86,13 +101,18 @@ interface GenInput {
   progress: SongProgress[];
   logs: PracticeLog[];
   existing?: WeeklyPlanSession[];
+  /** Class-effective song list (unlocked, teacher-ordered). Falls back to the static catalog. */
+  pool?: FocusPoolSong[];
+  /** Distinct songs to fit into a single 30-min session (1–3). 3 = warmup/focus/bonus all distinct. */
+  songsPerSession?: number;
 }
 
 export function buildWeekRows(input: GenInput) {
-  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [] } = input;
+  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3 } = input;
   const dates = practiceDaysForWeek(weekStart, classDayOfWeek);
-  const focus = pickFocusSong(progress);
+  const focus = pickFocusSong(progress, pool);
   const focusId = focus?.id ?? SONGS[0].id;
+  const focusTitle = focus?.title ?? "your focus song";
 
   const recentWarmupIds: string[] = existing
     .slice()
@@ -112,6 +132,19 @@ export function buildWeekRows(input: GenInput) {
       progress, logs, currentSongId: focusId,
       previousBonusType, weekNumber,
     });
+    // Collapse distinct songs to honor the class's songs-per-session setting.
+    // 3 → warmup/focus/bonus all distinct (default). 2 → bonus folds into the focus song.
+    // 1 → warmup + bonus both fold into the focus song (one song for the whole 30 min).
+    if (songsPerSession <= 2) {
+      bonus.song_id = focusId;
+      bonus.bonus_type = "callback_song";
+      bonus.instruction = `Extra reps on ${focusTitle} to finish strong.`;
+    }
+    if (songsPerSession <= 1 && warm.song_id) {
+      warm.song_id = focusId;
+      warm.instruction = `Ease in with ${focusTitle} — slow and clean.`;
+    }
+
     if (warm.song_id) recentWarmupIds.unshift(warm.song_id);
     previousBonusType = bonus.bonus_type;
 
@@ -190,6 +223,8 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const { data: batch } = useStudentBatchDay();
   const { data: progress = [] } = useSongProgress();
   const { data: logs = [] } = usePracticeLogs();
+  const classSongs = useStudentSongs();
+  const { songsPerSession } = useStudentClassConfig();
   const weekStart = weekStartArg ?? isoMonday();
   const { data: existing } = useWeeklyPlan(weekStart);
 
@@ -211,6 +246,8 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       progress,
       logs,
       existing: [],
+      pool: classSongs,
+      songsPerSession,
     });
 
     (async () => {

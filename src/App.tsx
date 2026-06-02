@@ -11,8 +11,8 @@ import Journey from "@/routes/student/Journey";
 import Foundations from "@/routes/student/Foundations";
 import TunerRoute from "@/routes/student/Tuner";
 import SongDetail from "@/routes/student/SongDetail";
-import Today from "@/routes/teacher/Today";
-import MyStudents from "@/routes/teacher/MyStudents";
+import MyClasses from "@/routes/teacher/MyClasses";
+import ClassDetail from "@/routes/teacher/ClassDetail";
 import Schedule from "@/routes/teacher/Schedule";
 
 
@@ -54,10 +54,13 @@ const App = () => (
                 <Route path="/student/foundations" element={<Foundations />} />
                 <Route path="/student/tuner" element={<TunerRoute />} />
                 <Route path="/student/song/:id" element={<SongDetail />} />
-                <Route path="/teacher" element={<Navigate to="/teacher/today" replace />} />
-                <Route path="/teacher/today" element={<Today />} />
-                <Route path="/teacher/students" element={<MyStudents />} />
+                <Route path="/teacher" element={<Navigate to="/teacher/classes" replace />} />
+                <Route path="/teacher/classes" element={<MyClasses />} />
+                <Route path="/teacher/class/:batchId" element={<ClassDetail />} />
                 <Route path="/teacher/schedule" element={<Schedule />} />
+                {/* Legacy teacher routes */}
+                <Route path="/teacher/today" element={<Navigate to="/teacher/classes" replace />} />
+                <Route path="/teacher/students" element={<Navigate to="/teacher/classes" replace />} />
 
                 
                 <Route path="/admin" element={<Navigate to="/admin/schedule" replace />} />

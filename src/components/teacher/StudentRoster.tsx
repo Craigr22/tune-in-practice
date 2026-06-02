@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
-import { useTeacherStudents, useStudentDetail } from "@/hooks/useTeacherStudents";
+import { useMemo } from "react";
+import { useStudentDetail } from "@/hooks/useTeacherStudents";
 import { computeRetention } from "@/lib/retention";
 import { getBadge, BADGE_LIST } from "@/lib/badges";
 import { CHECK_IN_COLOR, type CheckIn } from "@/hooks/useStudentProgress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
 import { SONGS } from "@/data/songs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,7 +41,7 @@ function MiniBars({ values }: { values: number[] }) {
 }
 
 /* ---------- row ---------- */
-function StudentRow({ student, onOpen }: { student: any; onOpen: () => void }) {
+export function StudentRow({ student, onOpen }: { student: any; onOpen: () => void }) {
   const { data } = useStudentDetail(student.id);
   const bars = useMemo(() => (data ? dailyMinutes(data.practice, 14) : []), [data]);
   const retention = useMemo(
@@ -137,7 +136,7 @@ function SongsEditor({ studentId, progress }: { studentId: string; progress: any
 }
 
 /* ---------- detail drawer ---------- */
-function StudentDetail({ student, batch, onClose }: { student: any | null; batch: any | null; onClose: () => void }) {
+export function StudentDetail({ student, batch, onClose }: { student: any | null; batch: any | null; onClose: () => void }) {
   const { data } = useStudentDetail(student?.id);
   if (!student) return null;
 
@@ -240,92 +239,5 @@ function StudentDetail({ student, batch, onClose }: { student: any | null; batch
         </div>
       </SheetContent>
     </Sheet>
-  );
-}
-
-/* ---------- screen ---------- */
-export default function MyStudents() {
-  const { data: groups = [], isLoading } = useTeacherStudents();
-  const [search, setSearch] = useState("");
-  const [batchFilter, setBatchFilter] = useState<string>("all");
-  const [openStudent, setOpenStudent] = useState<any | null>(null);
-  const [openBatch, setOpenBatch] = useState<any | null>(null);
-
-  const visibleGroups = useMemo(() => {
-    return groups
-      .filter((g: any) => batchFilter === "all" || g.batch.id === batchFilter)
-      .map((g: any) => ({
-        ...g,
-        students: g.students.filter((s: any) =>
-          search.trim() === "" ? true : s.name.toLowerCase().includes(search.toLowerCase())
-        ),
-      }));
-  }, [groups, batchFilter, search]);
-
-  return (
-    <section className="view view-teacher active">
-      <div className="teacher-view max-w-4xl mx-auto px-4 py-6">
-        <header className="mb-4">
-          <h1 className="text-2xl font-semibold">My students</h1>
-        </header>
-
-        <div className="flex flex-wrap gap-3 mb-4">
-          <Input
-            placeholder="Search by name…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="max-w-xs"
-          />
-          <select
-            className="border rounded-md px-3 py-2 bg-background text-sm"
-            value={batchFilter}
-            onChange={(e) => setBatchFilter(e.target.value)}
-          >
-            <option value="all">All batches</option>
-            {groups.map((g: any) => (
-              <option key={g.batch.id} value={g.batch.id}>
-                {g.batch.locations?.name} · {g.batch.instruments?.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {isLoading && <div className="text-sm">Loading…</div>}
-
-        {visibleGroups.map((g: any) => (
-          <div key={g.batch.id} className="rounded-xl border bg-card mb-5">
-            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
-              <div>
-                <div className="font-semibold">{g.batch.locations?.name} · {g.batch.instruments?.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {g.students.length} student{g.students.length === 1 ? "" : "s"} ·{" "}
-                  Course: {g.batch.semester_start ?? "—"} → {g.batch.semester_end ?? "ongoing"}
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-[1.4fr_1fr_0.6fr_0.7fr_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
-              <div>Student</div>
-              <div>Practice 14d</div>
-              <div>Attend</div>
-              <div>Badge</div>
-              <div></div>
-            </div>
-            {g.students.length === 0 ? (
-              <div className="px-4 py-4 text-sm text-muted-foreground">No matching students.</div>
-            ) : (
-              g.students.map((s: any) => (
-                <StudentRow
-                  key={s.id}
-                  student={s}
-                  onOpen={() => { setOpenBatch(g.batch); setOpenStudent(s); }}
-                />
-              ))
-            )}
-          </div>
-        ))}
-      </div>
-
-      <StudentDetail student={openStudent} batch={openBatch} onClose={() => { setOpenStudent(null); setOpenBatch(null); }} />
-    </section>
   );
 }

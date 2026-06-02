@@ -4,7 +4,7 @@ import SongDetail from "@/routes/student/SongDetail";
 import { useSongs } from "@/hooks/useSongs";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { usePracticeLogs, useSongProgress, computeStreak, minutesThisWeek, songsInProgress } from "@/hooks/useStudentProgress";
-import { useCatalogSongs } from "@/hooks/useSongCatalog";
+import { useStudentSongs } from "@/hooks/useBatchCoursework";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
@@ -17,7 +17,7 @@ const Home = () => {
   const { data: student } = useStudentMe();
   const { data: logs = [] } = usePracticeLogs();
   const { data: progress = [] } = useSongProgress();
-  const catalog = useCatalogSongs("ukulele");
+  const catalog = useStudentSongs();
   useEnsureWeeklyPlan();
   const todaysSession = useTodaysSession();
 

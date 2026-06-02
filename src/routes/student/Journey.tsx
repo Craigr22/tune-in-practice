@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCatalogSongs } from "@/hooks/useSongCatalog";
+import { useStudentSongs } from "@/hooks/useBatchCoursework";
 import {
   usePracticeLogs,
   useSongProgress,
@@ -59,7 +59,7 @@ const Journey = () => {
   const navigate = useNavigate();
   const { data: logs = [] } = usePracticeLogs();
   const { data: progress = [] } = useSongProgress();
-  const catalog = useCatalogSongs("ukulele");
+  const catalog = useStudentSongs();
   const [selected, setSelected] = useState<string | null>(null);
 
   const nodes: MapNode[] = useMemo(() => {
