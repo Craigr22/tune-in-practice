@@ -8,6 +8,7 @@ import { useStudentSongs } from "@/hooks/useBatchCoursework";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
+import PracticeDiary from "@/components/student/PracticeDiary";
 import { useEnsureWeeklyPlan, useTodaysSession } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 
@@ -149,6 +150,8 @@ const Home = () => {
           </div>
         )}
 
+        {/* ===== THIS WEEK'S PRACTICE ===== */}
+        <PracticeDiary />
 
         {/* ===== STREAK STRIP ===== */}
         <button
