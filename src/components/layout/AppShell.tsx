@@ -67,7 +67,7 @@ const TopNav = () => {
         <div className="role-toggle" title="View the app as a different role">
           <button
             className={`role-btn ${role === "admin" ? "active" : ""}`}
-            onClick={() => { setViewAs(null); go("/admin"); }}
+            onClick={() => { setViewAs(null); go("/admin/schedule"); }}
           >Admin</button>
           <button
             className={`role-btn ${role === "teacher" ? "active" : ""}`}

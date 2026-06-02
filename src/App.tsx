@@ -16,7 +16,6 @@ import MyStudents from "@/routes/teacher/MyStudents";
 import Schedule from "@/routes/teacher/Schedule";
 
 
-import AdminDashboard from "@/routes/admin/Dashboard";
 import AdminPeople from "@/routes/admin/People";
 import AdminSchedule from "@/routes/admin/Schedule";
 import FinanceLayout from "@/routes/admin/Finance/Layout";
@@ -60,7 +59,7 @@ const App = () => (
                 <Route path="/teacher/schedule" element={<Schedule />} />
 
                 
-                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin" element={<Navigate to="/admin/schedule" replace />} />
                 <Route path="/admin/people" element={<AdminPeople />} />
                 <Route path="/admin/people/:tab" element={<AdminPeople />} />
                 <Route path="/admin/schedule" element={<AdminSchedule />} />
