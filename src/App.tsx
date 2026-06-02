@@ -17,10 +17,8 @@ import Schedule from "@/routes/teacher/Schedule";
 
 
 import AdminDashboard from "@/routes/admin/Dashboard";
-import AdminStudents from "@/routes/admin/Students";
-import AdminTeachers from "@/routes/admin/Teachers";
+import AdminPeople from "@/routes/admin/People";
 import AdminSchedule from "@/routes/admin/Schedule";
-import AdminUsers from "@/routes/admin/Users";
 import FinanceLayout from "@/routes/admin/Finance/Layout";
 import FinanceOverview from "@/routes/admin/Finance/Overview";
 import FinancePayments from "@/routes/admin/Finance/Payments";
@@ -63,10 +61,13 @@ const App = () => (
 
                 
                 <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/students" element={<AdminStudents />} />
-                <Route path="/admin/teachers" element={<AdminTeachers />} />
+                <Route path="/admin/people" element={<AdminPeople />} />
+                <Route path="/admin/people/:tab" element={<AdminPeople />} />
                 <Route path="/admin/schedule" element={<AdminSchedule />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
+                {/* Legacy routes → consolidated People page */}
+                <Route path="/admin/students" element={<Navigate to="/admin/people/students" replace />} />
+                <Route path="/admin/teachers" element={<Navigate to="/admin/people/teachers" replace />} />
+                <Route path="/admin/users" element={<Navigate to="/admin/people/access" replace />} />
                 <Route path="/admin/finance" element={<FinanceLayout />}>
                   <Route index element={<FinanceOverview />} />
                   <Route path="payments" element={<FinancePayments />} />
