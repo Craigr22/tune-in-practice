@@ -445,6 +445,72 @@ export type Database = {
           },
         ]
       }
+      songs: {
+        Row: {
+          artist: string | null
+          bpm: number | null
+          chords: string[]
+          created_at: string
+          daily_target: number
+          difficulty: string
+          id: string
+          instrument: string
+          is_active: boolean
+          is_fingerstyle: boolean
+          new_chord: string | null
+          sort_order: number
+          state: string
+          strum: string | null
+          strum_note: string | null
+          target_approvals: number
+          title: string
+          track_num: number | null
+          updated_at: string
+        }
+        Insert: {
+          artist?: string | null
+          bpm?: number | null
+          chords?: string[]
+          created_at?: string
+          daily_target?: number
+          difficulty?: string
+          id: string
+          instrument?: string
+          is_active?: boolean
+          is_fingerstyle?: boolean
+          new_chord?: string | null
+          sort_order?: number
+          state?: string
+          strum?: string | null
+          strum_note?: string | null
+          target_approvals?: number
+          title: string
+          track_num?: number | null
+          updated_at?: string
+        }
+        Update: {
+          artist?: string | null
+          bpm?: number | null
+          chords?: string[]
+          created_at?: string
+          daily_target?: number
+          difficulty?: string
+          id?: string
+          instrument?: string
+          is_active?: boolean
+          is_fingerstyle?: boolean
+          new_chord?: string | null
+          sort_order?: number
+          state?: string
+          strum?: string | null
+          strum_note?: string | null
+          target_approvals?: number
+          title?: string
+          track_num?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           created_at: string
