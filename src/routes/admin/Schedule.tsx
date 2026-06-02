@@ -20,6 +20,15 @@ import BatchFormDialog from "@/components/admin/BatchFormDialog";
 const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
+// Nicer, less cluttered labels than the rbc defaults.
+const calendarFormats = {
+  timeGutterFormat: (date: Date, _c: any, loc: any) => loc.format(date, "h a", _c),
+  dayFormat: (date: Date, _c: any, loc: any) => loc.format(date, "EEE d", _c),
+  weekdayFormat: (date: Date, _c: any, loc: any) => loc.format(date, "EEE", _c),
+  eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }, _c: any, loc: any) =>
+    `${loc.format(start, "h:mm", _c)}–${loc.format(end, "h:mm a", _c)}`,
+};
+
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 type Row = {
@@ -117,10 +126,16 @@ export default function AdminSchedule() {
           <Calendar
             localizer={localizer}
             events={events}
-            defaultView={Views.MONTH}
-            views={[Views.MONTH, Views.WEEK, Views.DAY]}
+            defaultView={Views.WEEK}
+            views={[Views.WEEK, Views.MONTH, Views.DAY]}
+            formats={calendarFormats}
             min={new Date(0, 0, 0, 9, 0, 0)}
-            max={new Date(0, 0, 0, 23, 0, 0)}
+            max={new Date(0, 0, 0, 22, 0, 0)}
+            scrollToTime={new Date(0, 0, 0, 10, 0, 0)}
+            step={30}
+            timeslots={2}
+            dayLayoutAlgorithm="no-overlap"
+            popup
             onSelectEvent={(ev) => setSelectedSession((ev as any).resource)}
             eventPropGetter={(ev) => {
               const s = (ev as any).resource as Row;
