@@ -23,14 +23,6 @@ import { Plus, Pencil, Trash2, Music } from "lucide-react";
 import { toast } from "sonner";
 import SongFormDialog from "@/components/admin/SongFormDialog";
 
-const STATE_BADGE: Record<string, string> = {
-  mastered: "bg-amber-100 text-amber-700",
-  "in-progress": "bg-blue-100 text-blue-700",
-  next: "bg-muted text-muted-foreground",
-  stretch: "bg-purple-100 text-purple-700",
-  locked: "bg-muted text-muted-foreground",
-};
-
 function UkuleleManager() {
   const songs = useCatalogSongs("ukulele", { showInactive: true });
   const del = useDeleteSong();
@@ -68,7 +60,6 @@ function UkuleleManager() {
               <th className="text-left p-3">Song</th>
               <th className="text-left p-3">Chords</th>
               <th className="text-left p-3 w-28">Difficulty</th>
-              <th className="text-left p-3 w-28">State</th>
               <th className="text-right p-3 w-28">Actions</th>
             </tr>
           </thead>
@@ -90,11 +81,6 @@ function UkuleleManager() {
                 </td>
                 <td className="p-3 text-muted-foreground">{(s.chords ?? []).join(" · ") || "—"}</td>
                 <td className="p-3 text-muted-foreground">{s.difficulty}</td>
-                <td className="p-3">
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full ${STATE_BADGE[s.state] ?? "bg-muted text-muted-foreground"}`}>
-                    {s.state}
-                  </span>
-                </td>
                 <td className="p-3">
                   <div className="flex justify-end gap-1">
                     <Button

@@ -7,13 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
-const STATES = [
-  { value: "next", label: "Up next" },
-  { value: "in-progress", label: "In progress" },
-  { value: "mastered", label: "Mastered" },
-  { value: "stretch", label: "Stretch goal" },
-  { value: "locked", label: "Locked" },
-];
 const DIFFICULTIES = ["Beginner", "Advanced Beginner", "Intermediate", "Advanced"];
 
 const blank = {
@@ -145,21 +138,12 @@ export default function SongFormDialog({
             <Switch checked={form.is_fingerstyle} onCheckedChange={(v) => set("is_fingerstyle", v)} id="fs" />
             <Label htmlFor="fs" className="cursor-pointer">Fingerstyle song (separate track)</Label>
           </div>
-          <div>
+          <div className="col-span-2">
             <Label>Difficulty</Label>
             <Select value={form.difficulty} onValueChange={(v) => set("difficulty", v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {DIFFICULTIES.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Starting state</Label>
-            <Select value={form.state} onValueChange={(v) => set("state", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {STATES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
