@@ -42,10 +42,20 @@ type Row = {
     duration_min: number;
     teacher_id: string | null;
     instrument_id: string;
+    location_id: string | null;
     teachers: { name: string } | null;
     instruments: { name: string } | null;
+    locations: { name: string } | null;
   } | null;
 };
+
+// Distinct colors per room so the two studios read at a glance.
+const ROOM_COLORS = [
+  { bg: "hsl(221 83% 53%)", fg: "#fff" }, // blue
+  { bg: "hsl(160 84% 39%)", fg: "#fff" }, // green
+  { bg: "hsl(38 92% 50%)", fg: "#000" },  // amber
+  { bg: "hsl(280 65% 60%)", fg: "#fff" }, // purple
+];
 
 export default function AdminSchedule() {
   const { role } = useAuth();
@@ -61,7 +71,7 @@ export default function AdminSchedule() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sessions")
-        .select("id, batch_id, scheduled_date, status, batches!inner(id, start_time, duration_min, teacher_id, instrument_id, teachers(name), instruments(name))")
+        .select("id, batch_id, scheduled_date, status, batches!inner(id, start_time, duration_min, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name))")
         .order("scheduled_date");
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
@@ -71,13 +81,24 @@ export default function AdminSchedule() {
 
   const { data: classes = [] } = useBatchList();
 
+  // Assign each distinct room a stable color (sorted by name for determinism).
+  const roomColors = useMemo(() => {
+    const names = Array.from(
+      new Set(sessions.map((s) => s.batches?.locations?.name).filter(Boolean) as string[]),
+    ).sort();
+    const map = new Map<string, (typeof ROOM_COLORS)[number]>();
+    names.forEach((name, i) => map.set(name, ROOM_COLORS[i % ROOM_COLORS.length]));
+    return map;
+  }, [sessions]);
+
   const events: Event[] = useMemo(() => sessions.map((s) => {
     const b = s.batches!;
     const [h, m] = (b.start_time || "00:00:00").split(":").map(Number);
     const start = new Date(s.scheduled_date);
     start.setHours(h, m, 0, 0);
     const end = new Date(start.getTime() + (b.duration_min || 60) * 60000);
-    const title = `${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}`;
+    const room = b.locations?.name;
+    const title = `${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}${room ? ` · ${room}` : ""}`;
     return { title, start, end, resource: s };
   }), [sessions]);
 
@@ -122,7 +143,19 @@ export default function AdminSchedule() {
       </div>
 
       {view === "calendar" && (
-        <div className="bg-card rounded-lg p-3 border" style={{ height: 720 }}>
+        <div className="space-y-3">
+          {roomColors.size > 0 && (
+            <div className="flex items-center gap-4 flex-wrap text-xs text-muted-foreground">
+              <span className="font-medium">Rooms:</span>
+              {Array.from(roomColors.entries()).map(([name, c]) => (
+                <span key={name} className="flex items-center gap-1.5">
+                  <span className="inline-block w-3 h-3 rounded-sm" style={{ background: c.bg }} />
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="bg-card rounded-lg p-3 border" style={{ height: 720 }}>
           <Calendar
             localizer={localizer}
             events={events}
@@ -142,10 +175,13 @@ export default function AdminSchedule() {
               if (s.status === "cancelled") {
                 return { style: { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", textDecoration: "line-through", border: "none" } };
               }
-              return { style: { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", border: "none" } };
+              const room = s.batches?.locations?.name;
+              const c = (room && roomColors.get(room)) || { bg: "hsl(var(--primary))", fg: "hsl(var(--primary-foreground))" };
+              return { style: { background: c.bg, color: c.fg, border: "none" } };
             }}
             style={{ height: "100%" }}
           />
+          </div>
         </div>
       )}
 
