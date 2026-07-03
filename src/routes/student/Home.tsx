@@ -9,6 +9,7 @@ import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import PracticeDiary from "@/components/student/PracticeDiary";
+import JamPad from "@/components/student/JamPad";
 import { useEnsureWeeklyPlan, useTodaysSession } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 
@@ -81,6 +82,13 @@ const Home = () => {
                   "Pick any song below to begin."
                 )}
               </p>
+              <button
+                onClick={startSession}
+                className="mt-5 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm md:text-base font-bold transition-transform hover:scale-[1.04] active:scale-95"
+                style={{ background: "#FBE48A", color: "#0b2a3f", boxShadow: "0 12px 30px -10px rgba(0,0,0,0.45)" }}
+              >
+                ▶ Start today's session{totalMins ? ` · ${totalMins} min` : ""}
+              </button>
             </div>
             <div className="md:text-right">
               <div
@@ -88,7 +96,7 @@ const Home = () => {
                 style={{ background: "rgba(255,255,255,0.12)", backdropFilter: "blur(6px)" }}
               >
                 <div className="text-[11px] uppercase tracking-wider text-white/70">Streak</div>
-                <div className="text-3xl font-bold mt-1">🔥 {streak}</div>
+                <div className="text-3xl font-bold mt-1"><span className="bounce-soft">🔥</span> {streak}</div>
                 <div className="text-xs text-white/85 mt-1 max-w-[220px] md:text-right">
                   {streak === 0
                     ? "Practice today to start a streak."
@@ -152,6 +160,9 @@ const Home = () => {
 
         {/* ===== THIS WEEK'S PRACTICE ===== */}
         <PracticeDiary />
+
+        {/* ===== JAM CORNER ===== */}
+        <JamPad />
 
         {/* ===== STREAK STRIP ===== */}
         <button

@@ -623,6 +623,13 @@ a { color: inherit; text-decoration: none; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ==================== PLAYFUL TOUCHES (student view) ==================== */
+@keyframes bounceSoft {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-3px) rotate(6deg); }
+}
+.bounce-soft { display: inline-block; animation: bounceSoft 2.2s ease-in-out infinite; }
+
 .bam-phone {
   width: 380px; height: 760px;
   background: var(--paper);
