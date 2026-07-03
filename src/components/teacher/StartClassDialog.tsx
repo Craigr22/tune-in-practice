@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useBatchRoster } from "@/hooks/useTeacherToday";
 import { useEndClass, type AttendanceEntry, type BadgeUpdate } from "@/hooks/useEndClass";
 import { BADGE_LIST } from "@/lib/badges";
-import { SONGS } from "@/data/songs";
+import { useSongs } from "@/hooks/useSongs";
 import { toast } from "sonner";
 
 type Mode = "attendance" | "wrap";
@@ -24,6 +24,7 @@ export default function StartClassDialog({
   scheduledDate: string;
 }) {
   const { data: roster = [] } = useBatchRoster(open ? batchId : undefined);
+  const { songs } = useSongs();
   const [mode, setMode] = useState<Mode>("attendance");
   const [attendance, setAttendance] = useState<Record<string, AttendanceEntry["status"]>>({});
   const [notes, setNotes] = useState("");
@@ -106,7 +107,7 @@ export default function StartClassDialog({
                       <div className="flex items-center gap-2">
                         {upd && (
                           <span className="text-xs text-muted-foreground">
-                            {SONGS.find((g) => g.id === upd.song_id)?.title} · {BADGE_LIST[upd.teacher_badge - 1].emoji}
+                            {songs.find((g) => g.id === upd.song_id)?.title} · {BADGE_LIST[upd.teacher_badge - 1].emoji}
                           </span>
                         )}
                         <Button size="sm" variant="outline" onClick={() => setPickerStudent(s.id)}>
@@ -155,7 +156,7 @@ export default function StartClassDialog({
                 }}
               >
                 <option value="">Select song…</option>
-                {SONGS.map((s) => (
+                {songs.map((s) => (
                   <option key={s.id} value={s.id}>{s.title}</option>
                 ))}
               </select>

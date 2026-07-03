@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, isoMonday, addWeeks, practiceDaysForWeek } from "@/hooks/useWeeklyPlan";
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
-import { SONGS } from "@/data/songs";
+import { useSongs } from "@/hooks/useSongs";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 
 const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -22,6 +22,7 @@ function fmtRange(weekStart: string) {
 
 export default function WeeklyCalendarStrip() {
   const navigate = useNavigate();
+  const { songs } = useSongs();
   const currentWeek = isoMonday();
   const [weekStart, setWeekStart] = useState(currentWeek);
 
@@ -74,12 +75,12 @@ export default function WeeklyCalendarStrip() {
 
   const [selectedIso, setSelectedIso] = useState<string | null>(null);
   const selected = days.find((d) => d.iso === selectedIso);
-  const selectedSong = selected?.session ? SONGS.find((s) => s.id === selected.session!.focus_song_id) : null;
+  const selectedSong = selected?.session ? songs.find((s) => s.id === selected.session!.focus_song_id) : null;
   const selectedTpl = selected?.session ? SESSION_TEMPLATES[selected.session.session_type] : null;
 
   const openSession = (s: NonNullable<typeof selected>["session"]) => {
     if (!s) return;
-    const song = SONGS.find((x) => x.id === s.focus_song_id);
+    const song = songs.find((x) => x.id === s.focus_song_id);
     if (!song) return;
     navigate(`/student/song/${song.id}`, { state: { planSessionId: s.id } });
   };

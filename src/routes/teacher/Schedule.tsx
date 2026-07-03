@@ -8,7 +8,18 @@ import "@/styles/calendar.css";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useTeacherMe } from "@/hooks/useTeacherMe";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ClipboardCheck } from "lucide-react";
+import StartClassDialog from "@/components/teacher/StartClassDialog";
+
+const calendarFormats = {
+  timeGutterFormat: (date: Date, _c: any, loc: any) => loc.format(date, "h a", _c),
+  dayFormat: (date: Date, _c: any, loc: any) => loc.format(date, "EEE d", _c),
+  weekdayFormat: (date: Date, _c: any, loc: any) => loc.format(date, "EEE", _c),
+  eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }, _c: any, loc: any) =>
+    `${loc.format(start, "h:mm", _c)}–${loc.format(end, "h:mm a", _c)}`,
+};
 
 type Row = {
   id: string;
@@ -31,6 +42,7 @@ export default function TeacherSchedule() {
   const { data: teacher } = useTeacherMe();
   const teacherId = teacher?.id;
   const [selected, setSelected] = useState<Row | null>(null);
+  const [wrapSession, setWrapSession] = useState<Row | null>(null);
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ["teacher-sessions", teacherId],
@@ -68,7 +80,7 @@ export default function TeacherSchedule() {
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
         <header>
           <h1 className="text-2xl font-semibold">Schedule</h1>
-          <div className="text-xs text-muted-foreground">Your assigned classes</div>
+          <div className="text-xs text-muted-foreground">Your active classes — click a session to take attendance</div>
         </header>
 
         {isLoading && <div className="text-sm">Loading…</div>}
@@ -77,15 +89,24 @@ export default function TeacherSchedule() {
           <Calendar
             localizer={dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { "en-US": enUS } })}
             events={events}
-            defaultView={Views.MONTH}
-            views={[Views.MONTH, Views.WEEK, Views.DAY]}
+            defaultView={Views.WEEK}
+            views={[Views.WEEK, Views.MONTH, Views.DAY]}
+            formats={calendarFormats}
             min={new Date(0, 0, 0, 9, 0, 0)}
-            max={new Date(0, 0, 0, 23, 0, 0)}
+            max={new Date(0, 0, 0, 22, 0, 0)}
+            scrollToTime={new Date(0, 0, 0, 10, 0, 0)}
+            step={30}
+            timeslots={2}
+            dayLayoutAlgorithm="no-overlap"
+            popup
             onSelectEvent={(ev) => setSelected((ev as any).resource)}
             eventPropGetter={(ev) => {
               const s = (ev as any).resource as Row;
               if (s.status === "cancelled") {
                 return { style: { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))", textDecoration: "line-through", border: "none" } };
+              }
+              if (s.status === "completed") {
+                return { style: { background: "#10b981", color: "#fff", border: "none" } };
               }
               return { style: { background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))", border: "none" } };
             }}
@@ -108,8 +129,26 @@ export default function TeacherSchedule() {
                 </div>
               </div>
             )}
+            {selected && selected.status !== "cancelled" && (
+              <DialogFooter>
+                <Button onClick={() => { setWrapSession(selected); setSelected(null); }}>
+                  <ClipboardCheck className="w-4 h-4 mr-1" />
+                  {selected.status === "completed" ? "Update attendance" : "Take attendance"}
+                </Button>
+              </DialogFooter>
+            )}
           </DialogContent>
         </Dialog>
+
+        {wrapSession && (
+          <StartClassDialog
+            open={!!wrapSession}
+            onOpenChange={(o) => !o && setWrapSession(null)}
+            batchId={wrapSession.batch_id}
+            sessionId={wrapSession.id}
+            scheduledDate={wrapSession.scheduled_date}
+          />
+        )}
       </div>
     </section>
   );

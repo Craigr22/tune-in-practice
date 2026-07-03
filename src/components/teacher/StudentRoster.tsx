@@ -4,7 +4,7 @@ import { computeRetention } from "@/lib/retention";
 import { getBadge, BADGE_LIST } from "@/lib/badges";
 import { CHECK_IN_COLOR, type CheckIn } from "@/hooks/useStudentProgress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { SONGS } from "@/data/songs";
+import { useSongs } from "@/hooks/useSongs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/db";
@@ -80,8 +80,9 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
 /* ---------- songs tab with editable teacher badge ---------- */
 function SongsEditor({ studentId, progress }: { studentId: string; progress: any[] }) {
   const qc = useQueryClient();
+  const { songs } = useSongs();
   const byId = new Map(progress.map((p) => [p.song_id, p]));
-  const semSongs = SONGS.filter((s) => !s.fingerstyle).slice(0, 12);
+  const semSongs = songs.filter((s) => !s.fingerstyle).slice(0, 12);
 
   const setBadge = async (song_id: string, value: number | null) => {
     const existing = byId.get(song_id);
@@ -138,6 +139,7 @@ function SongsEditor({ studentId, progress }: { studentId: string; progress: any
 /* ---------- detail drawer ---------- */
 export function StudentDetail({ student, batch, onClose }: { student: any | null; batch: any | null; onClose: () => void }) {
   const { data } = useStudentDetail(student?.id);
+  const { songs } = useSongs();
   if (!student) return null;
 
   // 12-week dot grid
@@ -195,7 +197,7 @@ export function StudentDetail({ student, batch, onClose }: { student: any | null
               ) : (
                 <div className="space-y-1 max-h-96 overflow-y-auto pr-1">
                   {recentPractice.map((p: any) => {
-                    const song = SONGS.find((s) => s.id === p.song_id);
+                    const song = songs.find((s) => s.id === p.song_id);
                     return (
                       <div key={p.id} className="flex items-center justify-between text-xs border-b py-1">
                         <span className="flex items-center gap-2">

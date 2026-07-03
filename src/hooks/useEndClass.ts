@@ -86,6 +86,8 @@ export function useEndClass() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["teacher-today"] });
       qc.invalidateQueries({ queryKey: ["teacher-students"] });
+      qc.invalidateQueries({ queryKey: ["teacher-sessions"] });
+      qc.invalidateQueries({ queryKey: ["student-detail"] });
     },
   });
 }

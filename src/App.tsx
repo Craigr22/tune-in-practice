@@ -8,7 +8,6 @@ import AppShell from "@/components/layout/AppShell";
 import Home from "@/routes/student/Home";
 import Journey from "@/routes/student/Journey";
 
-import Foundations from "@/routes/student/Foundations";
 import TunerRoute from "@/routes/student/Tuner";
 import SongDetail from "@/routes/student/SongDetail";
 import MyClasses from "@/routes/teacher/MyClasses";
@@ -51,7 +50,6 @@ const App = () => (
                 <Route path="/student" element={<Home />} />
                 <Route path="/student/journey" element={<Journey />} />
                 
-                <Route path="/student/foundations" element={<Foundations />} />
                 <Route path="/student/tuner" element={<TunerRoute />} />
                 <Route path="/student/song/:id" element={<SongDetail />} />
                 <Route path="/teacher" element={<Navigate to="/teacher/classes" replace />} />

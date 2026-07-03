@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { isoMonday } from "@/hooks/useWeeklyPlan";
-import { SONGS } from "@/data/songs";
+import { useSongs } from "@/hooks/useSongs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ const TYPE_LABELS = { build: "Build", flow: "Flow", stretch: "Stretch" } as cons
 
 export default function WeeklyPlanEditor({ studentId }: { studentId: string }) {
   const qc = useQueryClient();
+  const { songs } = useSongs();
   const [weekStart, setWeekStart] = useState(isoMonday());
 
   const { data: rows = [], isLoading } = useQuery({
@@ -112,7 +113,7 @@ export default function WeeklyPlanEditor({ studentId }: { studentId: string }) {
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Song" /></SelectTrigger>
                       <SelectContent>
                         {seg !== "focus" && <SelectItem value="">—</SelectItem>}
-                        {SONGS.map((s) => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                        {songs.map((s) => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

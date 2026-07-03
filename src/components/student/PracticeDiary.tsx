@@ -1,14 +1,15 @@
 import { useMemo } from "react";
 import { useWeeklyPlan } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
-import { SONGS } from "@/data/songs";
+import { useSongs } from "@/hooks/useSongs";
 
 const BONUS_EMOJI = { callback_song: "🎁", mini_challenge: "🎯", jam: "🎸", foundation_refresh: "📚" } as const;
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function PracticeDiary() {
   const { data: plan = [] } = useWeeklyPlan();
-  const songTitle = useMemo(() => Object.fromEntries(SONGS.map((s) => [s.id, s.title])), []);
+  const { songs } = useSongs();
+  const songTitle = useMemo(() => Object.fromEntries(songs.map((s) => [s.id, s.title])), [songs]);
 
   if (!plan.length) return null;
 

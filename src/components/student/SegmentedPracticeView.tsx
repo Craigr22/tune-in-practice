@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SONGS } from "@/data/songs";
+import { useSongs } from "@/hooks/useSongs";
 import { SONG_AUDIO } from "@/data/audio";
 import { FOUNDATIONS } from "@/data/foundations";
 import type { WeeklyPlanSession } from "@/hooks/useWeeklyPlan";
@@ -21,6 +21,7 @@ const BONUS_LABELS: Record<WeeklyPlanSession["bonus_type"], { emoji: string; lab
 };
 
 export default function SegmentedPracticeView({ session, onAllDone, focusContent }: Props) {
+  const { songs } = useSongs();
   const completeSeg = useCompleteSegment();
   const [open, setOpen] = useState<Segment>(
     session.warmup_completed ? (session.focus_completed ? "bonus" : "focus") : "warmup"
@@ -29,8 +30,8 @@ export default function SegmentedPracticeView({ session, onAllDone, focusContent
     warmup: false, focus: false, bonus: false,
   });
 
-  const warmupSong = session.warmup_song_id ? SONGS.find((s) => s.id === session.warmup_song_id) : null;
-  const bonusSong = session.bonus_song_id ? SONGS.find((s) => s.id === session.bonus_song_id) : null;
+  const warmupSong = session.warmup_song_id ? songs.find((s) => s.id === session.warmup_song_id) : null;
+  const bonusSong = session.bonus_song_id ? songs.find((s) => s.id === session.bonus_song_id) : null;
   const foundation = session.bonus_type === "foundation_refresh"
     ? FOUNDATIONS[0] // pulled in instruction text; show first foundation as inline embed
     : null;
