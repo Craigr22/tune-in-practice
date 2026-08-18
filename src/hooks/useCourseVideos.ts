@@ -14,8 +14,31 @@ export type CourseVideo = {
 
 const BUCKET = "videos";
 
-export function videoPublicUrl(storagePath: string): string {
-  return supabase.storage.from(BUCKET).getPublicUrl(storagePath).data.publicUrl;
+/** How long a playback link stays valid. Refreshed well before it lapses. */
+const SIGNED_URL_TTL_SEC = 60 * 60;
+
+/**
+ * Mint short-lived playback URLs for private videos. The bucket is private,
+ * so only signed-in users can sign a URL — anonymous visitors get nothing.
+ */
+export function useSignedVideoUrls(paths: string[]) {
+  const key = [...paths].sort().join("|");
+  return useQuery({
+    queryKey: ["video-urls", key],
+    enabled: paths.length > 0,
+    staleTime: (SIGNED_URL_TTL_SEC - 300) * 1000,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const { data, error } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrls(paths, SIGNED_URL_TTL_SEC);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const row of data ?? []) {
+        if (row.path && row.signedUrl) map[row.path] = row.signedUrl;
+      }
+      return map;
+    },
+  });
 }
 
 export function useCourseVideos(instrument: Instrument) {

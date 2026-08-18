@@ -3,7 +3,7 @@ import {
   useCourseVideos,
   useUploadCourseVideo,
   useDeleteCourseVideo,
-  videoPublicUrl,
+  useSignedVideoUrls,
   type CourseVideo,
 } from "@/hooks/useCourseVideos";
 import { useCatalogSongs, type Instrument } from "@/hooks/useSongCatalog";
@@ -29,6 +29,7 @@ const MAX_MB = 150;
 
 export default function VideoManager({ instrument }: { instrument: Instrument }) {
   const { data: videos = [], isLoading } = useCourseVideos(instrument);
+  const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
   const songs = useCatalogSongs(instrument);
   const upload = useUploadCourseVideo();
   const del = useDeleteCourseVideo();
@@ -121,15 +122,17 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                   {new Date(v.created_at).toLocaleDateString()}
                 </div>
               </div>
-              <a
-                href={videoPublicUrl(v.storage_path)}
-                target="_blank"
-                rel="noreferrer"
-                className="text-muted-foreground hover:text-foreground"
-                title="Open in new tab"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
+              {urls[v.storage_path] && (
+                <a
+                  href={urls[v.storage_path]}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-muted-foreground hover:text-foreground"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
               <Button variant="ghost" size="icon" title="Delete video" onClick={() => setConfirmDel(v)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -194,12 +197,18 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
             <DialogTitle>{preview?.title}</DialogTitle>
           </DialogHeader>
           {preview && (
-            <video
-              src={videoPublicUrl(preview.storage_path)}
-              controls
-              autoPlay
-              className="w-full rounded-md bg-black"
-            />
+            urls[preview.storage_path] ? (
+              <video
+                src={urls[preview.storage_path]}
+                controls
+                autoPlay
+                className="w-full rounded-md bg-black"
+              />
+            ) : (
+              <div className="w-full aspect-video rounded-md bg-black/80 grid place-items-center text-white text-sm">
+                Preparing video…
+              </div>
+            )
           )}
         </DialogContent>
       </Dialog>
