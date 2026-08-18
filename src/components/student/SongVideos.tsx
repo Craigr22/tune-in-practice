@@ -5,14 +5,14 @@ import { useSongVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
  * so the practice page stays uncluttered. Videos are private — the src is a
  * short-lived signed URL minted for the signed-in student.
  */
-export default function SongVideos({ songId }: { songId: string }) {
+export default function SongVideos({ songId, inset = true }: { songId: string; inset?: boolean }) {
   const { data: videos = [] } = useSongVideos(songId);
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
 
   if (!videos.length) return null;
 
   return (
-    <div style={{ padding: "12px 16px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ padding: inset ? "12px 16px 0" : "12px 0 0", display: "flex", flexDirection: "column", gap: 8 }}>
       <div
         style={{
           fontSize: 11,

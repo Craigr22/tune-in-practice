@@ -13,6 +13,7 @@ import {
 } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
+import SongVideos from "@/components/student/SongVideos";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
@@ -111,6 +112,8 @@ const Journey = () => {
 
   const selectedNode = nodes.find((n) => n.songId === selected) || null;
   const selectedLogs = selectedNode ? logs.filter((l) => l.song_id === selectedNode.songId).slice(0, 6) : [];
+  // The full catalog entry behind the map node — chords, strum, tempo, etc.
+  const selectedSong = selectedNode ? catalog.find((s) => s.id === selectedNode.songId) : null;
 
   return (
     <section className="view view-journey active">
@@ -244,9 +247,8 @@ const Journey = () => {
                       return (
                         <button
                           key={n.songId}
-                          onClick={() => n.state !== "locked" && setSelected(isOpen ? null : n.songId)}
-                          disabled={n.state === "locked"}
-                          className={`relative rounded-2xl p-4 text-left transition-all ${n.state !== "locked" ? "hover:-translate-y-0.5 cursor-pointer" : "cursor-not-allowed opacity-70"}`}
+                          onClick={() => setSelected(isOpen ? null : n.songId)}
+                          className={`relative rounded-2xl p-4 text-left transition-all hover:-translate-y-0.5 cursor-pointer ${n.state === "locked" ? "opacity-80" : ""}`}
                           style={{ background: bg, border: `2px solid ${border}`, boxShadow: ring, transform: `translateY(${offsetY}px)` }}
                         >
                           <div
@@ -277,16 +279,17 @@ const Journey = () => {
 
                           <div className="text-center">
                             <div className="text-sm font-bold leading-tight line-clamp-2" style={{ color: n.state === "locked" ? "var(--ink-faint)" : "var(--ink)" }}>
-                              {n.state === "locked" ? "???" : n.title}
+                              {n.title}
                             </div>
-                            {n.state !== "locked" && (
-                              <div className="text-[10px] mt-0.5 line-clamp-1" style={{ color: "var(--ink-soft)" }}>{n.artist}</div>
-                            )}
+                            <div className="text-[10px] mt-0.5 line-clamp-1" style={{ color: "var(--ink-soft)" }}>{n.artist}</div>
                             {n.state === "current" && (
                               <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--navy)" }}>In progress</div>
                             )}
                             {n.state === "next" && (
                               <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--gold-deep)" }}>Up next</div>
+                            )}
+                            {n.state === "locked" && (
+                              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>Peek ahead</div>
                             )}
                           </div>
 
@@ -319,6 +322,52 @@ const Journey = () => {
               <BadgeDisplay level={selectedNode.teacherBadge} size="md" />
             </div>
 
+            {/* What this song teaches — the course substance behind the map node */}
+            {selectedSong && (
+              <div className="mt-4 grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+                {(selectedSong.chords ?? []).length > 0 && (
+                  <div className="rounded-xl p-3" style={{ background: "var(--paper-cool)" }}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-faint)" }}>Chords</div>
+                    <div className="flex flex-wrap gap-1">
+                      {(selectedSong.chords ?? []).map((c) => (
+                        <span
+                          key={c}
+                          className="text-xs font-bold px-2 py-0.5 rounded-md"
+                          style={
+                            c === selectedSong.newChord
+                              ? { background: "var(--gold-deep)", color: "#fff" }
+                              : { background: "var(--card)", color: "var(--ink)", border: "1px solid var(--border)" }
+                          }
+                          title={c === selectedSong.newChord ? "New chord in this song!" : undefined}
+                        >
+                          {c}{c === selectedSong.newChord ? " ✨" : ""}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedSong.strum && (
+                  <div className="rounded-xl p-3" style={{ background: "var(--paper-cool)" }}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-faint)" }}>Strum</div>
+                    <div className="text-sm font-bold tracking-widest" style={{ color: "var(--ink)" }}>{selectedSong.strum}</div>
+                    {selectedSong.strumNote && (
+                      <div className="text-[10px] mt-0.5" style={{ color: "var(--ink-soft)" }}>{selectedSong.strumNote}</div>
+                    )}
+                  </div>
+                )}
+                <div className="rounded-xl p-3" style={{ background: "var(--paper-cool)" }}>
+                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-faint)" }}>Level</div>
+                  <div className="text-sm font-bold" style={{ color: "var(--ink)" }}>{selectedSong.difficulty}</div>
+                  {selectedSong.bpm && (
+                    <div className="text-[10px] mt-0.5" style={{ color: "var(--ink-soft)" }}>{selectedSong.bpm} BPM</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Teacher-uploaded clips for this song */}
+            <SongVideos songId={selectedNode.songId} inset={false} />
+
             {selectedNode.sessions > 0 && (
               <>
                 <div className="mt-3 flex items-center gap-1" title="Last 7 days check-ins">
@@ -344,15 +393,21 @@ const Journey = () => {
               </>
             )}
 
-            {selectedNode.state !== "locked" && (
-              <button
-                onClick={() => navigate(`/student/song/${selectedNode.songId}`)}
-                className="mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors"
-                style={{ background: "var(--navy)", color: "#fff" }}
-              >
-                {selectedNode.sessions > 0 ? "Continue practicing →" : "Start this song →"}
-              </button>
-            )}
+            <button
+              onClick={() => navigate(`/student/song/${selectedNode.songId}`)}
+              className="mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-transform hover:scale-[1.01]"
+              style={{
+                background: selectedNode.state === "locked" ? "var(--paper-cool)" : "var(--navy)",
+                color: selectedNode.state === "locked" ? "var(--ink)" : "#fff",
+                border: selectedNode.state === "locked" ? "1px solid var(--border-strong)" : "none",
+              }}
+            >
+              {selectedNode.state === "locked"
+                ? "Take a peek →"
+                : selectedNode.sessions > 0
+                ? "Continue practicing →"
+                : "Start this song →"}
+            </button>
           </div>
         )}
       </div>
