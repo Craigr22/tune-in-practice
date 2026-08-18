@@ -19,14 +19,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Music } from "lucide-react";
+import { Plus, Pencil, Trash2, Music, Film } from "lucide-react";
+import { useCourseVideos } from "@/hooks/useCourseVideos";
 import { toast } from "sonner";
 import SongFormDialog from "@/components/admin/SongFormDialog";
 import VideoManager from "@/components/admin/VideoManager";
 
 function UkuleleManager() {
   const songs = useCatalogSongs("ukulele", { showInactive: true });
+  const { data: videos = [] } = useCourseVideos("ukulele");
   const del = useDeleteSong();
+
+  // How many clips each song has, so admins can see coverage at a glance.
+  const videoCount = new Map<string, number>();
+  for (const v of videos) {
+    if (v.song_id) videoCount.set(v.song_id, (videoCount.get(v.song_id) ?? 0) + 1);
+  }
   const [form, setForm] = useState<CatalogSong | null | undefined>(undefined); // undefined = closed
   const [confirmDel, setConfirmDel] = useState<CatalogSong | null>(null);
 
@@ -61,6 +69,7 @@ function UkuleleManager() {
               <th className="text-left p-3">Song</th>
               <th className="text-left p-3">Chords</th>
               <th className="text-left p-3 w-28">Difficulty</th>
+              <th className="text-left p-3 w-20">Video</th>
               <th className="text-right p-3 w-28">Actions</th>
             </tr>
           </thead>
@@ -82,6 +91,19 @@ function UkuleleManager() {
                 </td>
                 <td className="p-3 text-muted-foreground">{(s.chords ?? []).join(" · ") || "—"}</td>
                 <td className="p-3 text-muted-foreground">{s.difficulty}</td>
+                <td className="p-3">
+                  {videoCount.get(s.id) ? (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700"
+                      title={`${videoCount.get(s.id)} video${videoCount.get(s.id) === 1 ? "" : "s"} attached`}
+                    >
+                      <Film className="w-3 h-3" />
+                      {videoCount.get(s.id)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground" title="No video attached">—</span>
+                  )}
+                </td>
                 <td className="p-3">
                   <div className="flex justify-end gap-1">
                     <Button
