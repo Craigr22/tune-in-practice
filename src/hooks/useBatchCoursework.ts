@@ -6,6 +6,9 @@ import { useCatalogSongs, type CatalogSong, type Instrument } from "@/hooks/useS
 
 export const DEFAULT_SONGS_PER_SESSION = 3;
 
+/** Shared empty array so "no overrides yet" keeps a stable identity. */
+const EMPTY_ROWS: BatchCourseworkRow[] = [];
+
 export function toInstrument(name?: string | null): Instrument {
   const n = (name ?? "").toLowerCase();
   if (n.includes("guitar")) return "guitar";
@@ -141,7 +144,8 @@ export function useStudentClassConfig(): StudentClassConfig {
   });
 
   const batchId = enrollment?.batchId ?? undefined;
-  const { data: rows = [] } = useBatchCourseworkRows(batchId);
+  // Stable empty default — see the note in useCatalogSongs.
+  const { data: rows = EMPTY_ROWS } = useBatchCourseworkRows(batchId);
   const { data: settings } = useBatchSettings(batchId);
 
   return {

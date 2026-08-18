@@ -63,6 +63,9 @@ function builtinFor(instrument: Instrument): CatalogSong[] {
   return SONGS.map((s) => ({ ...s, source: "builtin" as const, isActive: true }));
 }
 
+/** Shared frozen empty array so "no rows yet" keeps a stable identity. */
+const EMPTY_ROWS: SongRow[] = [];
+
 const sortSongs = (a: CatalogSong, b: CatalogSong) => {
   const ta = a.track === "fs" ? 99 : (a.track as number);
   const tb = b.track === "fs" ? 99 : (b.track as number);
@@ -90,7 +93,9 @@ export function useSongRows(instrument: Instrument) {
  * Used by the admin manager (showInactive=true) and student pages (false).
  */
 export function useCatalogSongs(instrument: Instrument, opts?: { showInactive?: boolean }): CatalogSong[] {
-  const { data: rows = [] } = useSongRows(instrument);
+  // Stable empty default — a fresh `[]` literal each render would invalidate
+  // every downstream memo (and loop any effect that depends on it).
+  const { data: rows = EMPTY_ROWS } = useSongRows(instrument);
   return useMemo(() => {
     const db = rows.map(rowToSong).filter((s) => opts?.showInactive || s.isActive);
     const builtinIds = new Set(builtinFor(instrument).map((s) => s.id));
