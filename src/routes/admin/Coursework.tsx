@@ -22,6 +22,7 @@ import {
 import { Plus, Pencil, Trash2, Music } from "lucide-react";
 import { toast } from "sonner";
 import SongFormDialog from "@/components/admin/SongFormDialog";
+import VideoManager from "@/components/admin/VideoManager";
 
 function UkuleleManager() {
   const songs = useCatalogSongs("ukulele", { showInactive: true });
@@ -169,6 +170,8 @@ export default function AdminCoursework() {
       </div>
 
       {instrument === "ukulele" ? <UkuleleManager /> : <ComingSoon label={instrument === "guitar" ? "Guitar" : "Violin"} />}
+
+      <VideoManager instrument={instrument} />
     </div>
   );
 }
