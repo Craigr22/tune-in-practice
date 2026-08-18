@@ -190,6 +190,36 @@ export type Database = {
           },
         ]
       }
+      course_videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          instrument: string
+          song_id: string | null
+          storage_path: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          instrument?: string
+          song_id?: string | null
+          storage_path: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          instrument?: string
+          song_id?: string | null
+          storage_path?: string
+          title?: string
+        }
+        Relationships: []
+      }
       enrollments: {
         Row: {
           batch_id: string
