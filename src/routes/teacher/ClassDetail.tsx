@@ -49,6 +49,12 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
     if (settings) setPerDay(settings.songs_per_day);
   }, [settings]);
 
+  // Reordering is batched behind the Save button; locking saves immediately.
+  const [dirtyOrder, setDirtyOrder] = useState(false);
+
+  const payloadFor = (rows_: EditRow[]) =>
+    rows_.map((r, i) => ({ song_id: r.song_id, is_unlocked: r.is_unlocked, sort_order: (i + 1) * 100 }));
+
   const move = (i: number, dir: -1 | 1) => {
     setList((prev) => {
       const next = [...prev];
@@ -57,17 +63,30 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
+    setDirtyOrder(true);
   };
 
-  const toggle = (i: number) =>
-    setList((prev) => prev.map((r, idx) => (idx === i ? { ...r, is_unlocked: !r.is_unlocked } : r)));
+  /** Lock/unlock persists straight away — a switch that silently didn't save
+      was the easiest way to think students had been given a song. */
+  const toggle = async (i: number) => {
+    const before = list;
+    const next = list.map((r, idx) => (idx === i ? { ...r, is_unlocked: !r.is_unlocked } : r));
+    setList(next);
+    try {
+      await saveCoursework.mutateAsync(payloadFor(next));
+      setDirtyOrder(false); // the write above also committed any pending order
+      toast.success(`${next[i].is_unlocked ? "Unlocked" : "Locked"} “${next[i].title}”`);
+    } catch (e: any) {
+      setList(before);
+      toast.error(e.message ?? "Failed to save");
+    }
+  };
 
   const saveOrder = async () => {
     try {
-      await saveCoursework.mutateAsync(
-        list.map((r, i) => ({ song_id: r.song_id, is_unlocked: r.is_unlocked, sort_order: (i + 1) * 100 })),
-      );
-      toast.success("Coursework saved");
+      await saveCoursework.mutateAsync(payloadFor(list));
+      setDirtyOrder(false);
+      toast.success("Song order saved");
     } catch (e: any) {
       toast.error(e.message ?? "Failed to save");
     }
@@ -134,11 +153,21 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
         <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
           <div>
             <div className="font-medium text-sm">Course songs</div>
-            <p className="text-xs text-muted-foreground">Lock/unlock songs and set the order students see them in.</p>
+            <p className="text-xs text-muted-foreground">
+              Unlocking saves straight away. Reordering needs the Save button.
+            </p>
+            <p className="text-xs mt-0.5 font-medium text-emerald-700">
+              Students in this class see {list.filter((r) => r.is_unlocked).length} of {list.length} songs
+            </p>
           </div>
-          <Button size="sm" onClick={saveOrder} disabled={saveCoursework.isPending}>
-            {saveCoursework.isPending ? "Saving…" : "Save order"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {dirtyOrder && (
+              <span className="text-xs font-medium text-amber-600">Unsaved order</span>
+            )}
+            <Button size="sm" onClick={saveOrder} disabled={saveCoursework.isPending || !dirtyOrder}>
+              {saveCoursework.isPending ? "Saving…" : "Save order"}
+            </Button>
+          </div>
         </div>
         <div className="divide-y">
           {list.map((r, i) => (
