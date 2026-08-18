@@ -26,8 +26,11 @@ export function SongsProvider({ children }: { children: ReactNode }) {
 
   // Merge admin-managed ukulele songs from the DB on top of the built-in
   // catalog so new/customized songs appear everywhere (Home, Journey, detail).
-  const { data: dbRows = [] } = useSongRows("ukulele");
+  // NOTE: no `= []` default here — a fresh array literal each render would make
+  // the effect below re-run forever ("Maximum update depth exceeded").
+  const { data: dbRows } = useSongRows("ukulele");
   useEffect(() => {
+    if (!dbRows || dbRows.length === 0) return;
     setSongs((prev) => {
       const byId = new Map(prev.map((s) => [s.id, s]));
       for (const r of dbRows) {
