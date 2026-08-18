@@ -58,7 +58,8 @@ const TopNav = () => {
             <a className={`nav-link ${isActive("/admin/schedule") ? "active" : ""}`} onClick={() => go("/admin/schedule")}>Schedule</a>
             <a className={`nav-link ${isActive("/admin/people") ? "active" : ""}`} onClick={() => go("/admin/people")}>People</a>
             <a className={`nav-link ${isActive("/admin/coursework") ? "active" : ""}`} onClick={() => go("/admin/coursework")}>Course Work</a>
-            <a className={`nav-link ${isActive("/admin/finance") ? "active" : ""}`} onClick={() => go("/admin/finance")}>Finance</a>
+            {/* Finance hidden for now — routes still live at /admin/finance.
+                Restore this link when finance is ready to go public. */}
           </>
         )}
       </div>
