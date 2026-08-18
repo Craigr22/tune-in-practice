@@ -56,6 +56,23 @@ export function useCourseVideos(instrument: Instrument) {
   });
 }
 
+/** Videos an admin attached to one song — shown to students on the song page. */
+export function useSongVideos(songId?: string) {
+  return useQuery({
+    queryKey: ["song-videos", songId],
+    enabled: !!songId,
+    queryFn: async (): Promise<CourseVideo[]> => {
+      const { data, error } = await (supabase as any)
+        .from("course_videos")
+        .select("*")
+        .eq("song_id", songId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as CourseVideo[];
+    },
+  });
+}
+
 export function useUploadCourseVideo() {
   const qc = useQueryClient();
   return useMutation({

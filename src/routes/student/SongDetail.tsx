@@ -15,6 +15,7 @@ import PlanTab from "@/components/shared/song/PlanTab";
 import SidePanel from "@/components/shared/song/SidePanel";
 import TuneCheck from "@/components/shared/TuneCheck";
 import AudioClipRecorder from "@/components/shared/AudioClipRecorder";
+import SongVideos from "@/components/student/SongVideos";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { BADGE_LIST } from "@/lib/badges";
@@ -180,6 +181,7 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
                   )}
                 </div>
               )}
+              <SongVideos songId={song.id} />
               {planSession ? (
                 <SegmentedPracticeView
                   session={planSession}
