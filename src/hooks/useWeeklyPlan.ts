@@ -105,10 +105,12 @@ interface GenInput {
   pool?: FocusPoolSong[];
   /** Distinct songs to fit into a single 30-min session (1–3). 3 = warmup/focus/bonus all distinct. */
   songsPerSession?: number;
+  /** Per-practice-day counts, in session order. Overrides songsPerSession per day. */
+  songsPerDay?: number[];
 }
 
 export function buildWeekRows(input: GenInput) {
-  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3 } = input;
+  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay } = input;
   const dates = practiceDaysForWeek(weekStart, classDayOfWeek);
   const focus = pickFocusSong(progress, pool);
   const focusId = focus?.id ?? SONGS[0].id;
@@ -132,15 +134,16 @@ export function buildWeekRows(input: GenInput) {
       progress, logs, currentSongId: focusId,
       previousBonusType, weekNumber,
     });
-    // Collapse distinct songs to honor the class's songs-per-session setting.
-    // 3 → warmup/focus/bonus all distinct (default). 2 → bonus folds into the focus song.
+    // Collapse distinct songs to honor the teacher's plan for THIS day.
+    // 3 → warmup/focus/bonus all distinct. 2 → bonus folds into the focus song.
     // 1 → warmup + bonus both fold into the focus song (one song for the whole 30 min).
-    if (songsPerSession <= 2) {
+    const dayCount = songsPerDay?.[i] ?? songsPerSession;
+    if (dayCount <= 2) {
       bonus.song_id = focusId;
       bonus.bonus_type = "callback_song";
       bonus.instruction = `Extra reps on ${focusTitle} to finish strong.`;
     }
-    if (songsPerSession <= 1 && warm.song_id) {
+    if (dayCount <= 1 && warm.song_id) {
       warm.song_id = focusId;
       warm.instruction = `Ease in with ${focusTitle} — slow and clean.`;
     }
@@ -224,7 +227,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const { data: progress = [] } = useSongProgress();
   const { data: logs = [] } = usePracticeLogs();
   const classSongs = useStudentSongs();
-  const { songsPerSession } = useStudentClassConfig();
+  const { songsPerSession, songsPerDay } = useStudentClassConfig();
   const weekStart = weekStartArg ?? isoMonday();
   const { data: existing } = useWeeklyPlan(weekStart);
 
@@ -248,6 +251,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       existing: [],
       pool: classSongs,
       songsPerSession,
+      songsPerDay,
     });
 
     (async () => {

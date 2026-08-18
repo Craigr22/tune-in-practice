@@ -6,7 +6,8 @@ import {
   useBatchCourseworkRows,
   useBatchSettings,
   useSaveCoursework,
-  useSaveSongsPerSession,
+  useSaveSongsPerDay,
+  normalizeSongsPerDay,
   effectiveClassSongs,
   toInstrument,
 } from "@/hooks/useBatchCoursework";
@@ -16,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, ChevronUp, ChevronDown, Lock, Unlock } from "lucide-react";
+import { SESSION_ORDER, SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { toast } from "sonner";
 
 type EditRow = { song_id: string; title: string; artist: string; is_unlocked: boolean };
@@ -26,10 +28,10 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
   const { data: rows = [], isLoading } = useBatchCourseworkRows(batchId);
   const { data: settings } = useBatchSettings(batchId);
   const saveCoursework = useSaveCoursework(batchId);
-  const saveSongsPerSession = useSaveSongsPerSession(batchId);
+  const saveSongsPerDay = useSaveSongsPerDay(batchId);
 
   const [list, setList] = useState<EditRow[]>([]);
-  const [perSession, setPerSession] = useState(3);
+  const [perDay, setPerDay] = useState<number[]>(() => normalizeSongsPerDay(null));
 
   // Sync local editable state when the effective list loads/changes.
   const effective = useMemo(() => effectiveClassSongs(catalog, rows, { showLocked: true }), [catalog, rows]);
@@ -44,7 +46,7 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
     );
   }, [effective]);
   useEffect(() => {
-    if (settings) setPerSession(settings.songs_per_session);
+    if (settings) setPerDay(settings.songs_per_day);
   }, [settings]);
 
   const move = (i: number, dir: -1 | 1) => {
@@ -71,13 +73,15 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
     }
   };
 
-  const savePer = async (n: number) => {
-    setPerSession(n);
+  const setDayCount = async (dayIndex: number, n: number) => {
+    const next = perDay.map((v, i) => (i === dayIndex ? n : v));
+    setPerDay(next);
     try {
-      await saveSongsPerSession.mutateAsync(n);
-      toast.success("Practice load updated");
+      await saveSongsPerDay.mutateAsync(next);
+      toast.success(`Day ${dayIndex + 1} set to ${n} song${n === 1 ? "" : "s"}`);
     } catch (e: any) {
       toast.error(e.message ?? "Failed to save");
+      if (settings) setPerDay(settings.songs_per_day); // roll back on failure
     }
   };
 
@@ -86,24 +90,44 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
   return (
     <div className="space-y-5">
       <div className="rounded-lg border p-4">
-        <div className="font-medium text-sm">Weekly practice load</div>
+        <div className="font-medium text-sm">Weekly practice plan</div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Songs per 30-minute session. Students practise 3 sessions a week.
+          How many of the unlocked songs fill each 30-minute practice day. Ramp it up across the
+          week — e.g. 1 song on day 1, 2 on day 2 — or keep it steady.
         </p>
-        <div className="flex items-center gap-2 mt-3">
-          {[1, 2, 3].map((n) => (
-            <button
-              key={n}
-              onClick={() => savePer(n)}
-              className={`px-3 py-1.5 rounded-md text-sm border ${
-                perSession === n ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-              }`}
-            >
-              {n} song{n === 1 ? "" : "s"}
-            </button>
-          ))}
-          <span className="text-xs text-muted-foreground ml-1">per session</span>
+
+        <div className="mt-3 space-y-2">
+          {SESSION_ORDER.map((kind, i) => {
+            const tpl = SESSION_TEMPLATES[kind];
+            return (
+              <div key={kind} className="flex items-center gap-3 flex-wrap">
+                <div className="w-40 shrink-0">
+                  <div className="text-sm font-medium">Day {i + 1}</div>
+                  <div className="text-xs text-muted-foreground">{tpl.emoji} {tpl.label}</div>
+                </div>
+                <div className="flex gap-2">
+                  {[1, 2, 3].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setDayCount(i, n)}
+                      disabled={saveSongsPerDay.isPending}
+                      className={`px-3 py-1.5 rounded-md text-sm border disabled:opacity-60 ${
+                        perDay[i] === n ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      }`}
+                    >
+                      {n} song{n === 1 ? "" : "s"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
+
+        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+          {perDay.reduce((a, b) => a + b, 0)} song slots across the week · songs are picked from this
+          class's unlocked list, in the order below.
+        </p>
       </div>
 
       <div className="rounded-lg border">

@@ -64,18 +64,34 @@ export function useBatchCourseworkRows(batchId?: string) {
   });
 }
 
+/** Practice days in a week — one weekly-plan session each. */
+export const PRACTICE_DAYS = 3;
+
+/** Normalize whatever is stored into exactly PRACTICE_DAYS counts of 1–3. */
+export function normalizeSongsPerDay(raw: unknown, fallback = DEFAULT_SONGS_PER_SESSION): number[] {
+  const arr = Array.isArray(raw) ? raw : [];
+  return Array.from({ length: PRACTICE_DAYS }, (_, i) => {
+    const n = Number(arr[i]);
+    return Number.isFinite(n) && n >= 1 && n <= 3 ? Math.round(n) : fallback;
+  });
+}
+
 export function useBatchSettings(batchId?: string) {
   return useQuery({
     queryKey: ["batch-settings", batchId],
     enabled: !!batchId,
-    queryFn: async (): Promise<{ songs_per_session: number }> => {
+    queryFn: async (): Promise<{ songs_per_session: number; songs_per_day: number[] }> => {
       const { data, error } = await (supabase as any)
         .from("batch_settings")
-        .select("songs_per_session")
+        .select("songs_per_session, songs_per_day")
         .eq("batch_id", batchId!)
         .maybeSingle();
       if (error) throw error;
-      return { songs_per_session: data?.songs_per_session ?? DEFAULT_SONGS_PER_SESSION };
+      const flat = data?.songs_per_session ?? DEFAULT_SONGS_PER_SESSION;
+      return {
+        songs_per_session: flat,
+        songs_per_day: normalizeSongsPerDay(data?.songs_per_day, flat),
+      };
     },
   });
 }
@@ -95,13 +111,22 @@ export function useSaveCoursework(batchId: string) {
   });
 }
 
-export function useSaveSongsPerSession(batchId: string) {
+/** Save the per-day song counts (and keep the flat column in sync as a fallback). */
+export function useSaveSongsPerDay(batchId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (n: number) => {
-      const { error } = await (supabase as any)
-        .from("batch_settings")
-        .upsert({ batch_id: batchId, songs_per_session: n, updated_at: new Date().toISOString() }, { onConflict: "batch_id" });
+    mutationFn: async (perDay: number[]) => {
+      const days = normalizeSongsPerDay(perDay);
+      const { error } = await (supabase as any).from("batch_settings").upsert(
+        {
+          batch_id: batchId,
+          songs_per_day: days,
+          // Legacy single value — keep it meaningful for anything still reading it.
+          songs_per_session: Math.max(...days),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "batch_id" },
+      );
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["batch-settings", batchId] }),
@@ -115,6 +140,8 @@ export type StudentClassConfig = {
   instrument: Instrument;
   dayOfWeek: number | null;
   songsPerSession: number;
+  /** Distinct songs for each of the week's practice days, in order. */
+  songsPerDay: number[];
   rows: BatchCourseworkRow[];
 };
 
@@ -153,6 +180,7 @@ export function useStudentClassConfig(): StudentClassConfig {
     instrument: enrollment?.instrument ?? "ukulele",
     dayOfWeek: enrollment?.dayOfWeek ?? null,
     songsPerSession: settings?.songs_per_session ?? DEFAULT_SONGS_PER_SESSION,
+    songsPerDay: settings?.songs_per_day ?? normalizeSongsPerDay(null),
     rows,
   };
 }
