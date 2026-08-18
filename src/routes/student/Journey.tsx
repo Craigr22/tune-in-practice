@@ -14,6 +14,7 @@ import {
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
@@ -306,12 +307,17 @@ const Journey = () => {
           </div>
         </div>
 
-        {/* Selected song detail */}
-        {selectedNode && (
-          <div className="mt-6 rounded-2xl p-5 animate-fade-in" style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
+        {/* Selected song — opens as a dialog so it's always in view, however
+            far down the map the student tapped. */}
+        <Dialog open={!!selectedNode} onOpenChange={(o) => !o && setSelected(null)}>
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          {selectedNode && (
+          <>
+            <DialogHeader>
+              <DialogTitle style={{ color: "var(--ink)" }}>{selectedNode.title}</DialogTitle>
+            </DialogHeader>
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-lg" style={{ color: "var(--ink)" }}>{selectedNode.title}</h3>
                 <div className="text-xs" style={{ color: "var(--ink-soft)" }}>{selectedNode.artist}</div>
                 <div className="text-[11px] mt-1" style={{ color: "var(--ink-faint)" }}>
                   {selectedNode.sessions > 0
@@ -408,8 +414,10 @@ const Journey = () => {
                 ? "Continue practicing →"
                 : "Start this song →"}
             </button>
-          </div>
-        )}
+          </>
+          )}
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   );
