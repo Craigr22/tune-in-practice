@@ -18,6 +18,9 @@ function addWeeks(iso: string, n: number) {
 
 const TYPE_LABELS = { build: "Build", flow: "Flow", stretch: "Stretch" } as const;
 
+/** Radix Select rejects an empty-string item value, so "no song" needs a sentinel. */
+const NO_SONG = "__none__";
+
 export default function WeeklyPlanEditor({ studentId }: { studentId: string }) {
   const qc = useQueryClient();
   const { songs } = useSongs();
@@ -107,13 +110,15 @@ export default function WeeklyPlanEditor({ studentId }: { studentId: string }) {
                   <div>
                     <Label className="text-[10px] uppercase">{seg}</Label>
                     <Select
-                      value={d[`${seg}_song_id`] ?? ""}
-                      onValueChange={(v) => update(r.id, { [`${seg}_song_id`]: v })}
+                      value={d[`${seg}_song_id`] || (seg === "focus" ? "" : NO_SONG)}
+                      onValueChange={(v) =>
+                        update(r.id, { [`${seg}_song_id`]: v === NO_SONG ? null : v })
+                      }
                     >
                       <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Song" /></SelectTrigger>
                       <SelectContent>
-                        {seg !== "focus" && <SelectItem value="">—</SelectItem>}
-                        {songs.map((s) => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                        {seg !== "focus" && <SelectItem value={NO_SONG}>—</SelectItem>}
+                        {songs.filter((s) => s.id).map((s) => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
