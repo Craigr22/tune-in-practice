@@ -1,6 +1,19 @@
 import { useTeacherStudents } from "@/hooks/useTeacherStudents";
 import { useNavigate } from "react-router-dom";
-import { Music, ChevronRight, Users } from "lucide-react";
+import { Music, ChevronRight, Users, Clock } from "lucide-react";
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** "Saturday · 10:00 AM" — how a teacher actually identifies a class. */
+function whenLabel(batch: any): string {
+  const day = DAYS[batch?.day_of_week] ?? "";
+  const t = (batch?.start_time ?? "").slice(0, 5);
+  if (!t) return day;
+  const [h, m] = t.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${day} · ${hour12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
 
 export default function MyClasses() {
   const { data: groups = [], isLoading } = useTeacherStudents();
@@ -36,6 +49,10 @@ export default function MyClasses() {
               <div>
                 <div className="font-semibold">
                   {g.batch.locations?.name} · {g.batch.instruments?.name}
+                </div>
+                <div className="text-xs font-medium mt-1 flex items-center gap-1" style={{ color: "var(--navy)" }}>
+                  <Clock className="w-3 h-3" />
+                  {whenLabel(g.batch)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                   <Users className="w-3 h-3" />

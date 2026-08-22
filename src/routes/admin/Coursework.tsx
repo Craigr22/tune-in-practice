@@ -54,9 +54,10 @@ function UkuleleManager() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground max-w-2xl">
           {songs.length} songs in the ukulele course
-          {dbCount > 0 ? ` · ${dbCount} added by you` : ""}. These appear on students’ Home and Journey pages.
+          {dbCount > 0 ? ` · ${dbCount} added by you` : ""}. This is the master list — each teacher then
+          chooses which of these are unlocked, and in what order, for their own class.
         </p>
         <Button onClick={() => setForm(null)}><Plus className="w-4 h-4 mr-1" />Add song</Button>
       </div>
@@ -177,7 +178,7 @@ export default function AdminCoursework() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Instrument Course Work</h1>
+      <h1 className="text-2xl font-semibold">Course work</h1>
 
       <div className="flex rounded-md border overflow-hidden w-fit">
         {INSTRUMENTS.map((i) => (

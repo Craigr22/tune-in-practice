@@ -36,6 +36,31 @@ const Gate = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+/** Send each signed-in user to their own home instead of always the student page. */
+const RoleHome = () => {
+  const { role } = useAuth();
+  if (role === "admin") return <Navigate to="/admin/schedule" replace />;
+  if (role === "teacher") return <Navigate to="/teacher/classes" replace />;
+  if (role === "student") return <Navigate to="/student" replace />;
+  // Signed in, but no role assigned yet — say so rather than showing an empty
+  // student page that looks broken.
+  return (
+    <div className="max-w-md mx-auto px-4 py-16 text-center">
+      <h1 className="text-xl font-semibold" style={{ color: "var(--ink)" }}>Your account isn’t set up yet</h1>
+      <p className="mt-2 text-sm" style={{ color: "var(--ink-soft)" }}>
+        An admin needs to give your account a role before you can use the portal. Please check back shortly.
+      </p>
+    </div>
+  );
+};
+
+/** Keep each role inside its own area. Admins may go anywhere. */
+const RequireRole = ({ role: need, children }: { role: "teacher" | "admin"; children: React.ReactNode }) => {
+  const { role } = useAuth();
+  if (role === "admin" || role === need) return <>{children}</>;
+  return <Navigate to="/" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -46,16 +71,16 @@ const App = () => (
           <Gate>
             <Routes>
               <Route element={<AppShell />}>
-                <Route path="/" element={<Navigate to="/student" replace />} />
+                <Route path="/" element={<RoleHome />} />
                 <Route path="/student" element={<Home />} />
                 <Route path="/student/journey" element={<Journey />} />
                 
                 <Route path="/student/tuner" element={<TunerRoute />} />
                 <Route path="/student/song/:id" element={<SongDetail />} />
                 <Route path="/teacher" element={<Navigate to="/teacher/classes" replace />} />
-                <Route path="/teacher/classes" element={<MyClasses />} />
-                <Route path="/teacher/class/:batchId" element={<ClassDetail />} />
-                <Route path="/teacher/schedule" element={<Schedule />} />
+                <Route path="/teacher/classes" element={<RequireRole role="teacher"><MyClasses /></RequireRole>} />
+                <Route path="/teacher/class/:batchId" element={<RequireRole role="teacher"><ClassDetail /></RequireRole>} />
+                <Route path="/teacher/schedule" element={<RequireRole role="teacher"><Schedule /></RequireRole>} />
                 {/* Legacy teacher routes */}
                 <Route path="/teacher/today" element={<Navigate to="/teacher/classes" replace />} />
                 <Route path="/teacher/students" element={<Navigate to="/teacher/classes" replace />} />
@@ -70,7 +95,7 @@ const App = () => (
                 <Route path="/admin/students" element={<Navigate to="/admin/people/students" replace />} />
                 <Route path="/admin/teachers" element={<Navigate to="/admin/people/teachers" replace />} />
                 <Route path="/admin/users" element={<Navigate to="/admin/people/access" replace />} />
-                <Route path="/admin/finance" element={<FinanceLayout />}>
+                <Route path="/admin/finance" element={<RequireRole role="admin"><FinanceLayout /></RequireRole>}>
                   <Route index element={<FinanceOverview />} />
                   <Route path="payments" element={<FinancePayments />} />
                   <Route path="payouts" element={<FinancePayouts />} />

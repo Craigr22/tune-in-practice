@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate, Navigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
@@ -57,7 +57,7 @@ const TopNav = () => {
           <>
             <a className={`nav-link ${isActive("/admin/schedule") ? "active" : ""}`} onClick={() => go("/admin/schedule")}>Schedule</a>
             <a className={`nav-link ${isActive("/admin/people") ? "active" : ""}`} onClick={() => go("/admin/people")}>People</a>
-            <a className={`nav-link ${isActive("/admin/coursework") ? "active" : ""}`} onClick={() => go("/admin/coursework")}>Course Work</a>
+            <a className={`nav-link ${isActive("/admin/coursework") ? "active" : ""}`} onClick={() => go("/admin/coursework")}>Course work</a>
             {/* Finance hidden for now — routes still live at /admin/finance.
                 Restore this link when finance is ready to go public. */}
           </>
@@ -116,12 +116,6 @@ const TopNav = () => {
   );
 };
 
-const RoleHome = () => {
-  const { role } = useAuth();
-  if (role === "teacher") return <Navigate to="/teacher" replace />;
-  return <Navigate to="/student" replace />;
-};
-
 const AppShell = () => {
   const { role } = useAuth();
   const location = useLocation();
@@ -138,5 +132,4 @@ const AppShell = () => {
   );
 };
 
-export { RoleHome };
 export default AppShell;

@@ -154,7 +154,7 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
           <div>
             <div className="font-medium text-sm">Course songs</div>
             <p className="text-xs text-muted-foreground">
-              Unlocking saves straight away. Reordering needs the Save button.
+              From the school's course catalog. Unlocking saves straight away; reordering needs the Save button.
             </p>
             <p className="text-xs mt-0.5 font-medium text-emerald-700">
               Students in this class see {list.filter((r) => r.is_unlocked).length} of {list.length} songs
