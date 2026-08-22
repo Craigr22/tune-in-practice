@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useAuth } from "@/hooks/useAuth";
-import { useImpersonatedStudentId } from "@/hooks/useStudentImpersonation";
 
 export interface StudentRow {
   id: string;
@@ -11,19 +10,19 @@ export interface StudentRow {
   user_id: string | null;
 }
 
+/** The student record belonging to the signed-in user. */
 export function useStudentMe() {
-  const { user, actualRole, role } = useAuth();
-  const impersonatedId = useImpersonatedStudentId();
-  const useImpersonation = actualRole === "admin" && role === "student" && !!impersonatedId;
+  const { user } = useAuth();
 
   return useQuery({
-    queryKey: ["student-me", user?.id, useImpersonation ? impersonatedId : null],
+    queryKey: ["student-me", user?.id],
     enabled: !!user?.id,
     queryFn: async (): Promise<StudentRow | null> => {
-      const query = supabase.from("students").select("id, name, email, joined_on, user_id");
-      const { data, error } = useImpersonation
-        ? await query.eq("id", impersonatedId!).maybeSingle()
-        : await query.eq("user_id", user!.id).maybeSingle();
+      const { data, error } = await supabase
+        .from("students")
+        .select("id, name, email, joined_on, user_id")
+        .eq("user_id", user!.id)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
