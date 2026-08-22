@@ -3,13 +3,25 @@ import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
 import FloatingFoundations from "@/components/shared/FloatingFoundations";
+import {
+  useImpersonatedTeacherId,
+  setImpersonatedTeacherId,
+  useTeacherList,
+} from "@/hooks/useTeacherImpersonation";
+import {
+  useImpersonatedStudentId,
+  setImpersonatedStudentId,
+  useStudentList,
+} from "@/hooks/useStudentImpersonation";
 
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // Role switching / "view as" was a build-time testing aid — removed now that
-  // real accounts carry their own role.
-  const { user, role, signOut } = useAuth();
+  const { user, role, actualRole, setViewAs, signOut } = useAuth();
+  const impersonatedTeacherId = useImpersonatedTeacherId();
+  const { data: teachers = [] } = useTeacherList(actualRole === "admin" && role === "teacher");
+  const impersonatedStudentId = useImpersonatedStudentId();
+  const { data: students = [] } = useStudentList(actualRole === "admin" && role === "student");
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
@@ -52,6 +64,50 @@ const TopNav = () => {
         )}
       </div>
       <div className="streak-chip">🔥 keep it up</div>
+      {actualRole === "admin" && (
+        <div className="role-toggle" title="View the app as a different role">
+          <button
+            className={`role-btn ${role === "admin" ? "active" : ""}`}
+            onClick={() => { setViewAs(null); go("/admin/schedule"); }}
+          >Admin</button>
+          <button
+            className={`role-btn ${role === "teacher" ? "active" : ""}`}
+            onClick={() => { setViewAs("teacher"); go("/teacher/classes"); }}
+          >Teacher</button>
+          <button
+            className={`role-btn ${role === "student" ? "active" : ""}`}
+            onClick={() => { setViewAs("student"); go("/student"); }}
+          >Student</button>
+        </div>
+      )}
+      {actualRole === "admin" && role === "teacher" && (
+        <select
+          className="role-btn"
+          style={{ padding: "4px 8px", fontSize: 12 }}
+          value={impersonatedTeacherId ?? ""}
+          onChange={(e) => setImpersonatedTeacherId(e.target.value || null)}
+          title="View as teacher"
+        >
+          <option value="">Own account</option>
+          {teachers.map((t: any) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      )}
+      {actualRole === "admin" && role === "student" && (
+        <select
+          className="role-btn"
+          style={{ padding: "4px 8px", fontSize: 12 }}
+          value={impersonatedStudentId ?? ""}
+          onChange={(e) => setImpersonatedStudentId(e.target.value || null)}
+          title="View as student"
+        >
+          <option value="">Own account</option>
+          {students.map((s: any) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ))}
+        </select>
+      )}
       <div className="role-toggle" title={user?.email ?? ""}>
         <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
         <button className="role-btn" onClick={signOut}>Sign out</button>
