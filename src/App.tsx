@@ -26,6 +26,7 @@ import FinanceExpenses from "@/routes/admin/Finance/Expenses";
 import FinancePnL from "@/routes/admin/Finance/PnL";
 import Login from "@/pages/Login";
 import NotFound from "./pages/NotFound.tsx";
+import ErrorBoundary from "@/components/shared/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const RequireRole = ({ role: need, children }: { role: "teacher" | "admin"; chil
 };
 
 const App = () => (
+  <ErrorBoundary label="The app">
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -110,6 +112,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

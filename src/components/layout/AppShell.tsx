@@ -3,6 +3,7 @@ import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
 import FloatingFoundations from "@/components/shared/FloatingFoundations";
+import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import {
   useImpersonatedTeacherId,
   setImpersonatedTeacherId,
@@ -124,10 +125,20 @@ const AppShell = () => {
     <SongsProvider>
       <TopNav />
       <main id="app">
-        <Outlet />
+        {/* Keyed by path so navigating away clears a failed page instead of
+            leaving the user stuck on the error card. */}
+        <ErrorBoundary key={location.pathname} label="This page">
+          <Outlet />
+        </ErrorBoundary>
       </main>
-      {showFloatingTuner && <FloatingFoundations />}
-      {showFloatingTuner && <FloatingTuner />}
+      {/* The tuner depends on mic permission and live audio — isolate it so a
+          failure there can't take the page down with it. */}
+      {showFloatingTuner && (
+        <ErrorBoundary fallback={null}>
+          <FloatingFoundations />
+          <FloatingTuner />
+        </ErrorBoundary>
+      )}
     </SongsProvider>
   );
 };
