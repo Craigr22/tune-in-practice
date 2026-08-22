@@ -14,10 +14,10 @@ interface Props {
 }
 
 const BONUS_LABELS: Record<WeeklyPlanSession["bonus_type"], { emoji: string; label: string }> = {
-  callback_song: { emoji: "🎁", label: "Callback song" },
+  callback_song: { emoji: "🎁", label: "Song you know" },
   mini_challenge: { emoji: "🎯", label: "Mini challenge" },
   jam: { emoji: "🎸", label: "Jam" },
-  foundation_refresh: { emoji: "📚", label: "Foundation refresh" },
+  foundation_refresh: { emoji: "📚", label: "Basics refresh" },
 };
 
 export default function SegmentedPracticeView({ session, onAllDone, focusContent }: Props) {

@@ -1,21 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import SongDetail from "@/routes/student/SongDetail";
-import { useSongs } from "@/hooks/useSongs";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { usePracticeLogs, useSongProgress, computeStreak, minutesThisWeek, songsInProgress } from "@/hooks/useStudentProgress";
 import { useStudentSongs } from "@/hooks/useBatchCoursework";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
-import PracticeDiary from "@/components/student/PracticeDiary";
 import JamPad from "@/components/student/JamPad";
 import { useEnsureWeeklyPlan, useTodaysSession } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 
 const Home = () => {
   const navigate = useNavigate();
-  const [expandedSongId, setExpandedSongId] = useState<string | null>(null);
   const { data: student } = useStudentMe();
   const { data: logs = [] } = usePracticeLogs();
   const { data: progress = [] } = useSongProgress();
@@ -45,9 +41,18 @@ const Home = () => {
   const sessionTpl = todaysSession ? SESSION_TEMPLATES[todaysSession.session_type] : null;
   const totalMins = todaysSession ? (todaysSession.warmup_target_min + todaysSession.focus_target_min + todaysSession.bonus_target_min) : 0;
 
-  const startSession = () => {
-    const target = (todaysSession && sessionSong) ? sessionSong.id : focusSong?.id;
-    if (target) setExpandedSongId(target);
+  /**
+   * One way into practice. Every entry point (here, the weekly calendar, and
+   * Journey) opens the same guided flow: tune check, then warm-up → focus →
+   * bonus. Passing the plan session id is what turns on the guided segments.
+   */
+  const openPractice = (songId?: string) => {
+    const target = songId ?? (todaysSession && sessionSong ? sessionSong.id : focusSong?.id);
+    if (!target) return;
+    const isPlanned = !!todaysSession && target === todaysSession.focus_song_id;
+    navigate(`/student/song/${target}`, {
+      state: isPlanned ? { planSessionId: todaysSession!.id } : undefined,
+    });
   };
 
   return (
@@ -77,17 +82,19 @@ const Home = () => {
                 {todaysSession && sessionSong && sessionTpl ? (
                   <>{sessionTpl.emoji} <span className="font-semibold text-white">{sessionTpl.label}</span> · {totalMins} min · focus on <span className="font-semibold text-white">{sessionSong.title}</span> — warm-up, focus, bonus.</>
                 ) : focusSong ? (
-                  <>Today's focus: <span className="font-semibold text-white">{focusSong.title}</span>. Tap the song below to begin.</>
+                  <>Today's focus: <span className="font-semibold text-white">{focusSong.title}</span>. Tap the button to begin.</>
                 ) : (
-                  "Pick any song below to begin."
+                  <>No song set yet — open your <span className="font-semibold text-white">Journey</span> to pick one.</>
                 )}
               </p>
               <button
-                onClick={startSession}
+                onClick={() => (focusSong || sessionSong ? openPractice() : navigate("/student/journey"))}
                 className="mt-5 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm md:text-base font-bold transition-transform hover:scale-[1.04] active:scale-95"
                 style={{ background: "#FBE48A", color: "#0b2a3f", boxShadow: "0 12px 30px -10px rgba(0,0,0,0.45)" }}
               >
-                ▶ Start today's session{totalMins ? ` · ${totalMins} min` : ""}
+                {focusSong || sessionSong
+                  ? `▶ Start today's session${totalMins ? ` · ${totalMins} min` : ""}`
+                  : "Open my Journey →"}
               </button>
             </div>
             <div className="md:text-right">
@@ -111,9 +118,11 @@ const Home = () => {
 
         {/* ===== CURRENT SONG CARD ===== */}
         {currentSong && (
-          <section
-            className="rounded-3xl p-6 md:p-8 mb-5 cursor-pointer transition-shadow hover:shadow-lg"
-            onClick={() => setExpandedSongId((cur) => cur === currentSong.id ? null : currentSong.id)}
+          <button
+            type="button"
+            aria-label={`Practice ${currentSong.title}`}
+            className="w-full text-left rounded-3xl p-6 md:p-8 mb-5 cursor-pointer transition-shadow hover:shadow-lg"
+            onClick={() => openPractice(currentSong.id)}
             style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}
           >
             <div className="flex items-center justify-between gap-6">
@@ -149,17 +158,8 @@ const Home = () => {
                 )}
               </div>
             </div>
-          </section>
+          </button>
         )}
-
-        {expandedSongId && (
-          <div className="mb-5 rounded-3xl overflow-hidden" style={{ border: "1px solid var(--border)", background: "var(--card)" }}>
-            <SongDetail songId={expandedSongId} inline onClose={() => setExpandedSongId(null)} />
-          </div>
-        )}
-
-        {/* ===== THIS WEEK'S PRACTICE ===== */}
-        <PracticeDiary />
 
         {/* ===== JAM CORNER ===== */}
         <JamPad />

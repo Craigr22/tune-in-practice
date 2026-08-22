@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, isoMonday, addWeeks, practiceDaysForWeek } from "@/hooks/useWeeklyPlan";
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
 import { useSongs } from "@/hooks/useSongs";
-import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
+import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 
 const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 const DAY_FULL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -179,40 +179,63 @@ export default function WeeklyCalendarStrip() {
 
       {selected && (
         <div
-          className="mt-3 rounded-xl p-3 flex items-center justify-between gap-3"
+          className="mt-3 rounded-xl p-3"
           style={{ background: "var(--paper-cool)", border: "1px solid var(--border)" }}
         >
-          <div className="min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-              {DAY_FULL[selected.offset]} {new Date(selected.iso).getDate()} {MONTHS[new Date(selected.iso).getMonth()]}
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
+                {DAY_FULL[selected.offset]} {new Date(selected.iso).getDate()} {MONTHS[new Date(selected.iso).getMonth()]}
+              </div>
+              {selected.isClass ? (
+                <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                  In-person class day
+                </div>
+              ) : selected.session && selectedSong && selectedTpl ? (
+                <div className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
+                  {selectedTpl.emoji} {selectedTpl.label} · {selectedSong.title}
+                  <span className="ml-2 text-[11px] font-normal" style={{ color: "var(--ink-soft)" }}>
+                    {selected.session.warmup_target_min + selected.session.focus_target_min + selected.session.bonus_target_min} min
+                  </span>
+                </div>
+              ) : selected.isPractice ? (
+                <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                  Generating your session… give it a sec.
+                </div>
+              ) : (
+                <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
+              )}
             </div>
-            {selected.isClass ? (
-              <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
-                In-person class day
-              </div>
-            ) : selected.session && selectedSong && selectedTpl ? (
-              <div className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
-                {selectedTpl.emoji} {selectedTpl.label} · {selectedSong.title}
-                <span className="ml-2 text-[11px] font-normal" style={{ color: "var(--ink-soft)" }}>
-                  {selected.session.warmup_target_min + selected.session.focus_target_min + selected.session.bonus_target_min} min
-                </span>
-              </div>
-            ) : selected.isPractice ? (
-              <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
-                Generating your session… give it a sec.
-              </div>
-            ) : (
-              <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
+            {selected.session && (
+              <button
+                onClick={() => openSession(selected.session)}
+                className="shrink-0 rounded-full px-4 py-2 text-xs font-bold"
+                style={{ background: "var(--navy)", color: "#fff" }}
+              >
+                {selected.sessionCompleted ? "Review" : selected.isPast ? "Catch up" : "Open"}
+              </button>
             )}
           </div>
+
+          {/* What the session contains — folded in from the old separate diary
+              card so the week is only described once on this page. */}
           {selected.session && (
-            <button
-              onClick={() => openSession(selected.session)}
-              className="shrink-0 rounded-full px-4 py-2 text-xs font-bold"
-              style={{ background: "var(--navy)", color: "#fff" }}
-            >
-              {selected.sessionCompleted ? "Review" : selected.isPast ? "Catch up" : "Open"}
-            </button>
+            <ul className="mt-2.5 pt-2.5 border-t space-y-1 text-xs" style={{ borderColor: "var(--border)", color: "var(--ink-soft)" }}>
+              {([
+                ["♪", "Warm-up", selected.session.warmup_song_id, selected.session.warmup_completed],
+                ["🎯", "Focus", selected.session.focus_song_id, selected.session.focus_completed],
+                [BONUS_EMOJI[selected.session.bonus_type], "Bonus", selected.session.bonus_song_id, selected.session.bonus_completed],
+              ] as const).map(([emoji, label, songId, done], idx) => {
+                const title = songId ? songs.find((s) => s.id === songId)?.title : null;
+                return (
+                  <li key={idx} className="flex items-center gap-1.5">
+                    <span>{emoji}</span>
+                    <span>{label}{title ? `: ${title}` : ""}</span>
+                    {done && <span style={{ color: "#10b981" }}>✓</span>}
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       )}

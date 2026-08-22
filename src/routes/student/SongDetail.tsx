@@ -44,17 +44,20 @@ const TunerPill = ({ lowG, active, onClick }: { lowG: boolean; active: boolean; 
 
 interface SongDetailProps {
   songId?: string;
-  inline?: boolean;
   onClose?: () => void;
 }
 
-const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {}) => {
+/**
+ * Every route into practice lands here and gets the same flow: intro → tune
+ * check → guided session. There is deliberately no mode that skips tuning.
+ */
+const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
   const params = useParams<{ id: string }>();
   const id = songIdProp ?? params.id;
   const { getSong, closeSong, logPlay } = useSongs();
   const song = id ? getSong(id) : undefined;
   const [tab, setTab] = useState<TabKey>("warmup");
-  const [phase, setPhase] = useState<Phase>(inline ? "practice" : "intro");
+  const [phase, setPhase] = useState<Phase>("intro");
   const [tuningChecked, setTuningChecked] = useState(false);
   const [inlineTunerOpen, setInlineTunerOpen] = useState(false);
   const [lowG] = useLowG();
@@ -72,12 +75,9 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
   const [showRecorder, setShowRecorder] = useState(false);
   const logPractice = useLogPractice();
 
-  useEffect(() => { setTab("warmup"); setPhase(inline ? "practice" : "intro"); setTuningChecked(false); }, [id, inline]);
+  useEffect(() => { setTab("warmup"); setPhase("intro"); setTuningChecked(false); }, [id]);
 
-  if (!song) {
-    if (inline) return null;
-    return <Navigate to="/student" replace />;
-  }
+  if (!song) return <Navigate to="/student" replace />;
 
   const handleClose = onClose ?? closeSong;
 
@@ -90,6 +90,13 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
 
   const handleLogPlay = (sid: string) => {
     logPlay(sid);
+    // Start from the minutes the session actually planned, so most students
+    // never touch the number field.
+    if (planSession) {
+      setDuration(
+        planSession.warmup_target_min + planSession.focus_target_min + planSession.bonus_target_min,
+      );
+    }
     setPrompt(true);
     setBadge(null);
     setCheckIn(null);
@@ -219,54 +226,10 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
       <Dialog open={prompt} onOpenChange={(o) => { if (!o) setShowRecorder(false); setPrompt(o); }}>
         <DialogContent className="max-w-md">
           <DialogTitle>How did that feel?</DialogTitle>
-          <DialogDescription>Rate this run-through. We'll save it to your journey.</DialogDescription>
+          <DialogDescription>Tap one to save it to your journey.</DialogDescription>
 
-          <div className="flex items-center gap-2 mt-2">
-            <label className="text-xs font-semibold" style={{ color: "var(--ink-soft)" }}>Duration</label>
-            <input
-              type="number"
-              min={1}
-              max={120}
-              value={duration}
-              onChange={(e) => setDuration(Math.max(1, Number(e.target.value) || 1))}
-              className="w-20 px-2 py-1 rounded border text-sm"
-              style={{ borderColor: "var(--border-strong)" }}
-            />
-            <span className="text-xs" style={{ color: "var(--ink-soft)" }}>min</span>
-            <span className="ml-auto text-[11px]" style={{ color: tuningChecked ? "var(--olive)" : "var(--ink-faint)" }}>
-              {tuningChecked ? "🎵 Tuned" : "Tuning skipped"}
-            </span>
-          </div>
-
-          {/* Optional self-rating badge */}
+          {/* The one thing we actually need — asked first, in the biggest control. */}
           <div className="mt-3">
-            <div className="text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-soft)" }}>
-              Self-rating (optional)
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {BADGE_LIST.map((b) => (
-                <button
-                  key={b.level}
-                  onClick={() => setBadge((cur) => (cur === b.level ? null : b.level))}
-                  className="flex flex-col items-center gap-1 p-2 rounded-xl border transition-all hover:-translate-y-0.5"
-                  style={{
-                    borderColor: badge === b.level ? "var(--navy)" : "var(--border)",
-                    background: badge === b.level ? "rgba(0,133,199,0.08)" : "var(--paper-warm)",
-                  }}
-                  title={b.blurb}
-                >
-                  <span className="text-2xl">{b.emoji}</span>
-                  <span className="text-[10px] font-semibold">{b.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Required check-in */}
-          <div className="mt-4">
-            <div className="text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-soft)" }}>
-              Quick check-in <span className="text-red-500">*</span>
-            </div>
             <div className="grid grid-cols-3 gap-2">
               {(["nailed", "got_through", "need_help"] as CheckIn[]).map((c) => {
                 const active = checkIn === c;
@@ -290,6 +253,47 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
             </div>
           </div>
 
+          {/* Details, secondary to the check-in above. */}
+          <div className="mt-3 flex items-center gap-2">
+            <label className="text-xs font-semibold" style={{ color: "var(--ink-soft)" }}>Practised for</label>
+            <input
+              type="number"
+              min={1}
+              max={120}
+              value={duration}
+              onChange={(e) => setDuration(Math.max(1, Number(e.target.value) || 1))}
+              className="w-20 px-2 py-1 rounded border text-sm"
+              style={{ borderColor: "var(--border-strong)" }}
+            />
+            <span className="text-xs" style={{ color: "var(--ink-soft)" }}>min</span>
+            <span className="ml-auto text-[11px]" style={{ color: tuningChecked ? "var(--olive)" : "var(--ink-faint)" }}>
+              {tuningChecked ? "🎵 Tuned" : "Tuning skipped"}
+            </span>
+          </div>
+
+          <details className="mt-3">
+            <summary className="text-[11px] font-bold uppercase tracking-wider cursor-pointer" style={{ color: "var(--ink-soft)" }}>
+              Rate yourself (optional)
+            </summary>
+            <div className="grid grid-cols-5 gap-2 mt-2">
+              {BADGE_LIST.map((b) => (
+                <button
+                  key={b.level}
+                  onClick={() => setBadge((cur) => (cur === b.level ? null : b.level))}
+                  className="flex flex-col items-center gap-1 p-2 rounded-xl border transition-all hover:-translate-y-0.5"
+                  style={{
+                    borderColor: badge === b.level ? "var(--navy)" : "var(--border)",
+                    background: badge === b.level ? "rgba(0,133,199,0.08)" : "var(--paper-warm)",
+                  }}
+                  title={b.blurb}
+                >
+                  <span className="text-2xl">{b.emoji}</span>
+                  <span className="text-[10px] font-semibold">{b.name}</span>
+                </button>
+              ))}
+            </div>
+          </details>
+
           {/* Footer */}
           {!showRecorder && (
             <div className="mt-4 flex flex-col gap-2">
@@ -308,13 +312,20 @@ const SongDetail = ({ songId: songIdProp, inline, onClose }: SongDetailProps = {
                   </div>
                 </>
               ) : (
-                <Button
-                  onClick={submitWithoutRecording}
-                  disabled={!checkIn || logPractice.isPending}
-                  className="w-full"
-                >
-                  {logPractice.isPending ? "Saving…" : "Save check-in"}
-                </Button>
+                <>
+                  <Button
+                    onClick={submitWithoutRecording}
+                    disabled={!checkIn || logPractice.isPending}
+                    className="w-full"
+                  >
+                    {logPractice.isPending ? "Saving…" : "Save check-in"}
+                  </Button>
+                  {!checkIn && (
+                    <div className="text-xs text-center" style={{ color: "var(--ink-faint)" }}>
+                      Pick how it went above to save.
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
