@@ -25,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Film, Upload, Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
-const MAX_MB = 150;
+const MAX_MB = 1024;
 
 export default function VideoManager({ instrument }: { instrument: Instrument }) {
   const { data: videos = [], isLoading } = useCourseVideos(instrument);
