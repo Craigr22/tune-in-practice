@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Plus, Mail, KeyRound } from "lucide-react";
-import StudentLoginDialog, { type StudentLoginTarget } from "@/components/admin/StudentLoginDialog";
+import LoginDialog, { type LoginTarget } from "@/components/admin/LoginDialog";
 import { toast } from "sonner";
 
 type AppRole = "admin" | "teacher" | "student";
@@ -288,7 +288,7 @@ export default function AdminUsers() {
   const [pending, setPending] = useState<{ userId: string; name: string; current: AppRole; next: AppRole } | null>(null);
   const [invitingEmail, setInvitingEmail] = useState<string | null>(null);
   const [invitedEmails, setInvitedEmails] = useState<Set<string>>(new Set());
-  const [loginFor, setLoginFor] = useState<StudentLoginTarget | null>(null);
+  const [loginFor, setLoginFor] = useState<LoginTarget | null>(null);
   // Inline editing, one cell at a time, keyed "<row key>|<field>".
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -561,43 +561,50 @@ export default function AdminUsers() {
                   )}
                 </td>
                 <td className="p-3">
-                  {/* Students are children with no inbox: they get a username
-                      and password rather than an emailed invite. */}
-                  {r.role === "student" ? (
-                    <div className="flex items-center gap-2">
-                      {r.login_username && (
-                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted" title="Username">
-                          {r.login_username}
-                        </span>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setLoginFor({ id: r.key.split(":")[1], name: r.name, username: r.login_username ?? null })}
-                      >
-                        <KeyRound className="w-3.5 h-3.5 mr-1" />
-                        {r.login_username ? "Reset password" : "Create login"}
-                      </Button>
-                    </div>
-                  ) : r.user_id ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">
-                      Linked
-                    </span>
-                  ) : r.email ? (
+                  {/* Everyone can be given a password directly. Teachers and
+                      admins can also be sent an invite link instead. */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {r.login_username && (
+                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted" title="Username">
+                        {r.login_username}
+                      </span>
+                    )}
+                    {r.user_id && !r.login_username && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">
+                        Linked
+                      </span>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={invitingEmail === r.email}
-                      onClick={() => sendInvite(r.email!, r.name)}
+                      onClick={() => {
+                        const [prefix, id] = r.key.split(":");
+                        setLoginFor({
+                          role: r.role,
+                          name: r.name,
+                          recordId: prefix === "t" || prefix === "s" ? id : null,
+                          email: r.email,
+                          userId: r.user_id,
+                          username: r.login_username ?? null,
+                        });
+                      }}
                     >
-                      <Mail className="w-3.5 h-3.5 mr-1" />
-                      {invitingEmail === r.email ? "Sending…" : invitedEmails.has(r.email) ? "Resend invite" : "Send invite"}
+                      <KeyRound className="w-3.5 h-3.5 mr-1" />
+                      {r.user_id || r.login_username ? "Reset password" : "Create login"}
                     </Button>
-                  ) : (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground" title="Add an email address first">
-                      No email
-                    </span>
-                  )}
+                    {r.role !== "student" && !r.user_id && r.email && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={invitingEmail === r.email}
+                        onClick={() => sendInvite(r.email!, r.name)}
+                        title="Email a sign-in link instead"
+                      >
+                        <Mail className="w-3.5 h-3.5 mr-1" />
+                        {invitingEmail === r.email ? "Sending…" : "Invite"}
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -614,7 +621,7 @@ export default function AdminUsers() {
         automatically. Rows with no email need one added on the Students or Teachers tab first.
       </p>
 
-      <StudentLoginDialog student={loginFor} onClose={() => setLoginFor(null)} />
+      <LoginDialog target={loginFor} onClose={() => setLoginFor(null)} />
 
       <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}>
         <AlertDialogContent>

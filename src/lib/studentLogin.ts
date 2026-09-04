@@ -4,7 +4,7 @@
 // and can never receive mail. Nothing is ever sent there.
 //
 // Kept in one place because the sign-in page, the admin UI and the
-// provision-student edge function must all agree on it.
+// provision-user edge function must all agree on it.
 
 export const STUDENT_EMAIL_DOMAIN = "students.bam.invalid";
 

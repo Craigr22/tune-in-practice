@@ -9,46 +9,58 @@ import { Label } from "@/components/ui/label";
 import { KeyRound, Copy, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
-export interface StudentLoginTarget {
-  id: string;
+export interface LoginTarget {
+  role: "student" | "teacher" | "admin";
   name: string;
-  /** Existing username, if they already have a login. */
-  username: string | null;
+  /** students/teachers: their record id. */
+  recordId?: string | null;
+  /** teachers/admins: the address they'll sign in with. */
+  email?: string | null;
+  /** Set when they already have an account. */
+  userId?: string | null;
+  /** Students: their existing username, if provisioned. */
+  username?: string | null;
 }
 
 /**
- * Creates or resets a student's username + password login.
+ * Creates or resets a login for anyone.
  *
- * The account itself is made server-side by the provision-student edge
- * function, which holds the service role key. Nothing secret is in the app;
- * the password is shown here once so it can be handed to the student.
+ * The account is made server-side by the provision-user edge function, which
+ * holds the service role key. The password is shown here once so it can be
+ * handed over; it isn't stored anywhere readable.
  */
-export default function StudentLoginDialog({
-  student,
+export default function LoginDialog({
+  target,
   onClose,
 }: {
-  student: StudentLoginTarget | null;
+  target: LoginTarget | null;
   onClose: () => void;
 }) {
   const qc = useQueryClient();
-  const isReset = !!student?.username;
+  const hasLogin = !!(target?.username || target?.userId);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ username: string; password: string } | null>(null);
+  const [done, setDone] = useState<{ signInWith: string; password: string } | null>(null);
 
   useEffect(() => {
     setPassword(suggestPassword());
     setDone(null);
-  }, [student?.id]);
+  }, [target?.recordId, target?.userId, target?.email]);
 
   const submit = async () => {
-    if (!student) return;
+    if (!target) return;
     if (password.trim().length < 6) return toast.error("Password must be at least 6 characters");
+    if (target.role !== "student" && !target.email) {
+      return toast.error(`This ${target.role} needs an email address first.`);
+    }
     setBusy(true);
-    const { data, error } = await supabase.functions.invoke("provision-student", {
+    const { data, error } = await supabase.functions.invoke("provision-user", {
       body: {
-        action: isReset ? "reset" : "create",
-        studentId: student.id,
+        action: hasLogin ? "reset" : "create",
+        role: target.role,
+        recordId: target.recordId ?? null,
+        email: target.email ?? null,
+        userId: target.userId ?? null,
         password: password.trim(),
       },
     });
@@ -57,44 +69,48 @@ export default function StudentLoginDialog({
     const failure = error?.message ?? (data as any)?.error;
     if (failure) {
       toast.error(
-        failure.includes("Failed to fetch") || failure.includes("404")
-          ? "The provision-student function isn't deployed yet — ask Lovable to deploy it."
+        /Failed to fetch|404|not found/i.test(failure)
+          ? "The provision-user function isn't deployed yet — ask Lovable to deploy it."
           : failure,
       );
       return;
     }
 
-    const username = (data as any)?.username ?? student.username ?? "";
-    setDone({ username, password: password.trim() });
-    toast.success(isReset ? "Password reset" : `Login created for ${student.name}`);
+    const signInWith =
+      (data as any)?.signInWith ?? target.username ?? target.email ?? "";
+    setDone({ signInWith, password: password.trim() });
+    toast.success(hasLogin ? "Password reset" : `Login created for ${target.name}`);
     qc.invalidateQueries({ queryKey: ["admin-users"] });
     qc.invalidateQueries({ queryKey: ["students"] });
+    qc.invalidateQueries({ queryKey: ["teachers"] });
   };
 
   const copy = () => {
     if (!done) return;
-    navigator.clipboard?.writeText(`Username: ${done.username}\nPassword: ${done.password}`);
+    navigator.clipboard?.writeText(`Sign in with: ${done.signInWith}\nPassword: ${done.password}`);
     toast.success("Copied");
   };
 
+  const label = target?.role === "student" ? "Username" : "Email";
+
   return (
-    <Dialog open={!!student} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="w-4 h-4" />
-            {isReset ? `Reset password · ${student?.name}` : `Create login · ${student?.name}`}
+            {hasLogin ? `Reset password · ${target?.name}` : `Create login · ${target?.name}`}
           </DialogTitle>
         </DialogHeader>
 
         {done ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Give these to {student?.name}. The password isn't stored anywhere you can read it
-              again — if it's lost, just reset it.
+              Give these to {target?.name}. The password isn't stored anywhere you can read again —
+              if it's lost, just reset it.
             </p>
             <div className="rounded-lg border p-3 text-sm space-y-1">
-              <div><span className="text-muted-foreground">Username</span> <strong>{done.username}</strong></div>
+              <div><span className="text-muted-foreground">{label}</span> <strong>{done.signInWith}</strong></div>
               <div><span className="text-muted-foreground">Password</span> <strong>{done.password}</strong></div>
             </div>
             <Button variant="outline" onClick={copy} className="w-full">
@@ -104,9 +120,13 @@ export default function StudentLoginDialog({
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              {isReset
-                ? <>They'll keep the username <strong>{student?.username}</strong> and sign in with this new password.</>
-                : <>A username is made from their name. They sign in with that and this password — no email needed.</>}
+              {hasLogin ? (
+                <>They keep signing in with <strong>{target?.username ?? target?.email}</strong>, using this new password.</>
+              ) : target?.role === "student" ? (
+                <>A username is made from their name. They sign in with that and this password — no email needed.</>
+              ) : (
+                <>They sign in with <strong>{target?.email}</strong> and this password straight away — no invite email required.</>
+              )}
             </p>
             <div>
               <Label className="text-xs">Password</Label>
@@ -127,7 +147,7 @@ export default function StudentLoginDialog({
             <>
               <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
               <Button onClick={submit} disabled={busy}>
-                {busy ? "Working…" : isReset ? "Reset password" : "Create login"}
+                {busy ? "Working…" : hasLogin ? "Reset password" : "Create login"}
               </Button>
             </>
           )}
