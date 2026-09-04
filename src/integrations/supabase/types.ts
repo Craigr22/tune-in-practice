@@ -193,6 +193,69 @@ export type Database = {
           },
         ]
       }
+      course_plan_days: {
+        Row: {
+          bonus_instruction: string
+          class_topic: string | null
+          day_number: number
+          focus_instruction: string
+          focus_song_id: string | null
+          id: string
+          instrument: string
+          updated_at: string
+          video_ids: string[]
+          warmup_instruction: string
+          week_number: number
+        }
+        Insert: {
+          bonus_instruction?: string
+          class_topic?: string | null
+          day_number: number
+          focus_instruction?: string
+          focus_song_id?: string | null
+          id?: string
+          instrument?: string
+          updated_at?: string
+          video_ids?: string[]
+          warmup_instruction?: string
+          week_number: number
+        }
+        Update: {
+          bonus_instruction?: string
+          class_topic?: string | null
+          day_number?: number
+          focus_instruction?: string
+          focus_song_id?: string | null
+          id?: string
+          instrument?: string
+          updated_at?: string
+          video_ids?: string[]
+          warmup_instruction?: string
+          week_number?: number
+        }
+        Relationships: []
+      }
+      course_plan_settings: {
+        Row: {
+          instrument: string
+          title: string
+          updated_at: string
+          week_one_start: string | null
+        }
+        Insert: {
+          instrument?: string
+          title?: string
+          updated_at?: string
+          week_one_start?: string | null
+        }
+        Update: {
+          instrument?: string
+          title?: string
+          updated_at?: string
+          week_one_start?: string | null
+        }
+        Relationships: []
+      }
       course_videos: {
         Row: {
           created_at: string
