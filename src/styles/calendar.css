@@ -19,7 +19,7 @@
 .rbc-toolbar button {
   color: hsl(var(--foreground));
   background: transparent;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 5px 12px;
   font-size: 13px;
@@ -29,7 +29,7 @@
 .rbc-toolbar button:hover,
 .rbc-toolbar button:focus {
   background: hsl(var(--accent));
-  border-color: hsl(var(--border));
+  border-color: var(--border);
   color: hsl(var(--foreground));
 }
 .rbc-toolbar button.rbc-active,
@@ -46,12 +46,12 @@
   gap: 0;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
 }
 .rbc-toolbar .rbc-btn-group:last-child button {
   border: none;
   border-radius: 0;
-  border-left: 1px solid hsl(var(--border));
+  border-left: 1px solid var(--border);
 }
 .rbc-toolbar .rbc-btn-group:last-child button:first-child {
   border-left: none;
@@ -67,7 +67,7 @@
 .rbc-day-bg,
 .rbc-header,
 .rbc-timeslot-group {
-  border-color: hsl(var(--border)) !important;
+  border-color: var(--border) !important;
 }
 .rbc-month-view,
 .rbc-time-view {
@@ -130,13 +130,13 @@
 /* Popup (overflow events) */
 .rbc-overlay {
   background: hsl(var(--popover));
-  border: 1px solid hsl(var(--border));
+  border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 24px hsl(var(--foreground) / 0.15);
   padding: 8px;
 }
 .rbc-overlay-header {
-  border-bottom: 1px solid hsl(var(--border));
+  border-bottom: 1px solid var(--border);
   font-weight: 600;
   margin-bottom: 6px;
   padding-bottom: 6px;
