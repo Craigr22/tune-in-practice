@@ -3,7 +3,9 @@ import { Navigate } from "react-router-dom";
 import { Calendar, dateFnsLocalizer, Views, type Event } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
+import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
 import "@/styles/calendar.css";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +21,9 @@ import BatchFormDialog from "@/components/admin/BatchFormDialog";
 
 const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
+
+// Sessions can be dragged to another day/time and resized to change length.
+const DnDCalendar = withDragAndDrop(Calendar as any);
 
 // Nicer, less cluttered labels than the rbc defaults.
 const calendarFormats = {
@@ -71,7 +76,7 @@ export default function AdminSchedule() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sessions")
-        .select("id, batch_id, scheduled_date, status, batches!inner(id, start_time, duration_min, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name))")
+        .select("id, batch_id, scheduled_date, status, start_time, duration_min, batches!inner(id, start_time, duration_min, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name))")
         .order("scheduled_date");
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
@@ -93,14 +98,51 @@ export default function AdminSchedule() {
 
   const events: Event[] = useMemo(() => sessions.map((s) => {
     const b = s.batches!;
-    const [h, m] = (b.start_time || "00:00:00").split(":").map(Number);
+    // A session may override its class's usual time and length (from dragging).
+    const [h, m] = ((s as any).start_time || b.start_time || "00:00:00").split(":").map(Number);
     const start = new Date(s.scheduled_date);
     start.setHours(h, m, 0, 0);
-    const end = new Date(start.getTime() + (b.duration_min || 60) * 60000);
+    const mins = (s as any).duration_min ?? b.duration_min ?? 60;
+    const end = new Date(start.getTime() + mins * 60000);
     const room = b.locations?.name;
     const title = `${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}${room ? ` · ${room}` : ""}`;
     return { title, start, end, resource: s };
   }), [sessions]);
+
+  /**
+   * Dragging or resizing a session on the calendar. Writes the new date, and
+   * a per-session time/length override — the class's usual slot is untouched,
+   * so only this one lesson moves.
+   */
+  const moveSession = async ({ event, start, end }: any) => {
+    const s = event.resource as Row;
+    if (!s?.id) return;
+    if (s.status === "cancelled") return toast.error("This session is cancelled.");
+
+    const d = new Date(start);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const scheduled_date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const start_time = `${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+    const duration_min = Math.max(15, Math.round((new Date(end).getTime() - d.getTime()) / 60000));
+
+    const { error } = await supabase
+      .from("sessions")
+      .update({ scheduled_date, start_time, duration_min } as never)
+      .eq("id", s.id);
+
+    if (error) {
+      toast.error(
+        /column .* does not exist/i.test(error.message)
+          ? "Moving sessions needs the latest migration applied."
+          : error.message,
+      );
+      return;
+    }
+    toast.success(
+      `Moved to ${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} · ${start_time.slice(0, 5)}`,
+    );
+    qc.invalidateQueries({ queryKey: ["admin-sessions"] });
+  };
 
   if (role !== "admin") return <Navigate to="/" replace />;
 
@@ -156,8 +198,12 @@ export default function AdminSchedule() {
             </div>
           )}
           <div className="bg-card rounded-lg p-3 border" style={{ height: 720 }}>
-          <Calendar
+          <DnDCalendar
             localizer={localizer}
+            draggableAccessor={(ev: any) => ev.resource?.status !== "cancelled"}
+            resizable
+            onEventDrop={moveSession}
+            onEventResize={moveSession}
             events={events}
             defaultView={Views.WEEK}
             views={[Views.WEEK, Views.MONTH, Views.DAY]}
