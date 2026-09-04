@@ -73,6 +73,37 @@ export function useSongVideos(songId?: string) {
   });
 }
 
+/**
+ * PUT a file with real progress events. The Supabase SDK's upload() gives no
+ * progress, which is unusable for the large files this bucket now accepts,
+ * so we sign an upload URL (RLS still decides who may create one) and send
+ * the bytes ourselves.
+ */
+function putWithProgress(
+  url: string,
+  file: File,
+  opts: { contentType: string; onProgress?: (pct: number) => void; signal?: AbortSignal },
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url, true);
+    xhr.setRequestHeader("Content-Type", opts.contentType);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) opts.onProgress?.(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new Error(`Upload failed (${xhr.status}). ${xhr.responseText?.slice(0, 200) ?? ""}`.trim()));
+    xhr.onerror = () => reject(new Error("Upload failed — check your connection and try again."));
+    xhr.onabort = () => reject(new Error("Upload cancelled"));
+
+    opts.signal?.addEventListener("abort", () => xhr.abort(), { once: true });
+    xhr.send(file);
+  });
+}
+
 export function useUploadCourseVideo() {
   const qc = useQueryClient();
   return useMutation({
@@ -82,14 +113,35 @@ export function useUploadCourseVideo() {
       title: string;
       description?: string;
       song_id?: string | null;
+      onProgress?: (pct: number) => void;
+      signal?: AbortSignal;
     }) => {
       const safeName = args.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${args.instrument}/${crypto.randomUUID()}-${safeName}`;
+      const contentType = args.file.type || "video/mp4";
 
-      const { error: upErr } = await supabase.storage
+      const { data: signed, error: signErr } = await supabase.storage
         .from(BUCKET)
-        .upload(path, args.file, { contentType: args.file.type || "video/mp4", upsert: false });
-      if (upErr) throw upErr;
+        .createSignedUploadUrl(path);
+
+      if (signErr || !signed?.signedUrl) {
+        // Fall back to the plain SDK upload (no progress) rather than failing.
+        const { error: upErr } = await supabase.storage
+          .from(BUCKET)
+          .upload(path, args.file, { contentType, upsert: false });
+        if (upErr) throw upErr;
+      } else {
+        const url = signed.signedUrl.startsWith("http")
+          ? signed.signedUrl
+          : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1${signed.signedUrl}`;
+        try {
+          await putWithProgress(url, args.file, { contentType, onProgress: args.onProgress, signal: args.signal });
+        } catch (e) {
+          // A cancelled or failed transfer can still leave a partial object.
+          await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+          throw e;
+        }
+      }
 
       const { error: rowErr } = await (supabase as any).from("course_videos").insert({
         instrument: args.instrument,

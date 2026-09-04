@@ -44,7 +44,9 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
   const [preview, setPreview] = useState<CourseVideo | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [progress, setProgress] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const songTitle = (id: string | null) => songs.find((s) => s.id === id)?.title;
 
@@ -52,6 +54,8 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
     setTitle("");
     setSongId("none");
     setFile(null);
+    setProgress(null);
+    abortRef.current = null;
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -81,20 +85,32 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
     if (!title.trim()) return toast.error("Title is required");
     if (file.size > MAX_MB * 1024 * 1024)
       return toast.error(`Video is too large — keep it under ${MAX_MB} MB`);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setProgress(0);
     try {
       await upload.mutateAsync({
         instrument,
         file,
         title: title.trim(),
         song_id: songId === "none" ? null : songId,
+        onProgress: setProgress,
+        signal: controller.signal,
       });
       toast.success("Video uploaded");
       setFormOpen(false);
       resetForm();
     } catch (e: any) {
-      toast.error(e.message ?? "Upload failed");
+      const msg = e?.message ?? "Upload failed";
+      if (msg === "Upload cancelled") toast("Upload cancelled");
+      else toast.error(msg);
+      setProgress(null);
+    } finally {
+      abortRef.current = null;
     }
   };
+
+  const cancelUpload = () => abortRef.current?.abort();
 
   const doDelete = async () => {
     if (!confirmDel) return;
@@ -191,7 +207,11 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
       )}
 
       {/* Upload dialog */}
-      <Dialog open={formOpen} onOpenChange={(o) => { if (!o) { setFormOpen(false); resetForm(); } }}>
+      {/* Don't let a stray click outside dismiss the dialog mid-transfer. */}
+      <Dialog
+        open={formOpen}
+        onOpenChange={(o) => { if (!o && !upload.isPending) { setFormOpen(false); resetForm(); } }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Upload video</DialogTitle>
@@ -214,7 +234,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
               </Select>
             </div>
             <div>
-              <Label>Video file (max {MAX_MB} MB)</Label>
+              <Label>Video file (max {MAX_MB >= 1024 ? `${MAX_MB / 1024} GB` : `${MAX_MB} MB`})</Label>
               <Input
                 ref={fileRef}
                 type="file"
@@ -227,13 +247,41 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                 </p>
               )}
             </div>
+
+            {/* Progress — large files over school wifi need to show they're alive. */}
+            {upload.isPending && (
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="font-medium">
+                    {progress === null || progress < 100 ? "Uploading…" : "Finishing up…"}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {progress ?? 0}%
+                    {file ? ` · ${(((progress ?? 0) / 100) * (file.size / (1024 * 1024))).toFixed(0)}/${(file.size / (1024 * 1024)).toFixed(0)} MB` : ""}
+                  </span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all duration-200"
+                    style={{ width: `${progress ?? 0}%` }}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Keep this tab open until it finishes.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setFormOpen(false); resetForm(); }} disabled={upload.isPending}>
-              Cancel
-            </Button>
+            {upload.isPending ? (
+              <Button variant="outline" onClick={cancelUpload}>Cancel upload</Button>
+            ) : (
+              <Button variant="outline" onClick={() => { setFormOpen(false); resetForm(); }}>
+                Cancel
+              </Button>
+            )}
             <Button onClick={doUpload} disabled={upload.isPending}>
-              {upload.isPending ? "Uploading…" : "Upload"}
+              {upload.isPending ? `Uploading… ${progress ?? 0}%` : "Upload"}
             </Button>
           </DialogFooter>
         </DialogContent>
