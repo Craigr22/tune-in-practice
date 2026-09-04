@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import {
   useCourseVideos,
   useUploadCourseVideo,
+  useUpdateCourseVideo,
   useDeleteCourseVideo,
   useSignedVideoUrls,
   type CourseVideo,
@@ -22,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Film, Upload, Trash2, ExternalLink } from "lucide-react";
+import { Film, Upload, Trash2, ExternalLink, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_MB = 1024;
