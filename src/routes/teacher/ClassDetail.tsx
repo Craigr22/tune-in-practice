@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTeacherStudents } from "@/hooks/useTeacherStudents";
 import { useCatalogSongs } from "@/hooks/useSongCatalog";
-import { useBatchSettings, toInstrument } from "@/hooks/useBatchCoursework";
+import { toInstrument } from "@/hooks/useBatchCoursework";
 import { StudentRow, StudentDetail } from "@/components/teacher/StudentRoster";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
@@ -17,13 +17,12 @@ import { isoMonday } from "@/hooks/useWeeklyPlan";
  * per class here only created a second source of truth that the plan then
  * ignored. Teachers see the plan and grade against it.
  */
-function CoursePanel({ batchId, instrumentName }: { batchId: string; instrumentName?: string }) {
+function CoursePanel({ startDate, instrumentName }: { startDate: string | null; instrumentName?: string }) {
   const instrument = toInstrument(instrumentName);
   const catalog = useCatalogSongs(instrument, { showInactive: false });
-  const { data: settings } = useBatchSettings(batchId);
   const { days: planDays } = useStudentCoursePlan(instrument);
 
-  const start = settings?.course_start_date ?? null;
+  const start = startDate;
   const totalWeeks = new Set(planDays.map((d) => d.week_number)).size;
   const currentWeek = planWeekNumberFor(start, isoMonday());
   const thisWeek = currentWeek ? daysForWeek(planDays, currentWeek) : [];
@@ -35,7 +34,7 @@ function CoursePanel({ batchId, instrumentName }: { batchId: string; instrumentN
         <div className="font-medium text-sm">Course</div>
         {!start ? (
           <p className="text-sm text-muted-foreground mt-1">
-            This class hasn't been started on the course yet. An admin sets the start date on the
+            This class hasn't been started on the course yet. An admin sets its start date on the
             class in Schedule → Classes.
           </p>
         ) : currentWeek && currentWeek <= totalWeeks ? (
@@ -141,7 +140,7 @@ export default function ClassDetail() {
           </TabsList>
 
           <TabsContent value="coursework" className="pt-4">
-            <CoursePanel batchId={batch.id} instrumentName={batch.instruments?.name} />
+            <CoursePanel startDate={batch.semester_start ?? null} instrumentName={batch.instruments?.name} />
           </TabsContent>
 
           <TabsContent value="roster" className="pt-4">

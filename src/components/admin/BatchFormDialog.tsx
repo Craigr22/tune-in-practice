@@ -200,6 +200,9 @@ export default function BatchFormDialog({
           <div>
             <Label>Start date</Label>
             <Input type="date" value={form.semester_start} onChange={(e) => setForm({ ...form, semester_start: e.target.value })} />
+            <p className="text-xs text-muted-foreground mt-1">
+              When this class begins: its first practice day, and week 1 of the course.
+            </p>
           </div>
           <div>
             <Label>End date (optional)</Label>
