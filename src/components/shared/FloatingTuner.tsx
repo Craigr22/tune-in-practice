@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import Tuner from "@/components/Tuner";
+import JamPad from "@/components/student/JamPad";
 
 const FloatingTuner = () => {
   const [open, setOpen] = useState(false);
@@ -33,6 +34,10 @@ const FloatingTuner = () => {
           <DialogTitle className="sr-only">BAM Tuner</DialogTitle>
           <div className="max-h-[85vh] overflow-y-auto">
             <Tuner />
+            {/* The playable jam pad lives with the tuner so Home stays minimal. */}
+            <div className="mt-3">
+              <JamPad />
+            </div>
           </div>
         </DialogContent>
       </Dialog>

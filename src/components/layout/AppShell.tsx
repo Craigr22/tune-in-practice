@@ -2,7 +2,6 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
-import FloatingFoundations from "@/components/shared/FloatingFoundations";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import {
   useImpersonatedTeacherId,
@@ -135,7 +134,8 @@ const AppShell = () => {
           failure there can't take the page down with it. */}
       {showFloatingTuner && (
         <ErrorBoundary fallback={null}>
-          <FloatingFoundations />
+          {/* Basics book hidden for now to keep the student view minimal —
+              restore <FloatingFoundations /> here when wanted again. */}
           <FloatingTuner />
         </ErrorBoundary>
       )}
