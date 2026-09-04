@@ -78,10 +78,11 @@ const Journey = () => {
       const hasProgress = songLogs.length > 0 || (tb ?? 0) > 0;
 
       let state: NodeState;
+      // FOR NOW: nothing locks — every song is open to explore and play.
       if (isMastered) state = "mastered";
       else if (hasProgress) { state = "current"; foundCurrent = true; }
-      else if (!foundCurrent) { state = "next"; foundCurrent = true; }
-      else state = "locked";
+      else state = "next";
+      void foundCurrent;
 
       const firstDate = songLogs.length ? songLogs.reduce((a, l) => (l.played_on < a ? l.played_on : a), songLogs[0].played_on) : undefined;
       const lastDate = songLogs.length ? songLogs.reduce((a, l) => (l.played_on > a ? l.played_on : a), songLogs[0].played_on) : undefined;
@@ -153,7 +154,7 @@ const Journey = () => {
           <div className="text-xs flex items-center gap-3" style={{ color: "var(--ink-soft)" }}>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--gold-deep)" }} />Mastered</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ background: "var(--navy)" }} />Current</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--border-strong)" }} />Locked</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: "var(--border-strong)" }} />Up next</span>
           </div>
         </div>
 

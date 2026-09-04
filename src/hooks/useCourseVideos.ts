@@ -56,6 +56,23 @@ export function useCourseVideos(instrument: Instrument) {
   });
 }
 
+/** Course-wide videos with no song attached (tuning, first lesson, theory…). */
+export function useGeneralVideos(instrument: Instrument) {
+  return useQuery({
+    queryKey: ["general-videos", instrument],
+    queryFn: async (): Promise<CourseVideo[]> => {
+      const { data, error } = await (supabase as any)
+        .from("course_videos")
+        .select("*")
+        .eq("instrument", instrument)
+        .is("song_id", null)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as CourseVideo[];
+    },
+  });
+}
+
 /** Videos an admin attached to one song — shown to students on the song page. */
 export function useSongVideos(songId?: string) {
   return useQuery({

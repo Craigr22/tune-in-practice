@@ -8,6 +8,7 @@ import { usePracticeLogs, useSongProgress } from "@/hooks/useStudentProgress";
 import { SESSION_ORDER, SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { generateWarmup, generateBonus } from "@/lib/sessionSegments";
 import { SONGS } from "@/data/songs";
+import { COURSE_1, curriculumWeekFor } from "@/data/curriculum";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
@@ -112,6 +113,35 @@ interface GenInput {
 export function buildWeekRows(input: GenInput) {
   const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay } = input;
   const dates = practiceDaysForWeek(weekStart, classDayOfWeek);
+
+  // While a week is covered by the authored Course 1 curriculum, use its days
+  // verbatim — the teacher wrote this month's plan, so nothing is generated.
+  const curriculumWeek = curriculumWeekFor(COURSE_1, weekStart);
+  if (curriculumWeek) {
+    return SESSION_ORDER.map((kind, i) => {
+      const day = curriculumWeek.days[i];
+      const tpl = SESSION_TEMPLATES[kind];
+      return {
+        student_id: studentId,
+        week_start: weekStart,
+        session_index: i,
+        scheduled_date: dates[i],
+        session_type: kind,
+        focus_song_id: day.focusSongId,
+        focus_instruction: day.focusInstruction,
+        focus_target_min: tpl.focus_target_min,
+        warmup_target_min: tpl.warmup_target_min,
+        warmup_song_id: null as string | null,
+        warmup_instruction: day.warmupInstruction,
+        bonus_target_min: tpl.bonus_target_min,
+        bonus_type: "callback_song" as const,
+        bonus_song_id: day.focusSongId,
+        bonus_instruction: day.bonusInstruction,
+        generated_at: new Date().toISOString(),
+      };
+    });
+  }
+
   const focus = pickFocusSong(progress, pool);
   const focusId = focus?.id ?? SONGS[0].id;
   const focusTitle = focus?.title ?? "your focus song";

@@ -4,9 +4,46 @@ import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs } from "@/hooks/useBatchCoursework";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import SongVideos from "@/components/student/SongVideos";
-import { useSongVideos } from "@/hooks/useCourseVideos";
+import { useSongVideos, useGeneralVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
 import { useEnsureWeeklyPlan, useTodaysSession } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
+
+/** Course-wide clips (tuning, lessons, theory) that aren't tied to one song. */
+const CourseMaterial = () => {
+  const { data: videos = [] } = useGeneralVideos("ukulele");
+  const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
+  if (!videos.length) return null;
+  return (
+    <section
+      className="rounded-3xl mb-5 p-4 md:p-5"
+      style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+    >
+      <div className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: "var(--ink-soft)" }}>
+        📺 Course lessons
+      </div>
+      <div className="flex flex-col gap-4">
+        {videos.map((v) => (
+          <div key={v.id} className="flex flex-col gap-1">
+            {urls[v.storage_path] ? (
+              <video
+                controls
+                preload="none"
+                playsInline
+                src={urls[v.storage_path]}
+                style={{ width: "100%", borderRadius: 12, background: "#000" }}
+              />
+            ) : (
+              <div style={{ width: "100%", aspectRatio: "16 / 9", borderRadius: 12, background: "rgba(0,0,0,0.8)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
+                Loading video…
+              </div>
+            )}
+            <div className="text-xs font-semibold" style={{ color: "var(--ink)" }}>{v.title}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
 
 /** A card of teacher videos for one song — renders nothing when there are none. */
 const TodaysMaterial = ({ songId }: { songId: string }) => {
@@ -144,6 +181,9 @@ const Home = () => {
         {todaysSongIds.map((id) => (
           <TodaysMaterial key={id} songId={id} />
         ))}
+
+        {/* ===== COURSE-WIDE LESSONS (tuning, first lesson, theory) ===== */}
+        <CourseMaterial />
       </div>
     </section>
   );

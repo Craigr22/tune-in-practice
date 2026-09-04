@@ -194,7 +194,9 @@ export function useStudentSongs(): ClassSong[] {
   const cfg = useStudentClassConfig();
   const catalog = useCatalogSongs(cfg.instrument);
   return useMemo(
-    () => effectiveClassSongs(catalog, cfg.rows),
+    // FOR NOW: include teacher-locked songs too — everything is open during
+    // the Course 1 launch. Drop showLocked to re-enable per-class locking.
+    () => effectiveClassSongs(catalog, cfg.rows, { showLocked: true }),
     [catalog, cfg.rows],
   );
 }

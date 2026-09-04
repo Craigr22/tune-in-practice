@@ -47,10 +47,7 @@ export function SongsProvider({ children }: { children: ReactNode }) {
     (id: string) => {
       const song = songs.find((s) => s.id === id);
       if (!song) return;
-      if (song.state === "locked") {
-        alert(`🔒 ${song.title} is locked. Finish the previous track first — it builds the chords you need.`);
-        return;
-      }
+      // FOR NOW: no locks — every song opens.
       navigate(`/student/song/${id}`);
       window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
     },
