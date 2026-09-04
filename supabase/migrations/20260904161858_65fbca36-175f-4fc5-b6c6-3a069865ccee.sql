@@ -1,0 +1,2 @@
+ALTER TABLE public.students ADD COLUMN IF NOT EXISTS login_username TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS students_login_username_key ON public.students (lower(login_username)) WHERE login_username IS NOT NULL;
