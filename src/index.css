@@ -623,6 +623,14 @@ a { color: inherit; text-decoration: none; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Tuner + jam pad share one floating panel: the tuner drops its own card
+   so it becomes the top of that panel rather than a card inside a card. */
+.tuner-panel .bamt {
+  max-width: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* ==================== PLAYFUL TOUCHES (student view) ==================== */
 @keyframes bounceSoft {
   0%, 100% { transform: translateY(0) rotate(-4deg); }

@@ -30,13 +30,29 @@ const FloatingTuner = () => {
         </svg>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden border-none bg-transparent shadow-none">
+        <DialogContent
+          className="max-w-[560px] p-0 overflow-hidden border-none bg-transparent shadow-none"
+          // Without this Radix focuses the first control and the browser
+          // scrolls to it, opening the panel halfway down the tuner.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <DialogTitle className="sr-only">BAM Tuner</DialogTitle>
-          <div className="max-h-[85vh] overflow-y-auto">
+          {/* Tuner and jam pad share one panel: the tuner's own card provides
+              the top, the jam pad drops its card and continues below a rule,
+              so the two read as one tool rather than two stacked widgets. */}
+          <div
+            className="tuner-panel max-h-[85vh] overflow-y-auto mx-auto"
+            style={{
+              maxWidth: 540,
+              background: "var(--card)",
+              borderRadius: 24,
+              boxShadow: "var(--shadow-lg)",
+              overflowX: "hidden",
+            }}
+          >
             <Tuner />
-            {/* The playable jam pad lives with the tuner so Home stays minimal. */}
-            <div className="mt-3">
-              <JamPad />
+            <div style={{ borderTop: "1px solid var(--border)" }}>
+              <JamPad embedded />
             </div>
           </div>
         </DialogContent>

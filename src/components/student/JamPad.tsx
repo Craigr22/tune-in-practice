@@ -61,7 +61,7 @@ const NOTE_EMOJI = ["🎵", "🎶", "♪", "♫"];
 
 type FloatNote = { id: number; x: number; y: number; emoji: string };
 
-export default function JamPad() {
+export default function JamPad({ embedded = false }: { embedded?: boolean } = {}) {
   const [wiggling, setWiggling] = useState<Record<number, boolean>>({});
   const [notes, setNotes] = useState<FloatNote[]>([]);
   const strummingRef = useRef(false);
@@ -117,13 +117,18 @@ export default function JamPad() {
 
   return (
     <section
-      className="rounded-3xl p-5 md:p-6 mb-5 select-none"
-      style={{
-        background: "linear-gradient(135deg, var(--gold-bg), #fff 70%)",
-        border: "1px solid var(--gold-soft)",
-        boxShadow: "var(--shadow-sm)",
-        overflow: "hidden",
-      }}
+      className={embedded ? "px-5 pt-4 pb-5 select-none" : "rounded-3xl p-5 md:p-6 mb-5 select-none"}
+      style={
+        embedded
+          // Sits inside another panel: no card of its own, just a section.
+          ? { background: "transparent", overflow: "hidden" }
+          : {
+              background: "linear-gradient(135deg, var(--gold-bg), #fff 70%)",
+              border: "1px solid var(--gold-soft)",
+              boxShadow: "var(--shadow-sm)",
+              overflow: "hidden",
+            }
+      }
     >
       <style>{`
         @keyframes jam-float {
