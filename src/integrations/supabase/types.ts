@@ -555,8 +555,10 @@ export type Database = {
           batch_id: string
           completed_at: string | null
           covered_tags: string[]
+          duration_min: number | null
           id: string
           scheduled_date: string
+          start_time: string | null
           status: Database["public"]["Enums"]["session_status"]
           teacher_notes: string | null
         }
@@ -564,8 +566,10 @@ export type Database = {
           batch_id: string
           completed_at?: string | null
           covered_tags?: string[]
+          duration_min?: number | null
           id?: string
           scheduled_date: string
+          start_time?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           teacher_notes?: string | null
         }
@@ -573,8 +577,10 @@ export type Database = {
           batch_id?: string
           completed_at?: string | null
           covered_tags?: string[]
+          duration_min?: number | null
           id?: string
           scheduled_date?: string
+          start_time?: string | null
           status?: Database["public"]["Enums"]["session_status"]
           teacher_notes?: string | null
         }

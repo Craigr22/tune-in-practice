@@ -1,0 +1,3 @@
+ALTER TABLE public.sessions
+  ADD COLUMN IF NOT EXISTS start_time TIME,
+  ADD COLUMN IF NOT EXISTS duration_min INTEGER;
