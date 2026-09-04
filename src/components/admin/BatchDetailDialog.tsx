@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import { useBatchSettings, useSaveCourseStart } from "@/hooks/useBatchCoursework";
 
+const DOW_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 export default function BatchDetailDialog({ batchId, onClose }: { batchId: string | null; onClose: () => void }) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState("");
@@ -90,7 +92,12 @@ export default function BatchDetailDialog({ batchId, onClose }: { batchId: strin
             <div className="rounded-md border p-3">
               <div className="font-medium">Course start</div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                The week this class begins the course. Students get week 1 from this date.
+                The week this class begins the course — students get week 1 of the plan from this
+                date, and no practice is scheduled before it.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                It doesn't change when the class meets: {DOW_FULL[(batch as any).day_of_week] ?? "—"}s
+                at {((batch as any).start_time ?? "").slice(0, 5)}. Change that by editing the class.
               </p>
               <div className="flex items-end gap-2 mt-2">
                 <Input
