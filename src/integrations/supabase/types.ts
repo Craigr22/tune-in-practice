@@ -479,6 +479,24 @@ export type Database = {
           },
         ]
       }
+      pending_roles: {
+        Row: {
+          created_at: string
+          email: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       practice_logs: {
         Row: {
           acknowledged_at: string | null
