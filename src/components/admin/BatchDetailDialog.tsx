@@ -1,15 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
+import { useBatchSettings, useSaveCourseStart } from "@/hooks/useBatchCoursework";
 
 export default function BatchDetailDialog({ batchId, onClose }: { batchId: string | null; onClose: () => void }) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState("");
+  const { data: settings } = useBatchSettings(batchId ?? undefined);
+  const saveCourseStart = useSaveCourseStart(batchId ?? "");
+  const [courseStart, setCourseStart] = useState("");
+  useEffect(() => setCourseStart(settings?.course_start_date ?? ""), [settings?.course_start_date]);
 
   const { data: batch } = useQuery({
     queryKey: ["batch", batchId],
@@ -77,6 +83,38 @@ export default function BatchDetailDialog({ batchId, onClose }: { batchId: strin
           <div className="space-y-4 text-sm">
             <div className="text-muted-foreground">
               {(batch as any).code ? `${(batch as any).code} · ` : ""}{(batch as any).instruments?.name} · {(batch as any).teachers?.name} · {(batch as any).locations?.name}
+            </div>
+
+            {/* Starting a class on the course is an admin decision — it sets
+                which week of the plan its students are on. */}
+            <div className="rounded-md border p-3">
+              <div className="font-medium">Course start</div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                The week this class begins the course. Students get week 1 from this date.
+              </p>
+              <div className="flex items-end gap-2 mt-2">
+                <Input
+                  type="date"
+                  value={courseStart}
+                  onChange={(e) => setCourseStart(e.target.value)}
+                  className="w-44"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={saveCourseStart.isPending}
+                  onClick={async () => {
+                    try {
+                      await saveCourseStart.mutateAsync(courseStart || null);
+                      toast.success(courseStart ? "Course start saved" : "Course start cleared");
+                    } catch (e: any) {
+                      toast.error(e.message ?? "Failed to save");
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
             </div>
             <div>
               <div className="font-medium mb-2">
