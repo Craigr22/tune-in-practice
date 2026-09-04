@@ -106,14 +106,19 @@ interface GenInput {
   songsPerDay?: number[];
   /** The admin's planned days for this week (day 1..3). Used verbatim when present. */
   planDays?: CoursePlanDay[];
+  /** Nothing is planned before this date — the class hasn't started yet. */
+  notBefore?: string | null;
 }
 
 export function buildWeekRows(input: GenInput) {
-  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay, planDays } = input;
+  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay, planDays, notBefore } = input;
   const dates = practiceDaysForWeek(weekStart, classDayOfWeek);
 
   // While a week is covered by the admin's course plan, use those days
   // verbatim — a human planned this week, so nothing is generated.
+  // Days before the class starts aren't practice days at all.
+  const onOrAfterStart = (iso: string) => !notBefore || iso >= notBefore;
+
   if (planDays?.length) {
     return SESSION_ORDER.map((kind, i) => {
       const day = planDays[i];
@@ -137,7 +142,7 @@ export function buildWeekRows(input: GenInput) {
         bonus_instruction: day?.bonus_instruction || "Finish with a song you enjoy.",
         generated_at: new Date().toISOString(),
       };
-    });
+    }).filter((r) => onOrAfterStart(r.scheduled_date));
   }
 
   const focus = pickFocusSong(progress, pool);
@@ -198,7 +203,7 @@ export function buildWeekRows(input: GenInput) {
       generated_at: new Date().toISOString(),
     };
   });
-  return rows;
+  return rows.filter((r) => onOrAfterStart(r.scheduled_date));
 }
 
 /* ----- hooks ----- */
@@ -211,14 +216,16 @@ export function useStudentBatchDay() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("enrollments")
-        .select("batches:batch_id(day_of_week, start_time)")
+        .select("batches:batch_id(day_of_week, start_time, semester_start)")
         .eq("student_id", student!.id)
         .eq("status", "active")
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      const b = (data as { batches: { day_of_week: number; start_time: string } | null })?.batches;
-      return b ? { day_of_week: b.day_of_week, start_time: b.start_time } : null;
+      const b = (data as { batches: { day_of_week: number; start_time: string; semester_start: string | null } | null })?.batches;
+      return b
+        ? { day_of_week: b.day_of_week, start_time: b.start_time, semester_start: b.semester_start ?? null }
+        : null;
     },
   });
 }
@@ -263,6 +270,8 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const weekOneStart = courseStartDate;
   const planWeek = planWeekNumberFor(weekOneStart, weekStart);
   const planDays = planWeek ? daysForWeek(allPlanDays, planWeek) : [];
+  // A student's practice can't begin before their class does.
+  const notBefore = courseStartDate ?? batch?.semester_start ?? null;
 
   useEffect(() => {
     if (!student?.id) return;
@@ -289,7 +298,11 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       songsPerSession,
       songsPerDay,
       planDays,
+      notBefore,
     });
+
+    // A first week can be short, so don't keep regenerating it.
+    if (!rows.length || existing.length >= rows.length) return;
 
     (async () => {
       const { error } = await supabase

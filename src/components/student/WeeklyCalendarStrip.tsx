@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, isoMonday, addWeeks, practiceDaysForWeek } from "@/hooks/useWeeklyPlan";
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
+import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useSongs } from "@/hooks/useSongs";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 import { toLocalIso } from "@/lib/date";
@@ -33,6 +34,11 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
   const { data: plan = [] } = useWeeklyPlan(weekStart);
   const { data: logs = [] } = usePracticeLogs();
 
+  const { courseStartDate } = useStudentClassConfig();
+  // Before the class starts there are no practice days — and no class days.
+  const startsOn = courseStartDate ?? batch?.semester_start ?? null;
+  const beforeStart = (iso: string) => !!startsOn && iso < startsOn;
+
   const classDow = batch?.day_of_week ?? 6;
   const classOffset = (classDow + 6) % 7;
   const practiceDates = useMemo(
@@ -58,12 +64,12 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
       const d = new Date(weekStart);
       d.setDate(d.getDate() + o);
       const iso = toLocalIso(d);
-      const isPractice = practiceDates.includes(iso);
+      const isPractice = practiceDates.includes(iso) && !beforeStart(iso);
       const session = plan.find((p) => p.scheduled_date === iso);
       arr.push({
         iso,
         offset: o,
-        isClass: o === classOffset,
+        isClass: o === classOffset && !beforeStart(iso),
         isPractice,
         isToday: iso === todayIso,
         isPast: iso < todayIso,
@@ -72,7 +78,7 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
       });
     }
     return arr;
-  }, [weekStart, classOffset, practiceDates, plan, todayIso, practicedDays]);
+  }, [weekStart, classOffset, practiceDates, plan, todayIso, practicedDays, startsOn]);
 
   const [selectedIso, setSelectedIso] = useState<string | null>(null);
   const selected = days.find((d) => d.iso === selectedIso);
