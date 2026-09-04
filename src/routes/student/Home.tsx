@@ -1,46 +1,89 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs } from "@/hooks/useBatchCoursework";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import SongVideos from "@/components/student/SongVideos";
-import { useSongVideos, useGeneralVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
+import { useSongVideos, useGeneralVideos, useSignedVideoUrls, type CourseVideo } from "@/hooks/useCourseVideos";
 import { useEnsureWeeklyPlan, useTodaysSession } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 
-/** Course-wide clips (tuning, lessons, theory) that aren't tied to one song. */
+/**
+ * Course-wide clips (tuning, lessons, theory). A quiet list that plays one
+ * video at a time in a dialog — rendering every player inline turned this
+ * into a wall of black boxes.
+ */
 const CourseMaterial = () => {
   const { data: videos = [] } = useGeneralVideos("ukulele");
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
+  const [playing, setPlaying] = useState<CourseVideo | null>(null);
   if (!videos.length) return null;
+
   return (
     <section
-      className="rounded-3xl mb-5 p-4 md:p-5"
+      className="rounded-3xl mb-5 overflow-hidden"
       style={{ background: "var(--card)", border: "1px solid var(--border)" }}
     >
-      <div className="text-[11px] font-bold uppercase tracking-wider mb-3" style={{ color: "var(--ink-soft)" }}>
-        📺 Course lessons
+      <div className="px-5 pt-4 pb-3">
+        <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--gold-deep)" }}>
+          Lessons
+        </div>
+        <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
+          Watch any time · {videos.length} video{videos.length === 1 ? "" : "s"}
+        </div>
       </div>
-      <div className="flex flex-col gap-4">
+
+      <ul style={{ borderTop: "1px solid var(--border)" }}>
         {videos.map((v) => (
-          <div key={v.id} className="flex flex-col gap-1">
-            {urls[v.storage_path] ? (
+          <li key={v.id} style={{ borderBottom: "1px solid var(--border)" }}>
+            <button
+              onClick={() => setPlaying(v)}
+              className="w-full flex items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-black/[0.03]"
+            >
+              <span
+                className="shrink-0 grid place-items-center rounded-xl"
+                style={{ width: 36, height: 36, background: "var(--paper-cool)", color: "var(--navy)" }}
+                aria-hidden
+              >
+                ▶
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
+                  {v.title}
+                </span>
+                {v.description && (
+                  <span className="block text-xs truncate" style={{ color: "var(--ink-faint)" }}>
+                    {v.description}
+                  </span>
+                )}
+              </span>
+              <span style={{ color: "var(--ink-veil)" }} aria-hidden>›</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <Dialog open={!!playing} onOpenChange={(o) => !o && setPlaying(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogTitle>{playing?.title}</DialogTitle>
+          {playing && (
+            urls[playing.storage_path] ? (
               <video
                 controls
-                preload="none"
+                autoPlay
                 playsInline
-                src={urls[v.storage_path]}
+                src={urls[playing.storage_path]}
                 style={{ width: "100%", borderRadius: 12, background: "#000" }}
               />
             ) : (
-              <div style={{ width: "100%", aspectRatio: "16 / 9", borderRadius: 12, background: "rgba(0,0,0,0.8)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
+              <div style={{ width: "100%", aspectRatio: "16 / 9", borderRadius: 12, background: "rgba(0,0,0,0.85)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
                 Loading video…
               </div>
-            )}
-            <div className="text-xs font-semibold" style={{ color: "var(--ink)" }}>{v.title}</div>
-          </div>
-        ))}
-      </div>
+            )
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
