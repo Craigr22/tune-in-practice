@@ -205,6 +205,7 @@ export type Database = {
           focus_song_id: string | null
           id: string
           instrument: string
+          tier: string
           updated_at: string
           video_ids: string[]
           warmup_instruction: string
@@ -218,6 +219,7 @@ export type Database = {
           focus_song_id?: string | null
           id?: string
           instrument?: string
+          tier?: string
           updated_at?: string
           video_ids?: string[]
           warmup_instruction?: string
@@ -231,6 +233,7 @@ export type Database = {
           focus_song_id?: string | null
           id?: string
           instrument?: string
+          tier?: string
           updated_at?: string
           video_ids?: string[]
           warmup_instruction?: string
