@@ -36,7 +36,7 @@ type UserRow = {
 function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string> }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [role, setRole] = useState<"teacher" | "student">("student");
+  const [role, setRole] = useState<"admin" | "teacher" | "student">("student");
   const [form, setForm] = useState({ name: "", email: "", phone: "", parent_name: "", fee_amount: "", rate: "" });
   const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -48,6 +48,34 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
   };
 
   const submit = async () => {
+    // An admin has no teacher/student record — just an invited email that
+    // becomes an admin account the moment they sign in.
+    if (role === "admin") {
+      const email = form.email.trim().toLowerCase();
+      if (!email) return toast.error("Email required for an admin");
+      setSaving(true);
+      const { error } = await supabase
+        .from("pending_roles")
+        .upsert({ email, role: "admin" }, { onConflict: "email" });
+      if (error) { setSaving(false); return toast.error(error.message); }
+
+      const { error: mailErr } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true, emailRedirectTo: window.location.origin },
+      });
+      setSaving(false);
+      if (mailErr) {
+        toast.error(`Saved, but the invite email failed: ${mailErr.message}`);
+      } else {
+        toast.success(`Admin invite sent to ${email}`);
+      }
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      qc.invalidateQueries({ queryKey: ["pending-roles"] });
+      reset();
+      setOpen(false);
+      return;
+    }
+
     if (!form.name.trim()) return toast.error("Name required");
     setSaving(true);
     if (role === "student") {
@@ -98,22 +126,41 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
               <SelectContent>
                 <SelectItem value="student">Student</SelectItem>
                 <SelectItem value="teacher">Teacher</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-1">
-            <Label>Name *</Label>
-            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </div>
-          <div className="space-y-1">
-            <Label>Email</Label>
-            <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </div>
-          <div className="space-y-1">
-            <Label>Phone</Label>
-            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          </div>
+          {role === "admin" ? (
+            <div className="space-y-1">
+              <Label>Email *</Label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="name@example.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                We'll email them a sign-in link. They become an admin as soon as they sign in —
+                full access to schedule, people and course work.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <Label>Name *</Label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Email</Label>
+                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Phone</Label>
+                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              </div>
+            </>
+          )}
 
           {role === "student" && (
             <>
@@ -208,10 +255,12 @@ export default function AdminUsers() {
     queryKey: ["admin-users"],
     enabled: role === "admin",
     queryFn: async (): Promise<UserRow[]> => {
-      const [{ data: roles }, { data: teachers }, { data: students }] = await Promise.all([
+      const [{ data: roles }, { data: teachers }, { data: students }, { data: invited }] = await Promise.all([
         supabase.from("user_roles").select("user_id, role"),
         supabase.from("teachers").select("id, user_id, name, email, phone"),
         supabase.from("students").select("id, user_id, name, email, phone"),
+        // Invited but not yet signed in — mostly admins, who have no record.
+        (supabase as any).from("pending_roles").select("email, role"),
       ]);
       const tByUser = new Map((teachers ?? []).filter((t: any) => t.user_id).map((t: any) => [t.user_id, t]));
       const sByUser = new Map((students ?? []).filter((s: any) => s.user_id).map((s: any) => [s.user_id, s]));
@@ -240,6 +289,23 @@ export default function AdminUsers() {
       (students ?? []).forEach((s: any) => {
         if (s.user_id && seenUserIds.has(s.user_id)) return;
         list.push({ key: `s:${s.id}`, user_id: s.user_id, role: "student", name: s.name, email: s.email, phone: s.phone, source: "student" });
+      });
+
+      // Invited people with no record of their own (admins) — shown so an
+      // invite isn't invisible until they sign in.
+      const known = new Set(list.map((r) => (r.email ?? "").toLowerCase()).filter(Boolean));
+      (invited ?? []).forEach((p: any) => {
+        const email = (p.email ?? "").toLowerCase();
+        if (!email || known.has(email)) return;
+        list.push({
+          key: `pending:${email}`,
+          user_id: null,
+          role: p.role as AppRole,
+          name: email.split("@")[0],
+          email: p.email,
+          phone: null,
+          source: "auth",
+        });
       });
 
       return list.sort((a, b) => a.name.localeCompare(b.name));
