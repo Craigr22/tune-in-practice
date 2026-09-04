@@ -115,8 +115,9 @@ const Home = () => {
   const todaysSession = useTodaysSession();
 
   // The admin's plan decides which lessons belong to today.
-  const { instrument } = useStudentClassConfig();
-  const { weekOneStart, days: planDays } = useStudentCoursePlan(instrument);
+  const { instrument, courseStartDate } = useStudentClassConfig();
+  const { weekOneStart: courseDefaultStart, days: planDays } = useStudentCoursePlan(instrument);
+  const weekOneStart = courseStartDate ?? courseDefaultStart;
   const { data: allVideos = [] } = useCourseVideos(instrument);
   const todaysPlanDay = useMemo(() => {
     if (!todaysSession) return null;

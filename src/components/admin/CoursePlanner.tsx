@@ -202,7 +202,9 @@ function WeekBlock({
   days: CoursePlanDay[];
   startDate: string | null;
 }) {
-  const [open, setOpen] = useState(weekNumber === 1);
+  // Collapsed by default — 12 day editors open at once was the main reason
+  // this page felt unmanageable.
+  const [open, setOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const save = useSaveCoursePlanDay(instrument);
   const delWeek = useDeletePlanWeek(instrument);
@@ -210,6 +212,10 @@ function WeekBlock({
   const [topic, setTopic] = useState(day1?.class_topic ?? "");
 
   useEffect(() => setTopic(day1?.class_topic ?? ""), [day1?.id, day1?.class_topic]);
+
+  // Summary shown while the week is collapsed, so the plan reads at a glance.
+  const lessonCount = days.reduce((n, d) => n + (d.video_ids?.length ?? 0), 0);
+  const plannedDays = days.filter((d) => d.focus_instruction?.trim()).length;
 
   const weekDates = useMemo(() => {
     if (!startDate) return null;
@@ -233,10 +239,17 @@ function WeekBlock({
   return (
     <div className="rounded-lg border">
       <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 border-b">
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 text-left">
-          {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          <span className="font-medium text-sm">Week {weekNumber}</span>
-          {weekDates && <span className="text-xs text-muted-foreground">{weekDates}</span>}
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 text-left min-w-0">
+          {open ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
+          <span className="font-medium text-sm shrink-0">Week {weekNumber}</span>
+          {weekDates && <span className="text-xs text-muted-foreground shrink-0">{weekDates}</span>}
+          {!open && (
+            <span className="text-xs text-muted-foreground truncate ml-1">
+              · {topic || "no class topic"}
+              {lessonCount > 0 && ` · ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}`}
+              {plannedDays < 3 && ` · ${3 - plannedDays} day${plannedDays === 2 ? "" : "s"} empty`}
+            </span>
+          )}
         </button>
         <Button variant="ghost" size="icon" title="Delete week" onClick={() => setConfirmDel(true)}>
           <Trash2 className="w-4 h-4" />

@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import SongFormDialog from "@/components/admin/SongFormDialog";
 import VideoManager from "@/components/admin/VideoManager";
 import CoursePlanner from "@/components/admin/CoursePlanner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function UkuleleManager() {
   const songs = useCatalogSongs("ukulele", { showInactive: true });
@@ -193,11 +194,29 @@ export default function AdminCoursework() {
         ))}
       </div>
 
-      {instrument === "ukulele" ? <UkuleleManager /> : <ComingSoon label={instrument === "guitar" ? "Guitar" : "Violin"} />}
+      {/* Three long sections used to sit on one endless page — tabs keep each
+          job (plan the weeks, edit songs, manage videos) on its own screen. */}
+      <Tabs defaultValue="plan" className="pt-1">
+        <TabsList>
+          <TabsTrigger value="plan">Course plan</TabsTrigger>
+          <TabsTrigger value="songs">Songs</TabsTrigger>
+          <TabsTrigger value="videos">Videos</TabsTrigger>
+        </TabsList>
 
-      <CoursePlanner instrument={instrument} />
+        <TabsContent value="plan" className="pt-4">
+          <CoursePlanner instrument={instrument} />
+        </TabsContent>
 
-      <VideoManager instrument={instrument} />
+        <TabsContent value="songs" className="pt-4">
+          {instrument === "ukulele"
+            ? <UkuleleManager />
+            : <ComingSoon label={instrument === "guitar" ? "Guitar" : "Violin"} />}
+        </TabsContent>
+
+        <TabsContent value="videos" className="pt-4">
+          <VideoManager instrument={instrument} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

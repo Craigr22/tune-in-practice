@@ -7,6 +7,7 @@ import {
   useBatchSettings,
   useSaveCoursework,
   useSaveSongsPerDay,
+  useSaveCourseStart,
   normalizeSongsPerDay,
   effectiveClassSongs,
   toInstrument,
@@ -18,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, ChevronUp, ChevronDown, Lock, Unlock } from "lucide-react";
 import { SESSION_ORDER, SESSION_TEMPLATES } from "@/lib/sessionTemplates";
+import { useStudentCoursePlan, planWeekNumberFor } from "@/hooks/useCoursePlan";
+import { isoMonday } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
 
 type EditRow = { song_id: string; title: string; artist: string; is_unlocked: boolean };
@@ -29,6 +32,14 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
   const { data: settings } = useBatchSettings(batchId);
   const saveCoursework = useSaveCoursework(batchId);
   const saveSongsPerDay = useSaveSongsPerDay(batchId);
+  const saveCourseStart = useSaveCourseStart(batchId);
+  const { weekOneStart: courseDefaultStart, days: planDays } = useStudentCoursePlan(instrument);
+  const [courseStart, setCourseStart] = useState("");
+  useEffect(() => setCourseStart(settings?.course_start_date ?? ""), [settings?.course_start_date]);
+
+  const totalPlanWeeks = new Set(planDays.map((d) => d.week_number)).size;
+  const effectiveStart = settings?.course_start_date ?? courseDefaultStart;
+  const currentPlanWeek = planWeekNumberFor(effectiveStart, isoMonday());
 
   const [list, setList] = useState<EditRow[]>([]);
   const [perDay, setPerDay] = useState<number[]>(() => normalizeSongsPerDay(null));
@@ -108,6 +119,47 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
 
   return (
     <div className="space-y-5">
+      <div className="rounded-lg border p-4">
+        <div className="font-medium text-sm">Course start</div>
+        <p className="text-xs text-muted-foreground mt-0.5 max-w-2xl">
+          The week this class begins the course. Set it when a new batch starts and they get
+          week 1 from that date — the same course, shifted to when they began.
+        </p>
+        <div className="mt-3 flex items-end gap-2 flex-wrap">
+          <Input
+            type="date"
+            value={courseStart}
+            onChange={(e) => setCourseStart(e.target.value)}
+            className="w-44"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={saveCourseStart.isPending}
+            onClick={async () => {
+              try {
+                await saveCourseStart.mutateAsync(courseStart || null);
+                toast.success(courseStart ? "Course start saved" : "Using the course default");
+              } catch (e: any) {
+                toast.error(e.message ?? "Failed to save");
+              }
+            }}
+          >
+            Save
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            {!effectiveStart
+              ? "No start date yet — students get generated practice."
+              : currentPlanWeek && currentPlanWeek <= totalPlanWeeks
+              ? `On week ${currentPlanWeek} of ${totalPlanWeeks} this week.`
+              : currentPlanWeek
+              ? `Past the ${totalPlanWeeks}-week plan — students get generated practice.`
+              : `Starts ${effectiveStart}.`}
+            {!settings?.course_start_date && courseDefaultStart && " (course default)"}
+          </span>
+        </div>
+      </div>
+
       <div className="rounded-lg border p-4">
         <div className="font-medium text-sm">Weekly practice plan</div>
         <p className="text-xs text-muted-foreground mt-0.5">

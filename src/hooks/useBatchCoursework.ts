@@ -80,10 +80,10 @@ export function useBatchSettings(batchId?: string) {
   return useQuery({
     queryKey: ["batch-settings", batchId],
     enabled: !!batchId,
-    queryFn: async (): Promise<{ songs_per_session: number; songs_per_day: number[] }> => {
+    queryFn: async (): Promise<{ songs_per_session: number; songs_per_day: number[]; course_start_date: string | null }> => {
       const { data, error } = await (supabase as any)
         .from("batch_settings")
-        .select("songs_per_session, songs_per_day")
+        .select("songs_per_session, songs_per_day, course_start_date")
         .eq("batch_id", batchId!)
         .maybeSingle();
       if (error) throw error;
@@ -91,6 +91,7 @@ export function useBatchSettings(batchId?: string) {
       return {
         songs_per_session: flat,
         songs_per_day: normalizeSongsPerDay(data?.songs_per_day, flat),
+        course_start_date: data?.course_start_date ?? null,
       };
     },
   });
@@ -112,6 +113,21 @@ export function useSaveCoursework(batchId: string) {
 }
 
 /** Save the per-day song counts (and keep the flat column in sync as a fallback). */
+/** When this class starts curriculum week 1. Null clears it (use the default). */
+export function useSaveCourseStart(batchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (date: string | null) => {
+      const { error } = await (supabase as any).from("batch_settings").upsert(
+        { batch_id: batchId, course_start_date: date, updated_at: new Date().toISOString() },
+        { onConflict: "batch_id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["batch-settings", batchId] }),
+  });
+}
+
 export function useSaveSongsPerDay(batchId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -142,6 +158,8 @@ export type StudentClassConfig = {
   songsPerSession: number;
   /** Distinct songs for each of the week's practice days, in order. */
   songsPerDay: number[];
+  /** Monday this class begins curriculum week 1 (null = course default). */
+  courseStartDate: string | null;
   rows: BatchCourseworkRow[];
 };
 
@@ -181,6 +199,7 @@ export function useStudentClassConfig(): StudentClassConfig {
     dayOfWeek: enrollment?.dayOfWeek ?? null,
     songsPerSession: settings?.songs_per_session ?? DEFAULT_SONGS_PER_SESSION,
     songsPerDay: settings?.songs_per_day ?? normalizeSongsPerDay(null),
+    courseStartDate: settings?.course_start_date ?? null,
     rows,
   };
 }
