@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,13 +25,19 @@ import FinancePayouts from "@/routes/admin/Finance/Payouts";
 import FinanceExpenses from "@/routes/admin/Finance/Expenses";
 import FinancePnL from "@/routes/admin/Finance/PnL";
 import Login from "@/pages/Login";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "./pages/NotFound.tsx";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
+/** Reachable signed out — a password reset link may arrive with no session. */
+const PUBLIC_PATHS = ["/reset-password"];
+
 const Gate = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  if (PUBLIC_PATHS.includes(location.pathname)) return <>{children}</>;
   if (loading) return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", color: "var(--ink-soft)" }}>Loading…</div>;
   if (!user) return <Login />;
   return <>{children}</>;
@@ -72,6 +78,8 @@ const App = () => (
         <AuthProvider>
           <Gate>
             <Routes>
+              {/* Outside the shell: no nav, and it works signed out. */}
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route element={<AppShell />}>
                 <Route path="/" element={<RoleHome />} />
                 <Route path="/student" element={<Home />} />

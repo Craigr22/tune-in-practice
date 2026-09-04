@@ -32,6 +32,23 @@ const Login = () => {
     }
   };
 
+  /** Emails a recovery link that lands on /reset-password. */
+  const forgotPassword = async () => {
+    if (!email) { setErr("Enter your email first, then tap this again."); return; }
+    setErr(null); setMsg(null); setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setMsg("Password reset link sent — check your inbox.");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Could not send the reset link");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const magic = async () => {
     if (!email) { setErr("Enter your email first."); return; }
     setErr(null); setBusy(true);
@@ -83,6 +100,13 @@ const Login = () => {
         <button type="button" onClick={magic} disabled={busy} className="bam-cta bam-cta-gold" style={{ width: "100%", marginBottom: 12 }}>
           Email me a magic link
         </button>
+
+        {mode === "signin" && (
+          <button type="button" onClick={forgotPassword} disabled={busy}
+            style={{ background: "none", border: 0, color: "var(--navy)", fontSize: 12, cursor: "pointer", width: "100%", marginBottom: 8, textDecoration: "underline" }}>
+            Forgot your password?
+          </button>
+        )}
 
         <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setErr(null); setMsg(null); }}
           style={{ background: "none", border: 0, color: "var(--ink-soft)", fontSize: 12, cursor: "pointer", width: "100%" }}>
