@@ -301,7 +301,7 @@ export default function ClassDetail() {
         </button>
         <header className="mb-4">
           <h1 className="text-2xl font-semibold">
-            {batch.locations?.name} · {batch.instruments?.name}
+            {batch.code ? `${batch.code} · ` : ""}{batch.locations?.name} · {batch.instruments?.name}
           </h1>
           <p className="text-sm text-muted-foreground">
             {group.students.length} student{group.students.length === 1 ? "" : "s"} ·{" "}

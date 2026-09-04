@@ -47,8 +47,15 @@ export default function MyClasses() {
               className="text-left rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors flex items-start justify-between gap-3"
             >
               <div>
-                <div className="font-semibold">
-                  {g.batch.locations?.name} · {g.batch.instruments?.name}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {g.batch.code && (
+                    <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--navy)" }}>
+                      {g.batch.code}
+                    </span>
+                  )}
+                  <span className="font-semibold">
+                    {g.batch.locations?.name} · {g.batch.instruments?.name}
+                  </span>
                 </div>
                 <div className="text-xs font-medium mt-1 flex items-center gap-1" style={{ color: "var(--navy)" }}>
                   <Clock className="w-3 h-3" />

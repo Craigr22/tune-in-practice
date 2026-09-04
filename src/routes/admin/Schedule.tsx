@@ -43,6 +43,7 @@ type Row = {
   status: string;
   batches: {
     id: string;
+    code: string | null;
     start_time: string;
     duration_min: number;
     teacher_id: string | null;
@@ -76,7 +77,7 @@ export default function AdminSchedule() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sessions")
-        .select("id, batch_id, scheduled_date, status, start_time, duration_min, batches!inner(id, start_time, duration_min, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name))")
+        .select("id, batch_id, scheduled_date, status, start_time, duration_min, batches!inner(id, code, start_time, duration_min, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name))")
         .order("scheduled_date");
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
@@ -105,7 +106,8 @@ export default function AdminSchedule() {
     const mins = (s as any).duration_min ?? b.duration_min ?? 60;
     const end = new Date(start.getTime() + mins * 60000);
     const room = b.locations?.name;
-    const title = `${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}${room ? ` · ${room}` : ""}`;
+    const code = (b as any).code ? `${(b as any).code} · ` : "";
+    const title = `${code}${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}${room ? ` · ${room}` : ""}`;
     return { title, start, end, resource: s };
   }), [sessions]);
 
@@ -236,6 +238,7 @@ export default function AdminSchedule() {
           <table className="w-full text-sm">
             <thead className="bg-muted">
               <tr>
+                <th className="text-left p-3 w-24">Class</th>
                 <th className="text-left p-3">When</th>
                 <th className="text-left p-3">Instrument</th>
                 <th className="text-left p-3">Teacher</th>
@@ -252,6 +255,11 @@ export default function AdminSchedule() {
                 const pct = cap > 0 ? Math.min(100, Math.round((b.enrolled / cap) * 100)) : 0;
                 return (
                   <tr key={b.id} className={`border-t ${!b.is_active ? "opacity-50" : ""}`}>
+                    <td className="p-3">
+                      <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--navy)" }}>
+                        {b.code ?? "—"}
+                      </span>
+                    </td>
                     <td className="p-3">
                       <div className="font-medium">{DOW[b.day_of_week]} · {(b.start_time || "").slice(0, 5)}</div>
                       <div className="text-xs text-muted-foreground">{b.duration_min} min</div>
@@ -310,7 +318,7 @@ export default function AdminSchedule() {
           </DialogHeader>
           {selectedSession && (
             <div className="space-y-3 text-sm">
-              <div>{selectedSession.batches?.instruments?.name} · {selectedSession.batches?.teachers?.name}</div>
+              <div>{(selectedSession.batches as any)?.code ? `${(selectedSession.batches as any).code} · ` : ""}{selectedSession.batches?.instruments?.name} · {selectedSession.batches?.teachers?.name}</div>
               <div className="text-muted-foreground">
                 {selectedSession.scheduled_date} · {selectedSession.batches?.start_time?.slice(0,5)}
               </div>

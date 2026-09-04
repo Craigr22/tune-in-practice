@@ -76,7 +76,7 @@ export default function BatchDetailDialog({ batchId, onClose }: { batchId: strin
         {batch && (
           <div className="space-y-4 text-sm">
             <div className="text-muted-foreground">
-              {(batch as any).instruments?.name} · {(batch as any).teachers?.name} · {(batch as any).locations?.name}
+              {(batch as any).code ? `${(batch as any).code} · ` : ""}{(batch as any).instruments?.name} · {(batch as any).teachers?.name} · {(batch as any).locations?.name}
             </div>
             <div>
               <div className="font-medium mb-2">
