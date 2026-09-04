@@ -4,13 +4,14 @@ import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursewo
 import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
 import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
 import { useEnsureWeeklyPlan, useTodaysSession, useCompleteSegment, useMarkSessionComplete, isoMonday } from "@/hooks/useWeeklyPlan";
-import { useLogPractice } from "@/hooks/useStudentProgress";
+import { useLogPractice, usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
+import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 
 /**
- * Today, on one page. The three sections the admin planned — warm-up, focus,
- * bonus — with their videos playing inline. Nothing opens, nothing floats,
- * nothing to navigate to.
+ * Today, on one page, in the order a student needs it: where they are in the
+ * week, what to do, then the material to do it with. Nothing opens or
+ * navigates away.
  */
 const Home = () => {
   const { data: student } = useStudentMe();
@@ -21,6 +22,8 @@ const Home = () => {
   const completeSeg = useCompleteSegment();
   const markComplete = useMarkSessionComplete();
   const logPractice = useLogPractice();
+  const { data: logs = [] } = usePracticeLogs();
+  const streak = useMemo(() => computeStreak(logs), [logs]);
 
   useEnsureWeeklyPlan();
   const session = useTodaysSession();
@@ -110,18 +113,35 @@ const Home = () => {
   return (
     <section className="view view-home active">
       <div className="home" style={{ paddingBottom: 60, maxWidth: 640, margin: "0 auto" }}>
-        <header className="mb-5">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--gold-deep)" }}>
-            Today · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
+        {/* Where they are in the week: practice days and the class day. */}
+        <WeeklyCalendarStrip />
+
+        <header className="flex items-end justify-between gap-3 mb-4">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--gold-deep)" }}>
+              Today · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
+            </div>
+            <h1 className="mt-1 text-2xl md:text-3xl font-bold" style={{ color: "var(--ink)" }}>
+              Hi {firstName}
+            </h1>
+            {session && tpl && (
+              <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
+                {tpl.emoji} {tpl.label} · {totalMins} min
+              </p>
+            )}
           </div>
-          <h1 className="mt-1 text-2xl md:text-3xl font-bold" style={{ color: "var(--ink)" }}>
-            Hi {firstName}
-          </h1>
-          {session && tpl && (
-            <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-              {tpl.emoji} {tpl.label} · {totalMins} min
-            </p>
-          )}
+          <div
+            className="shrink-0 rounded-2xl px-4 py-2 text-center"
+            style={{ background: "var(--gold-bg)", border: "1px solid var(--gold-soft)" }}
+            title={streak === 0 ? "Practise today to start a streak" : `${streak}-day streak`}
+          >
+            <div className="text-xl font-bold" style={{ color: "var(--ink)" }}>
+              <span className="bounce-soft">🔥</span> {streak}
+            </div>
+            <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
+              day{streak === 1 ? "" : "s"}
+            </div>
+          </div>
         </header>
 
         {!session ? (
@@ -137,30 +157,6 @@ const Home = () => {
           </div>
         ) : (
           <>
-            {/* Today's lessons, playing right here. */}
-            {videos.length > 0 && (
-              <div className="mb-5 flex flex-col gap-4">
-                {videos.map((v) => (
-                  <div key={v.id}>
-                    {urls[v.storage_path] ? (
-                      <video
-                        controls
-                        preload="none"
-                        playsInline
-                        src={urls[v.storage_path]}
-                        style={{ width: "100%", borderRadius: 16, background: "#000" }}
-                      />
-                    ) : (
-                      <div style={{ width: "100%", aspectRatio: "16 / 9", borderRadius: 16, background: "rgba(0,0,0,0.85)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
-                        Loading video…
-                      </div>
-                    )}
-                    <div className="text-sm font-semibold mt-1.5" style={{ color: "var(--ink)" }}>{v.title}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* The three planned sections. */}
             <div className="flex flex-col gap-3">
               {sections.map((s) => (
@@ -199,6 +195,34 @@ const Home = () => {
                 </div>
               ))}
             </div>
+            {/* Material second: what to do comes before what to watch. */}
+            {videos.length > 0 && (
+              <div className="mt-5">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--ink-soft)" }}>
+                  Today's lessons
+                </div>
+                <div className="flex flex-col gap-4">
+                  {videos.map((v) => (
+                    <div key={v.id}>
+                      {urls[v.storage_path] ? (
+                        <video
+                          controls
+                          preload="none"
+                          playsInline
+                          src={urls[v.storage_path]}
+                          style={{ width: "100%", borderRadius: 14, background: "#000", maxHeight: 220 }}
+                        />
+                      ) : (
+                        <div style={{ width: "100%", aspectRatio: "16 / 9", maxHeight: 220, borderRadius: 14, background: "rgba(0,0,0,0.85)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
+                          Loading video…
+                        </div>
+                      )}
+                      <div className="text-sm font-semibold mt-1.5" style={{ color: "var(--ink)" }}>{v.title}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
