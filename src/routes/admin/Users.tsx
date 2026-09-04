@@ -217,6 +217,22 @@ export default function AdminUsers() {
   const [pending, setPending] = useState<{ userId: string; name: string; current: AppRole; next: AppRole } | null>(null);
   const [invitingEmail, setInvitingEmail] = useState<string | null>(null);
   const [invitedEmails, setInvitedEmails] = useState<Set<string>>(new Set());
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+
+  /** Fix a typo'd address. The record's key carries its table and id. */
+  const saveEmail = async (row: UserRow) => {
+    const email = editEmail.trim().toLowerCase() || null;
+    const [prefix, id] = row.key.split(":");
+    const table = prefix === "t" ? "teachers" : prefix === "s" ? "students" : null;
+    if (!table) return toast.error("This account's email is managed elsewhere.");
+    const { error } = await supabase.from(table).update({ email }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success(email ? `Email updated to ${email}` : "Email cleared");
+    setEditingKey(null);
+    qc.invalidateQueries({ queryKey: ["admin-users"] });
+    qc.invalidateQueries({ queryKey: [table] });
+  };
 
   /**
    * Emails a sign-in link. Supabase creates the account when they click it,
@@ -399,7 +415,36 @@ export default function AdminUsers() {
             {filtered.map((r) => (
               <tr key={r.key} className="border-t">
                 <td className="p-3 font-medium">{r.name}</td>
-                <td className="p-3 text-muted-foreground">{r.email ?? "—"}</td>
+                <td className="p-3 text-muted-foreground">
+                  {editingKey === r.key ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={editEmail}
+                        onChange={(e) => setEditEmail(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEmail(r);
+                          if (e.key === "Escape") setEditingKey(null);
+                        }}
+                        className="h-8 text-sm"
+                        placeholder="name@example.com"
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-8" onClick={() => saveEmail(r)}>Save</Button>
+                      <Button size="sm" variant="outline" className="h-8" onClick={() => setEditingKey(null)}>✕</Button>
+                    </div>
+                  ) : r.source === "auth" ? (
+                    // Admin accounts and pending invites: no record to edit here.
+                    <span>{r.email ?? "—"}</span>
+                  ) : (
+                    <button
+                      onClick={() => { setEditingKey(r.key); setEditEmail(r.email ?? ""); }}
+                      className="text-left hover:underline"
+                      title="Click to edit"
+                    >
+                      {r.email ?? <span className="italic">add email</span>}
+                    </button>
+                  )}
+                </td>
                 <td className="p-3 text-muted-foreground">{r.phone ?? "—"}</td>
                 <td className="p-3">
                   {r.user_id ? (

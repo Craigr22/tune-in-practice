@@ -3,11 +3,14 @@ import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
+import { useViewAs, setViewAs, useViewableAccounts } from "@/hooks/useViewAs";
 
 const TopNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, role, signOut } = useAuth();
+  const { user, role, actualRole, signOut } = useAuth();
+  const viewAs = useViewAs();
+  const { data: accounts = [] } = useViewableAccounts(actualRole === "admin");
 
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
@@ -50,6 +53,49 @@ const TopNav = () => {
         )}
       </div>
       <div className="streak-chip">🔥 keep it up</div>
+
+      {/* Admin-only lens: see the app as a particular teacher or student.
+          Always paired with a way straight back to your own account. */}
+      {actualRole === "admin" && (
+        <div className="role-toggle" title="See the app as someone else">
+          <select
+            className="role-btn"
+            style={{ padding: "4px 8px", fontSize: 12, maxWidth: 190 }}
+            value={viewAs ? `${viewAs.role}:${viewAs.id}` : ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) { setViewAs(null); go("/admin/schedule"); return; }
+              const [role, id] = v.split(":");
+              const person = accounts.find((a) => a.id === id && a.role === role);
+              if (!person) return;
+              setViewAs(person);
+              go(role === "teacher" ? "/teacher/classes" : "/student");
+            }}
+          >
+            <option value="">👤 My account (admin)</option>
+            <optgroup label="Teachers">
+              {accounts.filter((a) => a.role === "teacher").map((a) => (
+                <option key={`t${a.id}`} value={`teacher:${a.id}`}>{a.name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Students">
+              {accounts.filter((a) => a.role === "student").map((a) => (
+                <option key={`s${a.id}`} value={`student:${a.id}`}>{a.name}</option>
+              ))}
+            </optgroup>
+          </select>
+          {viewAs && (
+            <button
+              className="role-btn active"
+              onClick={() => { setViewAs(null); go("/admin/schedule"); }}
+              title="Return to your own account"
+            >
+              Exit
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="role-toggle" title={user?.email ?? ""}>
         <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
         <button className="role-btn" onClick={signOut}>Sign out</button>

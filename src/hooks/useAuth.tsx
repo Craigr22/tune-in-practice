@@ -1,14 +1,18 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/db";
+import { useViewAs, setViewAs } from "@/hooks/useViewAs";
 
 export type AppRole = "admin" | "teacher" | "student";
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
-  /** The user's role from the database. */
+  /** Role the UI behaves as — the viewed account's role while an admin is
+      using "view as", otherwise the user's own. */
   role: AppRole | null;
+  /** The user's real role from the database. Never affected by "view as". */
+  actualRole: AppRole | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -21,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const viewAs = useViewAs();
 
   // Drop any stored role override on load: with the toggle gone there would
   // be no way back out of it.
@@ -66,13 +71,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [session?.user?.id]);
 
+  // Only an admin may look through another account.
+  const effectiveRole: AppRole | null =
+    role === "admin" && viewAs ? viewAs.role : role;
+
   const value = useMemo<AuthContextValue>(() => ({
     user: session?.user ?? null,
     session,
-    role,
+    role: effectiveRole,
+    actualRole: role,
     loading,
-    signOut: async () => { await supabase.auth.signOut(); },
-  }), [session, role, loading]);
+    signOut: async () => { setViewAs(null); await supabase.auth.signOut(); },
+  }), [session, role, effectiveRole, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
