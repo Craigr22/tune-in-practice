@@ -21,14 +21,11 @@ import { formatINR } from "@/lib/finance";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-type PaymentType = "per_hour" | "per_session" | "fixed_monthly";
 
 const emptyForm: TeacherInput = {
   name: "",
   email: "",
   phone: "",
-  rate: 0,
-  payment_type: "per_session",
   payout_cycle: "monthly",
   instruments: [],
   is_active: true,
@@ -83,8 +80,6 @@ function TeacherFormDialog({ open, teacher, onClose }: { open: boolean; teacher:
             name: teacher.name ?? "",
             email: teacher.email ?? "",
             phone: teacher.phone ?? "",
-            rate: Number(teacher.rate ?? 0),
-            payment_type: (teacher.payment_type ?? "per_session") as PaymentType,
             payout_cycle: teacher.payout_cycle ?? "monthly",
             instruments: teacher.instruments ?? [],
             is_active: teacher.is_active ?? true,
@@ -108,7 +103,6 @@ function TeacherFormDialog({ open, teacher, onClose }: { open: boolean; teacher:
         name: form.name.trim(),
         email: form.email?.trim() || null,
         phone: form.phone?.trim() || null,
-        rate: Number(form.rate || 0),
       },
       {
         onSuccess: () => { toast.success(teacher ? "Teacher updated" : "Teacher added"); onClose(); },
@@ -134,23 +128,6 @@ function TeacherFormDialog({ open, teacher, onClose }: { open: boolean; teacher:
             <div className="space-y-1">
               <Label>Phone</Label>
               <Input value={form.phone ?? ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Rate (₹)</Label>
-              <Input type="number" value={form.rate} onChange={(e) => setForm({ ...form, rate: Number(e.target.value) })} />
-            </div>
-            <div className="space-y-1">
-              <Label>Payment type</Label>
-              <Select value={form.payment_type} onValueChange={(v) => setForm({ ...form, payment_type: v as PaymentType })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="per_session">Per session</SelectItem>
-                  <SelectItem value="per_hour">Per hour</SelectItem>
-                  <SelectItem value="fixed_monthly">Fixed monthly</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
           </div>
           <div className="space-y-1">
@@ -223,7 +200,6 @@ function TeacherDetail({ teacher, onClose, onEdit, instrumentsMap }: { teacher: 
             {teacher.email && <div>Email: {teacher.email}</div>}
             {teacher.phone && <div>Phone: <a className="text-primary underline" href={`tel:${teacher.phone}`}>{teacher.phone}</a></div>}
             <div>Instruments: {instrumentNames || "—"}</div>
-            <div>Payment: {formatINR(Number(teacher.rate ?? 0))} ({teacher.payment_type?.replace("_", " ")})</div>
             <div>Payout cycle: {teacher.payout_cycle}</div>
             <div>
               Status:{" "}
@@ -297,10 +273,10 @@ function TeacherDetail({ teacher, onClose, onEdit, instrumentsMap }: { teacher: 
 }
 
 type TStatus = "active" | "inactive" | "all";
-type TSort = "name" | "rate_desc" | "rate_asc";
+type TSort = "name";
 
 function exportTeachersCsv(rows: any[], instrumentsMap: Map<string, string>) {
-  const headers = ["Name", "Email", "Phone", "Instruments", "Rate", "Payment type", "Payout cycle", "Status"];
+  const headers = ["Name", "Email", "Phone", "Instruments", "Payout cycle", "Status"];
   const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = [
     headers.join(","),
@@ -310,8 +286,6 @@ function exportTeachersCsv(rows: any[], instrumentsMap: Map<string, string>) {
         t.email,
         t.phone,
         (t.instruments ?? []).map((id: string) => instrumentsMap.get(id)).filter(Boolean).join("; "),
-        t.rate,
-        t.payment_type,
         t.payout_cycle,
         t.is_active ? "Active" : "Inactive",
       ].map(esc).join(","),
@@ -356,8 +330,6 @@ export default function AdminTeachers() {
     });
     out.sort((a: any, b: any) => {
       switch (sort) {
-        case "rate_desc": return Number(b.rate ?? 0) - Number(a.rate ?? 0);
-        case "rate_asc": return Number(a.rate ?? 0) - Number(b.rate ?? 0);
         default: return a.name.localeCompare(b.name);
       }
     });
@@ -401,8 +373,6 @@ export default function AdminTeachers() {
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="name">Name (A–Z)</SelectItem>
-            <SelectItem value="rate_desc">Rate (high → low)</SelectItem>
-            <SelectItem value="rate_asc">Rate (low → high)</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -410,11 +380,10 @@ export default function AdminTeachers() {
       {isLoading && <div className="text-sm">Loading…</div>}
 
       <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="grid grid-cols-[1.4fr_1fr_1.2fr_0.8fr_0.6fr] gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b bg-muted/30">
+        <div className="grid grid-cols-[1.4fr_1fr_1.2fr_0.6fr] gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b bg-muted/30">
           <div>Name</div>
           <div>Contact</div>
           <div>Instruments</div>
-          <div>Rate</div>
           <div>Status</div>
         </div>
         {filtered.map((t: any) => {
@@ -423,7 +392,7 @@ export default function AdminTeachers() {
             <div
               key={t.id}
               onClick={() => setOpen(t)}
-              className="grid grid-cols-[1.4fr_1fr_1.2fr_0.8fr_0.6fr] gap-4 items-center px-4 py-3 border-b cursor-pointer hover:bg-muted/40"
+              className="grid grid-cols-[1.4fr_1fr_1.2fr_0.6fr] gap-4 items-center px-4 py-3 border-b cursor-pointer hover:bg-muted/40"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-muted grid place-items-center text-sm font-semibold">
@@ -433,7 +402,6 @@ export default function AdminTeachers() {
               </div>
               <div className="text-sm text-muted-foreground truncate">{t.phone || t.email || "—"}</div>
               <div className="text-sm text-muted-foreground truncate">{names || "—"}</div>
-              <div className="text-sm tabular-nums">{formatINR(Number(t.rate ?? 0))}</div>
               <div>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${t.is_active ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
                   {t.is_active ? "Active" : "Inactive"}

@@ -23,15 +23,12 @@ import { formatINR } from "@/lib/finance";
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-type FeeCycle = "monthly" | "quarterly" | "semester";
 
 const emptyForm: StudentInput = {
   name: "",
   email: "",
   phone: "",
   parent_name: "",
-  fee_amount: 0,
-  fee_cycle: "monthly",
   is_active: true,
 };
 
@@ -59,8 +56,6 @@ function StudentFormDialog({
             email: student.email ?? "",
             phone: student.phone ?? "",
             parent_name: student.parent_name ?? "",
-            fee_amount: Number(student.fee_amount ?? 0),
-            fee_cycle: (student.fee_cycle ?? "monthly") as FeeCycle,
             is_active: student.is_active ?? true,
           }
         : emptyForm
@@ -77,7 +72,6 @@ function StudentFormDialog({
         email: form.email?.trim() || null,
         phone: form.phone?.trim() || null,
         parent_name: form.parent_name?.trim() || null,
-        fee_amount: Number(form.fee_amount || 0),
       },
       {
         onSuccess: () => {
@@ -111,23 +105,6 @@ function StudentFormDialog({
           <div className="space-y-1">
             <Label>Parent name</Label>
             <Input value={form.parent_name ?? ""} onChange={(e) => setForm({ ...form, parent_name: e.target.value })} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label>Fee amount (₹)</Label>
-              <Input type="number" value={form.fee_amount} onChange={(e) => setForm({ ...form, fee_amount: Number(e.target.value) })} />
-            </div>
-            <div className="space-y-1">
-              <Label>Fee cycle</Label>
-              <Select value={form.fee_cycle} onValueChange={(v) => setForm({ ...form, fee_cycle: v as FeeCycle })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="semester">Semester</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
         <DialogFooter>
@@ -215,7 +192,6 @@ function StudentDetail({ student, onClose, onEdit }: { student: any | null; onCl
             {student.phone && <div>Phone: <a className="text-primary underline" href={`tel:${student.phone}`}>{student.phone}</a></div>}
             {student.parent_name && <div>Parent: {student.parent_name}</div>}
             <div>Joined: {student.joined_on}</div>
-            <div>Fee: {formatINR(Number(student.fee_amount ?? 0))} / {student.fee_cycle}</div>
             <div>
               Status:{" "}
               <span className={student.is_active ? "text-emerald-600" : "text-muted-foreground"}>
@@ -316,16 +292,16 @@ function StudentDetail({ student, onClose, onEdit }: { student: any | null; onCl
 }
 
 type StatusFilter = "active" | "inactive" | "all";
-type SortKey = "name" | "fee_desc" | "fee_asc" | "recent";
+type SortKey = "name" | "recent";
 const PAGE_SIZE = 50;
 
 function exportStudentsCsv(rows: any[]) {
-  const headers = ["Name", "Email", "Phone", "Parent", "Fee", "Fee cycle", "Status", "Joined"];
+  const headers = ["Name", "Email", "Phone", "Parent", "Status", "Joined"];
   const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = [
     headers.join(","),
     ...rows.map((s) =>
-      [s.name, s.email, s.phone, s.parent_name, s.fee_amount, s.fee_cycle, s.is_active ? "Active" : "Inactive", s.joined_on]
+      [s.name, s.email, s.phone, s.parent_name, s.is_active ? "Active" : "Inactive", s.joined_on]
         .map(esc)
         .join(","),
     ),
@@ -372,8 +348,6 @@ export default function AdminStudents() {
     });
     out.sort((a: any, b: any) => {
       switch (sort) {
-        case "fee_desc": return Number(b.fee_amount ?? 0) - Number(a.fee_amount ?? 0);
-        case "fee_asc": return Number(a.fee_amount ?? 0) - Number(b.fee_amount ?? 0);
         case "recent": return String(b.joined_on ?? "").localeCompare(String(a.joined_on ?? ""));
         default: return a.name.localeCompare(b.name);
       }
@@ -452,8 +426,6 @@ export default function AdminStudents() {
           <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="name">Name (A–Z)</SelectItem>
-            <SelectItem value="fee_desc">Fee (high → low)</SelectItem>
-            <SelectItem value="fee_asc">Fee (low → high)</SelectItem>
             <SelectItem value="recent">Recently joined</SelectItem>
           </SelectContent>
         </Select>
@@ -472,18 +444,17 @@ export default function AdminStudents() {
       {isLoading && <div className="text-sm">Loading…</div>}
 
       <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="grid grid-cols-[auto_1.4fr_1fr_1fr_0.8fr_0.6fr] gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b bg-muted/30 items-center">
+        <div className="grid grid-cols-[auto_1.4fr_1fr_1fr_0.6fr] gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b bg-muted/30 items-center">
           <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} aria-label="Select all" />
           <div>Name</div>
           <div>Contact</div>
           <div>Parent</div>
-          <div>Fee</div>
           <div>Status</div>
         </div>
         {visible.map((s: any) => (
           <div
             key={s.id}
-            className="grid grid-cols-[auto_1.4fr_1fr_1fr_0.8fr_0.6fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/40"
+            className="grid grid-cols-[auto_1.4fr_1fr_1fr_0.6fr] gap-4 items-center px-4 py-3 border-b hover:bg-muted/40"
           >
             <input
               type="checkbox"
@@ -500,7 +471,6 @@ export default function AdminStudents() {
             </div>
             <div className="text-sm text-muted-foreground truncate cursor-pointer" onClick={() => setOpen(s)}>{s.phone || s.email || "—"}</div>
             <div className="text-sm text-muted-foreground truncate cursor-pointer" onClick={() => setOpen(s)}>{s.parent_name || "—"}</div>
-            <div className="text-sm tabular-nums cursor-pointer" onClick={() => setOpen(s)}>{formatINR(Number(s.fee_amount ?? 0))}</div>
             <div>
               <span className={`text-xs px-2 py-0.5 rounded-full ${s.is_active ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
                 {s.is_active ? "Active" : "Inactive"}

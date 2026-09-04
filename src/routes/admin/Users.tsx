@@ -40,12 +40,12 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<"admin" | "teacher" | "student">("student");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", parent_name: "", fee_amount: "", rate: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", parent_name: "" });
   const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
-    setForm({ name: "", email: "", phone: "", parent_name: "", fee_amount: "", rate: "" });
+    setForm({ name: "", email: "", phone: "", parent_name: "" });
     setSelectedInstruments([]);
     setRole("student");
   };
@@ -87,7 +87,6 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         parent_name: form.parent_name.trim() || null,
-        fee_amount: Number(form.fee_amount || 0),
       });
       setSaving(false);
       if (error) return toast.error(error.message);
@@ -98,7 +97,6 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
         name: form.name.trim(),
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
-        rate: Number(form.rate || 0),
         instruments: selectedInstruments,
       });
       setSaving(false);
@@ -171,19 +169,11 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
                 <Label>Parent name</Label>
                 <Input value={form.parent_name} onChange={(e) => setForm({ ...form, parent_name: e.target.value })} />
               </div>
-              <div className="space-y-1">
-                <Label>Fee amount</Label>
-                <Input type="number" value={form.fee_amount} onChange={(e) => setForm({ ...form, fee_amount: e.target.value })} />
-              </div>
             </>
           )}
 
           {role === "teacher" && (
             <>
-              <div className="space-y-1">
-                <Label>Rate</Label>
-                <Input type="number" value={form.rate} onChange={(e) => setForm({ ...form, rate: e.target.value })} />
-              </div>
               {instrumentsMap.size > 0 && (
                 <div className="space-y-1">
                   <Label>Instruments</Label>
