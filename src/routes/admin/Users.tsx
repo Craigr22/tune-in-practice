@@ -36,6 +36,70 @@ type UserRow = {
   source: "auth" | "teacher" | "student";
 };
 
+/**
+ * One editable table cell. At module scope on purpose: nested inside the page
+ * component it would be a new component type on every render, so React would
+ * remount the input and drop focus mid-typing.
+ */
+function EditableCell({
+  editing, value, placeholder, editValue, setEditValue, onStart, onSave, onCancel,
+}: {
+  editing: boolean;
+  value: string | null;
+  placeholder?: string;
+  editValue: string;
+  setEditValue: (v: string) => void;
+  onStart: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  if (editing) {
+    // Icon-only buttons and a wrapping layout: these columns are narrow, and a
+    // text "Save" button squeezed the field down to a few pixels.
+    return (
+      <div className="flex items-center gap-1 min-w-[150px]">
+        <Input
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onSave();
+            if (e.key === "Escape") onCancel();
+          }}
+          // Saving on blur means a click anywhere else keeps the edit rather
+          // than quietly discarding it.
+          onBlur={(e) => {
+            if (!e.relatedTarget?.closest?.("[data-cell-action]")) onSave();
+          }}
+          className="h-8 text-sm flex-1 min-w-0"
+          autoFocus
+        />
+        <button
+          data-cell-action
+          onClick={onSave}
+          title="Save (Enter)"
+          className="shrink-0 h-8 w-7 grid place-items-center rounded-md text-white"
+          style={{ background: "var(--navy)" }}
+        >
+          ✓
+        </button>
+        <button
+          data-cell-action
+          onClick={onCancel}
+          title="Cancel (Esc)"
+          className="shrink-0 h-8 w-7 grid place-items-center rounded-md border text-muted-foreground"
+        >
+          ✕
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button onClick={onStart} className="text-left hover:underline w-full" title="Click to edit">
+      {value || <span className="italic text-muted-foreground">{placeholder ?? "—"}</span>}
+    </button>
+  );
+}
+
 function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string> }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -211,22 +275,60 @@ export default function AdminUsers() {
   const [invitingEmail, setInvitingEmail] = useState<string | null>(null);
   const [invitedEmails, setInvitedEmails] = useState<Set<string>>(new Set());
   const [loginFor, setLoginFor] = useState<StudentLoginTarget | null>(null);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [editEmail, setEditEmail] = useState("");
+  // Inline editing, one cell at a time, keyed "<row key>|<field>".
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  type Field = "name" | "email" | "phone";
 
-  /** Fix a typo'd address. The record's key carries its table and id. */
-  const saveEmail = async (row: UserRow) => {
-    const email = editEmail.trim().toLowerCase() || null;
-    const [prefix, id] = row.key.split(":");
-    const table = prefix === "t" ? "teachers" : prefix === "s" ? "students" : null;
-    if (!table) return toast.error("This account's email is managed elsewhere.");
-    const { error } = await supabase.from(table).update({ email }).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success(email ? `Email updated to ${email}` : "Email cleared");
-    setEditingKey(null);
-    qc.invalidateQueries({ queryKey: ["admin-users"] });
-    qc.invalidateQueries({ queryKey: [table] });
+  const startEdit = (row: UserRow, field: Field, current: string | null) => {
+    setEditingCell(`${row.key}|${field}`);
+    setEditValue(current ?? "");
   };
+
+  /**
+   * Save one field. Teachers and students own a record; an admin has only a
+   * profile row, and an invited admin only a pending_roles row.
+   */
+  const saveCell = async (row: UserRow, field: Field) => {
+    let value: string | null = editValue.trim() || null;
+    if (field === "email" && value) value = value.toLowerCase();
+    if (field === "name" && !value) return toast.error("Name can't be empty");
+
+    const [prefix, id] = row.key.split(":");
+    let error: { message: string } | null = null;
+
+    if (prefix === "t" || prefix === "s") {
+      const table = prefix === "t" ? "teachers" : "students";
+      ({ error } = await supabase.from(table).update({ [field]: value }).eq("id", id));
+      qc.invalidateQueries({ queryKey: [table] });
+    } else if (prefix === "auth" && row.user_id) {
+      if (field === "phone") return toast.error("Phone isn't stored for this account.");
+      ({ error } = await (supabase as any).from("user_profiles").upsert(
+        { user_id: row.user_id, [field]: value, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" },
+      ));
+    } else if (prefix === "pending") {
+      if (field !== "email" || !value) return toast.error("An invited admin needs an email.");
+      ({ error } = await (supabase as any).from("pending_roles").update({ email: value }).eq("email", row.email));
+    } else {
+      return toast.error("This entry can't be edited here.");
+    }
+
+    if (error) return toast.error(error.message);
+    toast.success("Saved");
+    setEditingCell(null);
+    qc.invalidateQueries({ queryKey: ["admin-users"] });
+  };
+
+  const cellProps = (row: UserRow, field: Field, value: string | null) => ({
+    editing: editingCell === `${row.key}|${field}`,
+    value,
+    editValue,
+    setEditValue,
+    onStart: () => startEdit(row, field, value),
+    onSave: () => saveCell(row, field),
+    onCancel: () => setEditingCell(null),
+  });
 
   /**
    * Emails a sign-in link. Supabase creates the account when they click it,
@@ -275,6 +377,12 @@ export default function AdminUsers() {
         // Invited but not yet signed in — mostly admins, who have no record.
         (supabase as any).from("pending_roles").select("email, role"),
       ]);
+
+      // Admins own no teacher/student row; their name and email live here.
+      const { data: profiles } = await (supabase as any)
+        .from("user_profiles")
+        .select("user_id, name, email");
+      const profileByUser = new Map<string, any>((profiles ?? []).map((p: any) => [p.user_id, p]));
       const tByUser = new Map((teachers ?? []).filter((t: any) => t.user_id).map((t: any) => [t.user_id, t]));
       const sByUser = new Map((students ?? []).filter((s: any) => s.user_id).map((s: any) => [s.user_id, s]));
       const seenUserIds = new Set<string>();
@@ -288,8 +396,8 @@ export default function AdminUsers() {
           key: `auth:${r.user_id}`,
           user_id: r.user_id,
           role: r.role,
-          name: t?.name ?? s?.name ?? "—",
-          email: t?.email ?? s?.email ?? null,
+          name: t?.name ?? s?.name ?? profileByUser.get(r.user_id)?.name ?? "—",
+          email: t?.email ?? s?.email ?? profileByUser.get(r.user_id)?.email ?? null,
           phone: t?.phone ?? s?.phone ?? null,
           source: "auth",
         });
@@ -411,38 +519,17 @@ export default function AdminUsers() {
           <tbody>
             {filtered.map((r) => (
               <tr key={r.key} className="border-t">
-                <td className="p-3 font-medium">{r.name}</td>
-                <td className="p-3 text-muted-foreground">
-                  {editingKey === r.key ? (
-                    <div className="flex items-center gap-1">
-                      <Input
-                        value={editEmail}
-                        onChange={(e) => setEditEmail(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") saveEmail(r);
-                          if (e.key === "Escape") setEditingKey(null);
-                        }}
-                        className="h-8 text-sm"
-                        placeholder="name@example.com"
-                        autoFocus
-                      />
-                      <Button size="sm" className="h-8" onClick={() => saveEmail(r)}>Save</Button>
-                      <Button size="sm" variant="outline" className="h-8" onClick={() => setEditingKey(null)}>✕</Button>
-                    </div>
-                  ) : r.source === "auth" ? (
-                    // Admin accounts and pending invites: no record to edit here.
-                    <span>{r.email ?? "—"}</span>
-                  ) : (
-                    <button
-                      onClick={() => { setEditingKey(r.key); setEditEmail(r.email ?? ""); }}
-                      className="text-left hover:underline"
-                      title="Click to edit"
-                    >
-                      {r.email ?? <span className="italic">add email</span>}
-                    </button>
-                  )}
+                <td className="p-3 font-medium">
+                  <EditableCell {...cellProps(r, "name", r.name === "—" ? null : r.name)} placeholder="add name" />
                 </td>
-                <td className="p-3 text-muted-foreground">{r.phone ?? "—"}</td>
+                <td className="p-3 text-muted-foreground">
+                  <EditableCell {...cellProps(r, "email", r.email)} placeholder="add email" />
+                </td>
+                <td className="p-3 text-muted-foreground">
+                  {r.source === "auth"
+                    ? (r.phone ?? "—")
+                    : <EditableCell {...cellProps(r, "phone", r.phone)} placeholder="add phone" />}
+                </td>
                 <td className="p-3">
                   {r.user_id ? (
                     <Select value={r.role} onValueChange={(v) => requestRoleChange(r.user_id!, r.name, r.role, v as AppRole)}>
