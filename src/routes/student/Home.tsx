@@ -7,6 +7,9 @@ import { useEnsureWeeklyPlan, useTodaysSession, useCompleteSegment, useMarkSessi
 import { useLogPractice, usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
+import type { CourseVideo } from "@/hooks/useCourseVideos";
+
+const NO_VIDEOS: CourseVideo[] = [];
 
 /**
  * Today, on one page, in the order a student needs it: where they are in the
@@ -88,6 +91,7 @@ const Home = () => {
           song: title(session.warmup_song_id),
           text: session.warmup_instruction,
           done: session.warmup_completed,
+          videos: NO_VIDEOS,
         },
         {
           key: "focus" as const,
@@ -97,6 +101,9 @@ const Home = () => {
           song: title(session.focus_song_id),
           text: session.focus_instruction,
           done: session.focus_completed,
+          // The day's videos are planned per day, not per segment, so they
+          // belong to the step that actually works on the material.
+          videos,
         },
         {
           key: "bonus" as const,
@@ -106,6 +113,7 @@ const Home = () => {
           song: title(session.bonus_song_id),
           text: session.bonus_instruction,
           done: session.bonus_completed,
+          videos: NO_VIDEOS,
         },
       ]
     : [];
@@ -164,74 +172,80 @@ const Home = () => {
             </p>
           </div>
         ) : (
-          <>
-            {/* The three planned sections. */}
-            <div className="flex flex-col gap-3">
-              {sections.map((s) => (
-                <div
-                  key={s.key}
-                  className="rounded-2xl p-5"
-                  style={{
-                    background: s.done ? "rgba(16,185,129,0.07)" : "var(--card)",
-                    border: `1px solid ${s.done ? "rgba(16,185,129,0.35)" : "var(--border)"}`,
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg" aria-hidden>{s.emoji}</span>
-                    <span className="font-bold" style={{ color: "var(--ink)" }}>{s.label}</span>
-                    <span className="text-xs tabular-nums" style={{ color: "var(--ink-faint)" }}>{s.mins} min</span>
-                    {s.done && <span className="ml-auto text-sm" style={{ color: "#10b981" }}>Done ✓</span>}
+          /* Today's three steps, in order. The lesson videos live inside the
+             step that refers to them rather than in a section of their own —
+             the focus instruction usually says to watch and then play, so
+             the two belong in the same place. */
+          <div className="flex flex-col gap-3">
+            {sections.map((s, i) => (
+              <div
+                key={s.key}
+                className="rounded-2xl p-5"
+                style={{
+                  background: s.done ? "rgba(16,185,129,0.07)" : "var(--card)",
+                  border: `1px solid ${s.done ? "rgba(16,185,129,0.35)" : "var(--border)"}`,
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="shrink-0 w-6 h-6 rounded-full grid place-items-center text-xs font-bold"
+                    style={{
+                      background: s.done ? "#10b981" : "var(--paper-cool)",
+                      color: s.done ? "#fff" : "var(--ink-soft)",
+                    }}
+                    aria-hidden
+                  >
+                    {s.done ? "✓" : i + 1}
+                  </span>
+                  <span className="text-lg" aria-hidden>{s.emoji}</span>
+                  <span className="font-bold" style={{ color: "var(--ink)" }}>{s.label}</span>
+                  <span className="text-xs tabular-nums" style={{ color: "var(--ink-faint)" }}>{s.mins} min</span>
+                  {s.done && <span className="ml-auto text-sm" style={{ color: "#10b981" }}>Done</span>}
+                </div>
+
+                {s.song && (
+                  <div className="text-sm font-semibold mt-2" style={{ color: "var(--navy)" }}>{s.song}</div>
+                )}
+                {s.text && (
+                  <p className="text-sm mt-1.5 leading-relaxed" style={{ color: "var(--ink-soft)" }}>{s.text}</p>
+                )}
+
+                {s.videos.length > 0 && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    {s.videos.map((v) => (
+                      <div key={v.id}>
+                        {urls[v.storage_path] ? (
+                          <video
+                            controls
+                            preload="none"
+                            playsInline
+                            src={urls[v.storage_path]}
+                            style={{ width: "100%", borderRadius: 14, background: "#000", maxHeight: 220 }}
+                          />
+                        ) : (
+                          <div style={{ width: "100%", aspectRatio: "16 / 9", maxHeight: 220, borderRadius: 14, background: "rgba(0,0,0,0.85)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
+                            Loading video…
+                          </div>
+                        )}
+                        <div className="text-xs font-semibold mt-1.5" style={{ color: "var(--ink-soft)" }}>{v.title}</div>
+                      </div>
+                    ))}
                   </div>
+                )}
 
-                  {s.song && (
-                    <div className="text-sm font-semibold mt-2" style={{ color: "var(--navy)" }}>{s.song}</div>
-                  )}
-                  {s.text && (
-                    <p className="text-sm mt-1.5 leading-relaxed" style={{ color: "var(--ink-soft)" }}>{s.text}</p>
-                  )}
-
-                  {!s.done && (
-                    <button
-                      onClick={() => markSegmentDone(s.key)}
-                      disabled={completeSeg.isPending}
-                      className="mt-3 rounded-xl px-4 py-2 text-sm font-bold transition-transform active:scale-95 disabled:opacity-60"
-                      style={{ background: "var(--navy)", color: "#fff" }}
-                    >
-                      Mark {s.label.toLowerCase()} done
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {/* Material second: what to do comes before what to watch. */}
-            {videos.length > 0 && (
-              <div className="mt-5">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--ink-soft)" }}>
-                  Today's lessons
-                </div>
-                <div className="flex flex-col gap-4">
-                  {videos.map((v) => (
-                    <div key={v.id}>
-                      {urls[v.storage_path] ? (
-                        <video
-                          controls
-                          preload="none"
-                          playsInline
-                          src={urls[v.storage_path]}
-                          style={{ width: "100%", borderRadius: 14, background: "#000", maxHeight: 220 }}
-                        />
-                      ) : (
-                        <div style={{ width: "100%", aspectRatio: "16 / 9", maxHeight: 220, borderRadius: 14, background: "rgba(0,0,0,0.85)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
-                          Loading video…
-                        </div>
-                      )}
-                      <div className="text-sm font-semibold mt-1.5" style={{ color: "var(--ink)" }}>{v.title}</div>
-                    </div>
-                  ))}
-                </div>
+                {!s.done && (
+                  <button
+                    onClick={() => markSegmentDone(s.key)}
+                    disabled={completeSeg.isPending}
+                    className="mt-3 rounded-xl px-4 py-2 text-sm font-bold transition-transform active:scale-95 disabled:opacity-60"
+                    style={{ background: "var(--navy)", color: "#fff" }}
+                  >
+                    Mark {s.label.toLowerCase()} done
+                  </button>
+                )}
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </div>
     </section>
