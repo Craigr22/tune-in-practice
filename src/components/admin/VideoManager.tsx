@@ -33,6 +33,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
   const songs = useCatalogSongs(instrument);
   const upload = useUploadCourseVideo();
+  const update = useUpdateCourseVideo();
   const del = useDeleteCourseVideo();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -41,6 +42,8 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
   const [file, setFile] = useState<File | null>(null);
   const [confirmDel, setConfirmDel] = useState<CourseVideo | null>(null);
   const [preview, setPreview] = useState<CourseVideo | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const songTitle = (id: string | null) => songs.find((s) => s.id === id)?.title;
@@ -50,6 +53,27 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
     setSongId("none");
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const startEdit = (video: CourseVideo) => {
+    setEditingId(video.id);
+    setEditTitle(video.title);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editTitle.trim()) return;
+    try {
+      await update.mutateAsync({ id: editingId, instrument, title: editTitle.trim() });
+      toast.success("Title updated");
+      cancelEdit();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to update title");
+    }
   };
 
   const doUpload = async () => {
