@@ -210,8 +210,8 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
                 placeholder="name@example.com"
               />
               <p className="text-xs text-muted-foreground">
-                We'll email them a sign-in link. They become an admin as soon as they sign in —
-                full access to schedule, people and course work.
+                They get full access to schedule, people and course work. We'll email a sign-in link
+                now — or set them a password from the list once they're added.
               </p>
             </div>
           ) : (
@@ -615,10 +615,11 @@ export default function AdminUsers() {
         </table>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        <strong>Send invite</strong> emails a sign-in link. There's no password to set or share — they
-        click the link, their account is created, and it's linked to this record with the right role
-        automatically. Rows with no email need one added on the Students or Teachers tab first.
+      <p className="text-xs text-muted-foreground max-w-3xl">
+        <strong>Create login</strong> sets a password you hand over. Students sign in with a username
+        (no email needed); teachers and admins sign in with their email. <strong>Invite</strong> is an
+        alternative for teachers and admins — it emails a sign-in link instead. Click any name, email
+        or phone to edit it.
       </p>
 
       <LoginDialog target={loginFor} onClose={() => setLoginFor(null)} />
