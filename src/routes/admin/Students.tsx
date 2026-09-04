@@ -29,6 +29,8 @@ const emptyForm: StudentInput = {
   email: "",
   phone: "",
   parent_name: "",
+  fee_amount: 0,
+  fee_cycle: "monthly",
   is_active: true,
 };
 
@@ -56,6 +58,8 @@ function StudentFormDialog({
             email: student.email ?? "",
             phone: student.phone ?? "",
             parent_name: student.parent_name ?? "",
+            fee_amount: student.fee_amount ?? 0,
+            fee_cycle: student.fee_cycle ?? "monthly",
             is_active: student.is_active ?? true,
           }
         : emptyForm

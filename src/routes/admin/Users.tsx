@@ -313,7 +313,7 @@ export default function AdminUsers() {
 
     if (prefix === "t" || prefix === "s") {
       const table = prefix === "t" ? "teachers" : "students";
-      ({ error } = await supabase.from(table).update({ [field]: value }).eq("id", id));
+      ({ error } = await (supabase as any).from(table).update({ [field]: value }).eq("id", id));
       qc.invalidateQueries({ queryKey: [table] });
     } else if (prefix === "auth" && row.user_id) {
       if (field === "phone") return toast.error("Phone isn't stored for this account.");
