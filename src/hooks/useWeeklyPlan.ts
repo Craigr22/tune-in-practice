@@ -8,7 +8,12 @@ import { usePracticeLogs, useSongProgress } from "@/hooks/useStudentProgress";
 import { SESSION_ORDER, SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { generateWarmup, generateBonus } from "@/lib/sessionSegments";
 import { SONGS } from "@/data/songs";
-import { COURSE_1, curriculumWeekFor } from "@/data/curriculum";
+import {
+  planWeekNumberFor,
+  daysForWeek,
+  useStudentCoursePlan,
+  type CoursePlanDay,
+} from "@/hooks/useCoursePlan";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
@@ -108,35 +113,37 @@ interface GenInput {
   songsPerSession?: number;
   /** Per-practice-day counts, in session order. Overrides songsPerSession per day. */
   songsPerDay?: number[];
+  /** The admin's planned days for this week (day 1..3). Used verbatim when present. */
+  planDays?: CoursePlanDay[];
 }
 
 export function buildWeekRows(input: GenInput) {
-  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay } = input;
+  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay, planDays } = input;
   const dates = practiceDaysForWeek(weekStart, classDayOfWeek);
 
-  // While a week is covered by the authored Course 1 curriculum, use its days
-  // verbatim — the teacher wrote this month's plan, so nothing is generated.
-  const curriculumWeek = curriculumWeekFor(COURSE_1, weekStart);
-  if (curriculumWeek) {
+  // While a week is covered by the admin's course plan, use those days
+  // verbatim — a human planned this week, so nothing is generated.
+  if (planDays?.length) {
     return SESSION_ORDER.map((kind, i) => {
-      const day = curriculumWeek.days[i];
+      const day = planDays[i];
       const tpl = SESSION_TEMPLATES[kind];
+      const songId = day?.focus_song_id ?? pool?.[0]?.id ?? SONGS[0].id;
       return {
         student_id: studentId,
         week_start: weekStart,
         session_index: i,
         scheduled_date: dates[i],
         session_type: kind,
-        focus_song_id: day.focusSongId,
-        focus_instruction: day.focusInstruction,
+        focus_song_id: songId,
+        focus_instruction: day?.focus_instruction || tpl.focus_instruction,
         focus_target_min: tpl.focus_target_min,
         warmup_target_min: tpl.warmup_target_min,
         warmup_song_id: null as string | null,
-        warmup_instruction: day.warmupInstruction,
+        warmup_instruction: day?.warmup_instruction || "Tune up and loosen your hands.",
         bonus_target_min: tpl.bonus_target_min,
         bonus_type: "callback_song" as const,
-        bonus_song_id: day.focusSongId,
-        bonus_instruction: day.bonusInstruction,
+        bonus_song_id: songId,
+        bonus_instruction: day?.bonus_instruction || "Finish with a song you enjoy.",
         generated_at: new Date().toISOString(),
       };
     });
@@ -257,14 +264,21 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const { data: progress = [] } = useSongProgress();
   const { data: logs = [] } = usePracticeLogs();
   const classSongs = useStudentSongs();
-  const { songsPerSession, songsPerDay } = useStudentClassConfig();
+  const { songsPerSession, songsPerDay, instrument } = useStudentClassConfig();
+  const { weekOneStart, days: allPlanDays } = useStudentCoursePlan(instrument);
   const weekStart = weekStartArg ?? isoMonday();
   const { data: existing } = useWeeklyPlan(weekStart);
+
+  const planWeek = planWeekNumberFor(weekOneStart, weekStart);
+  const planDays = planWeek ? daysForWeek(allPlanDays, planWeek) : [];
 
   useEffect(() => {
     if (!student?.id) return;
     if (existing === undefined) return; // still loading
     if (existing.length >= 3) return;
+    // Wait for the course plan before generating, so a planned week isn't
+    // filled with generated content just because the query hadn't landed.
+    if (weekOneStart && !allPlanDays.length) return;
 
     const weeksSinceJoin = Math.floor(
       (new Date(weekStart).getTime() - new Date(student.joined_on).getTime()) / (7 * 86_400_000)
@@ -282,6 +296,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       pool: classSongs,
       songsPerSession,
       songsPerDay,
+      planDays,
     });
 
     (async () => {
@@ -292,7 +307,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       qc.invalidateQueries({ queryKey: ["weekly-plan", student.id, weekStart] });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, existing?.length, batch?.day_of_week, weekStart]);
+  }, [student?.id, existing?.length, batch?.day_of_week, weekStart, weekOneStart, allPlanDays.length]);
 }
 
 export function useCompleteSegment() {

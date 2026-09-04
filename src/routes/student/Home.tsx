@@ -2,20 +2,20 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useStudentMe } from "@/hooks/useStudentMe";
-import { useStudentSongs } from "@/hooks/useBatchCoursework";
+import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
+import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import SongVideos from "@/components/student/SongVideos";
-import { useSongVideos, useGeneralVideos, useSignedVideoUrls, type CourseVideo } from "@/hooks/useCourseVideos";
-import { useEnsureWeeklyPlan, useTodaysSession } from "@/hooks/useWeeklyPlan";
+import { useSongVideos, useCourseVideos, useSignedVideoUrls, type CourseVideo } from "@/hooks/useCourseVideos";
+import { useEnsureWeeklyPlan, useTodaysSession, isoMonday } from "@/hooks/useWeeklyPlan";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 
 /**
- * Course-wide clips (tuning, lessons, theory). A quiet list that plays one
- * video at a time in a dialog — rendering every player inline turned this
- * into a wall of black boxes.
+ * The lessons the admin planned for today. A quiet list that plays one video
+ * at a time in a dialog — rendering every player inline turned this into a
+ * wall of black boxes.
  */
-const CourseMaterial = () => {
-  const { data: videos = [] } = useGeneralVideos("ukulele");
+const CourseMaterial = ({ videos, label }: { videos: CourseVideo[]; label: string }) => {
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
   const [playing, setPlaying] = useState<CourseVideo | null>(null);
   if (!videos.length) return null;
@@ -27,10 +27,10 @@ const CourseMaterial = () => {
     >
       <div className="px-5 pt-4 pb-3">
         <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--gold-deep)" }}>
-          Lessons
+          {label}
         </div>
         <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
-          Watch any time · {videos.length} video{videos.length === 1 ? "" : "s"}
+          {videos.length} video{videos.length === 1 ? "" : "s"}
         </div>
       </div>
 
@@ -113,6 +113,23 @@ const Home = () => {
   const catalog = useStudentSongs();
   useEnsureWeeklyPlan();
   const todaysSession = useTodaysSession();
+
+  // The admin's plan decides which lessons belong to today.
+  const { instrument } = useStudentClassConfig();
+  const { weekOneStart, days: planDays } = useStudentCoursePlan(instrument);
+  const { data: allVideos = [] } = useCourseVideos(instrument);
+  const todaysPlanDay = useMemo(() => {
+    if (!todaysSession) return null;
+    const wk = planWeekNumberFor(weekOneStart, isoMonday(new Date(todaysSession.scheduled_date)));
+    if (!wk) return null;
+    return daysForWeek(planDays, wk)[todaysSession.session_index] ?? null;
+  }, [todaysSession, weekOneStart, planDays]);
+
+  const todaysLessons = useMemo(() => {
+    const ids = todaysPlanDay?.video_ids ?? [];
+    // Keep the admin's chosen order.
+    return ids.map((id) => allVideos.find((v) => v.id === id)).filter(Boolean) as CourseVideo[];
+  }, [todaysPlanDay, allVideos]);
 
   const focusSong = useMemo(() => {
     const ordered = [...catalog].filter((s) => !s.fingerstyle).sort((a, b) => (a.track as number) - (b.track as number) || a.order - b.order);
@@ -221,12 +238,13 @@ const Home = () => {
         </section>
 
         {/* ===== TEACHING MATERIAL FOR TODAY ===== */}
+        {/* ===== TODAY'S LESSONS (planned by the admin) ===== */}
+        <CourseMaterial videos={todaysLessons} label="Today's lessons" />
+
+        {/* Videos attached to today's songs, if any. */}
         {todaysSongIds.map((id) => (
           <TodaysMaterial key={id} songId={id} />
         ))}
-
-        {/* ===== COURSE-WIDE LESSONS (tuning, first lesson, theory) ===== */}
-        <CourseMaterial />
       </div>
     </section>
   );

@@ -24,6 +24,7 @@ import { useCourseVideos } from "@/hooks/useCourseVideos";
 import { toast } from "sonner";
 import SongFormDialog from "@/components/admin/SongFormDialog";
 import VideoManager from "@/components/admin/VideoManager";
+import CoursePlanner from "@/components/admin/CoursePlanner";
 
 function UkuleleManager() {
   const songs = useCatalogSongs("ukulele", { showInactive: true });
@@ -193,6 +194,8 @@ export default function AdminCoursework() {
       </div>
 
       {instrument === "ukulele" ? <UkuleleManager /> : <ComingSoon label={instrument === "guitar" ? "Guitar" : "Violin"} />}
+
+      <CoursePlanner instrument={instrument} />
 
       <VideoManager instrument={instrument} />
     </div>
