@@ -134,6 +134,7 @@ export type Database = {
       }
       batches: {
         Row: {
+          code: string | null
           day_of_week: number
           duration_min: number
           id: string
@@ -147,6 +148,7 @@ export type Database = {
           teacher_id: string | null
         }
         Insert: {
+          code?: string | null
           day_of_week: number
           duration_min?: number
           id?: string
@@ -160,6 +162,7 @@ export type Database = {
           teacher_id?: string | null
         }
         Update: {
+          code?: string | null
           day_of_week?: number
           duration_min?: number
           id?: string
