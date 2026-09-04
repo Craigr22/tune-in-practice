@@ -5,6 +5,7 @@ import { getBadge, BADGE_LIST } from "@/lib/badges";
 import { CHECK_IN_COLOR, type CheckIn } from "@/hooks/useStudentProgress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSongs } from "@/hooks/useSongs";
+import { useStudentCoursePlan } from "@/hooks/useCoursePlan";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/lib/db";
@@ -81,8 +82,29 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
 function SongsEditor({ studentId, progress }: { studentId: string; progress: any[] }) {
   const qc = useQueryClient();
   const { songs } = useSongs();
+  const { days: planDays } = useStudentCoursePlan("ukulele");
   const byId = new Map(progress.map((p) => [p.song_id, p]));
-  const semSongs = songs.filter((s) => !s.fingerstyle).slice(0, 12);
+
+  /**
+   * Grade the songs the course actually covers, in course order, rather than
+   * an arbitrary slice of the catalog. Anything the student has already been
+   * graded on is kept so no history disappears.
+   */
+  const semSongs = useMemo(() => {
+    const planned: string[] = [];
+    [...planDays]
+      .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number)
+      .forEach((d) => {
+        if (d.focus_song_id && !planned.includes(d.focus_song_id)) planned.push(d.focus_song_id);
+      });
+    progress.forEach((p) => { if (p.song_id && !planned.includes(p.song_id)) planned.push(p.song_id); });
+
+    const inCourse = planned
+      .map((id) => songs.find((x) => x.id === id))
+      .filter(Boolean) as typeof songs;
+    // Before a course plan exists, fall back to the start of the catalog.
+    return inCourse.length ? inCourse : songs.filter((x) => !x.fingerstyle).slice(0, 12);
+  }, [planDays, progress, songs]);
 
   const setBadge = async (song_id: string, value: number | null) => {
     const existing = byId.get(song_id);

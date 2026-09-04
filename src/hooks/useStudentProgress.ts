@@ -72,7 +72,8 @@ export function useLogPractice() {
       durationMin: number;
       selfBadge: number | null;
       tuningCheckCompleted?: boolean;
-      checkIn: CheckIn;
+      /** Null when the student just marked a session done without rating it. */
+      checkIn: CheckIn | null;
       sharedWithTeacher?: boolean;
       recordingBlob?: Blob | null;
     }) => {

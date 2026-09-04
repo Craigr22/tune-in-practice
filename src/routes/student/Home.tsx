@@ -3,7 +3,8 @@ import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
 import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
-import { useEnsureWeeklyPlan, useTodaysSession, useCompleteSegment, isoMonday } from "@/hooks/useWeeklyPlan";
+import { useEnsureWeeklyPlan, useTodaysSession, useCompleteSegment, useMarkSessionComplete, isoMonday } from "@/hooks/useWeeklyPlan";
+import { useLogPractice } from "@/hooks/useStudentProgress";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 
 /**
@@ -18,6 +19,8 @@ const Home = () => {
   const { days: planDays } = useStudentCoursePlan(instrument);
   const { data: allVideos = [] } = useCourseVideos(instrument);
   const completeSeg = useCompleteSegment();
+  const markComplete = useMarkSessionComplete();
+  const logPractice = useLogPractice();
 
   useEnsureWeeklyPlan();
   const session = useTodaysSession();
@@ -34,6 +37,36 @@ const Home = () => {
     return ids.map((id) => allVideos.find((v) => v.id === id)).filter(Boolean) as typeof allVideos;
   }, [planDay, allVideos]);
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
+
+  /**
+   * Ticking off a segment. When the last one lands, the session is marked
+   * complete and a practice log is written — that log is what the teacher's
+   * roster draws its practice history and retention flags from, so without it
+   * finishing a session would leave no trace.
+   */
+  const markSegmentDone = (segment: "warmup" | "focus" | "bonus") => {
+    if (!session) return;
+    completeSeg.mutate({ id: session.id, segment });
+
+    const doneAfter = {
+      warmup: segment === "warmup" || session.warmup_completed,
+      focus: segment === "focus" || session.focus_completed,
+      bonus: segment === "bonus" || session.bonus_completed,
+    };
+    if (!(doneAfter.warmup && doneAfter.focus && doneAfter.bonus)) return;
+    if (session.completed_at) return; // already counted
+
+    markComplete.mutate(session.id);
+    logPractice.mutate({
+      songId: session.focus_song_id,
+      durationMin:
+        session.warmup_target_min + session.focus_target_min + session.bonus_target_min,
+      selfBadge: null,
+      tuningCheckCompleted: false,
+      checkIn: null,
+      sharedWithTeacher: true,
+    });
+  };
 
   const firstName = (student?.name || "").split(" ")[0] || "there";
   const title = (id: string | null) => (id ? catalog.find((s) => s.id === id)?.title ?? null : null);
@@ -155,7 +188,7 @@ const Home = () => {
 
                   {!s.done && (
                     <button
-                      onClick={() => completeSeg.mutate({ id: session.id, segment: s.key })}
+                      onClick={() => markSegmentDone(s.key)}
                       disabled={completeSeg.isPending}
                       className="mt-3 rounded-xl px-4 py-2 text-sm font-bold transition-transform active:scale-95 disabled:opacity-60"
                       style={{ background: "var(--navy)", color: "#fff" }}
