@@ -141,7 +141,28 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                 <span className="text-white text-lg">▶</span>
               </button>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{v.title}</div>
+                {editingId === v.id ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="h-8 text-sm"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEdit();
+                        if (e.key === "Escape") cancelEdit();
+                      }}
+                    />
+                    <Button size="icon" className="h-8 w-8" onClick={saveEdit} disabled={update.isPending}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={cancelEdit} disabled={update.isPending}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-sm font-medium truncate">{v.title}</div>
+                )}
                 <div className="text-xs text-muted-foreground truncate">
                   {songTitle(v.song_id) ? `🎵 ${songTitle(v.song_id)} · ` : ""}
                   {new Date(v.created_at).toLocaleDateString()}
@@ -158,6 +179,9 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
+              <Button variant="ghost" size="icon" title="Edit title" onClick={() => startEdit(v)}>
+                <Pencil className="w-4 h-4" />
+              </Button>
               <Button variant="ghost" size="icon" title="Delete video" onClick={() => setConfirmDel(v)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
