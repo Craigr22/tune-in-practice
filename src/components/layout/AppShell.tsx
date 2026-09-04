@@ -1,7 +1,6 @@
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
-import FloatingTuner from "@/components/shared/FloatingTuner";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import {
   useImpersonatedTeacherId,
@@ -119,7 +118,6 @@ const TopNav = () => {
 const AppShell = () => {
   const { role } = useAuth();
   const location = useLocation();
-  const showFloatingTuner = role !== "teacher" && location.pathname.startsWith("/student");
   return (
     <SongsProvider>
       <TopNav />
@@ -130,15 +128,9 @@ const AppShell = () => {
           <Outlet />
         </ErrorBoundary>
       </main>
-      {/* The tuner depends on mic permission and live audio — isolate it so a
-          failure there can't take the page down with it. */}
-      {showFloatingTuner && (
-        <ErrorBoundary fallback={null}>
-          {/* Basics book hidden for now to keep the student view minimal —
-              restore <FloatingFoundations /> here when wanted again. */}
-          <FloatingTuner />
-        </ErrorBoundary>
-      )}
+      {/* Floating tuner and basics book removed for now — the student view is
+          deliberately one plain page. Restore <FloatingTuner /> (which also
+          carries the jam pad) and <FloatingFoundations /> here to bring back. */}
     </SongsProvider>
   );
 };
