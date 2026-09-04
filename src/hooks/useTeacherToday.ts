@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useTeacherMe } from "./useTeacherMe";
+import { toLocalIso } from "@/lib/date";
 
 // Returns today's batches (with location + instrument) plus or-creates a session.
 export function useTeacherToday() {
   const { data: teacher } = useTeacherMe();
   const teacherId = teacher?.id;
   const today = new Date();
-  const todayISO = today.toISOString().slice(0, 10);
+  const todayISO = toLocalIso(today);
   const dow = today.getDay(); // 0..6
 
   return useQuery({

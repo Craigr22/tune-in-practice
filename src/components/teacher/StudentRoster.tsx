@@ -12,6 +12,7 @@ import { supabase } from "@/lib/db";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import WeeklyPlanEditor from "@/components/teacher/WeeklyPlanEditor";
+import { toLocalIso } from "@/lib/date";
 
 /* ---------- helpers ---------- */
 function dailyMinutes(practice: { played_on: string; duration_min: number }[], days: number) {
@@ -170,7 +171,7 @@ export function StudentDetail({ student, batch, onClose }: { student: any | null
   const dayCells: { date: string; status: "present" | "late" | "absent" | null }[] = [];
   for (let i = weeks * 7 - 1; i >= 0; i--) {
     const d = new Date(today); d.setDate(d.getDate() - i);
-    const iso = d.toISOString().slice(0, 10);
+    const iso = toLocalIso(d);
     const a = (data?.attendance ?? []).find((x: any) => x.session_date === iso);
     dayCells.push({ date: iso, status: a?.status ?? null });
   }

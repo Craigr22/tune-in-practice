@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
+import { toLocalIso } from "@/lib/date";
 
 export type CheckIn = "nailed" | "got_through" | "need_help";
 
@@ -131,9 +132,9 @@ export function computeStreak(logs: PracticeLog[]): number {
   let streak = 0;
   const d = new Date();
   d.setHours(0, 0, 0, 0);
-  const todayIso = d.toISOString().slice(0, 10);
+  const todayIso = toLocalIso(d);
   if (!days.has(todayIso)) d.setDate(d.getDate() - 1);
-  while (days.has(d.toISOString().slice(0, 10))) {
+  while (days.has(toLocalIso(d))) {
     streak += 1;
     d.setDate(d.getDate() - 1);
   }
@@ -146,7 +147,7 @@ export function minutesThisWeek(logs: PracticeLog[]): number {
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((day + 6) % 7));
   monday.setHours(0, 0, 0, 0);
-  const iso = monday.toISOString().slice(0, 10);
+  const iso = toLocalIso(monday);
   return logs.filter((l) => l.played_on >= iso).reduce((a, l) => a + (l.duration_min || 0), 0);
 }
 
@@ -174,7 +175,7 @@ export function sentimentStrip(logs: { played_on: string; check_in: CheckIn | nu
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    const iso = d.toISOString().slice(0, 10);
+    const iso = toLocalIso(d);
     let worst: CheckIn | null = null;
     for (const l of logs) {
       if (l.played_on !== iso || !l.check_in) continue;

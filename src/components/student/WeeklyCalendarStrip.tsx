@@ -4,6 +4,7 @@ import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, isoMonday, addW
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
 import { useSongs } from "@/hooks/useSongs";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
+import { toLocalIso } from "@/lib/date";
 
 const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 const DAY_FULL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -39,7 +40,7 @@ export default function WeeklyCalendarStrip() {
     [weekStart, classDow]
   );
 
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = toLocalIso();
   const practicedDays = useMemo(() => new Set(logs.map((l) => l.played_on)), [logs]);
 
   const days = useMemo(() => {
@@ -56,7 +57,7 @@ export default function WeeklyCalendarStrip() {
     for (let o = 0; o < 7; o++) {
       const d = new Date(weekStart);
       d.setDate(d.getDate() + o);
-      const iso = d.toISOString().slice(0, 10);
+      const iso = toLocalIso(d);
       const isPractice = practiceDates.includes(iso);
       const session = plan.find((p) => p.scheduled_date === iso);
       arr.push({

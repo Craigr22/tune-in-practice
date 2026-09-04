@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import type { Instrument } from "@/hooks/useSongCatalog";
 import type { TierKey } from "@/lib/tiers";
+import { isoMondayOf } from "@/lib/date";
 
 /** Practice days in a week — matches the three weekly-plan sessions. */
 export const PLAN_DAYS_PER_WEEK = 3;
@@ -136,13 +137,6 @@ export function useDeletePlanWeek(instrument: Instrument) {
 }
 
 /* ---------------- student side ---------------- */
-
-const isoMondayOf = (iso: string) => {
-  const d = new Date(iso);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return d.toISOString().slice(0, 10);
-};
 
 /** Which curriculum week (1-based) a given ISO Monday falls on, or null. */
 export function planWeekNumberFor(weekOneStart: string | null, weekStart: string): number | null {

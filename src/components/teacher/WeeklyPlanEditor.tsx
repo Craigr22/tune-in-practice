@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { toLocalIso } from "@/lib/date";
 
 function addWeeks(iso: string, n: number) {
   const d = new Date(iso);
   d.setDate(d.getDate() + n * 7);
-  return d.toISOString().slice(0, 10);
+  return toLocalIso(d);
 }
 
 const TYPE_LABELS = { build: "Build", flow: "Flow", stretch: "Stretch" } as const;

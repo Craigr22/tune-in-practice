@@ -17,6 +17,7 @@ import {
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
+import { isoMondayOf, addDaysIso, todayLocalIso } from "@/lib/date";
 
 export interface WeeklyPlanSession {
   id: string;
@@ -42,20 +43,10 @@ export interface WeeklyPlanSession {
   completed_at: string | null;
 }
 
-/* ----- date helpers ----- */
-export function isoMonday(d = new Date()): string {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  const day = x.getDay();
-  x.setDate(x.getDate() - ((day + 6) % 7));
-  return x.toISOString().slice(0, 10);
-}
-const addDays = (iso: string, n: number) => {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-const todayIso = () => new Date().toISOString().slice(0, 10);
+/* ----- date helpers (local dates — see src/lib/date.ts) ----- */
+export const isoMonday = (d: Date | string = new Date()) => isoMondayOf(d);
+const addDays = addDaysIso;
+const todayIso = todayLocalIso;
 
 /** Three practice days spaced ~1 rest day apart, avoiding the class weekday. */
 export function practiceDaysForWeek(weekStart: string, classDayOfWeek: number /* 0=Sun..6=Sat */): string[] {
@@ -233,9 +224,7 @@ export function useStudentBatchDay() {
 }
 
 export function addWeeks(iso: string, n: number): string {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + n * 7);
-  return d.toISOString().slice(0, 10);
+  return addDaysIso(iso, n * 7);
 }
 
 export function useWeeklyPlan(weekStartArg?: string) {
