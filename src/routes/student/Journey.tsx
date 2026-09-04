@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useStudentSongs } from "@/hooks/useBatchCoursework";
+import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
+import { useStudentCoursePlan, planWeekNumberFor } from "@/hooks/useCoursePlan";
+import { isoMonday } from "@/hooks/useWeeklyPlan";
 import {
   usePracticeLogs,
   useSongProgress,
@@ -14,6 +16,7 @@ import {
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
+import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
@@ -34,27 +37,6 @@ interface MapNode {
   fingerstyle?: boolean;
 }
 
-type TierKey = "beginner" | "adv-beginner" | "casual" | "fingerstyle";
-interface Tier {
-  key: TierKey;
-  name: string;
-  tagline: string;
-  emoji: string;
-  accent: string; // css var
-  accentSoft: string;
-}
-const TIERS: Tier[] = [
-  { key: "beginner",      name: "Beginner",          tagline: "First chords · steady strumming",     emoji: "🌱", accent: "#10b981", accentSoft: "#d1fae5" },
-  { key: "adv-beginner",  name: "Advanced Beginner", tagline: "New shapes · richer progressions",    emoji: "🌿", accent: "#3b82f6", accentSoft: "#dbeafe" },
-  { key: "casual",        name: "Casual Ukulelist",  tagline: "Full songs · confident performance", emoji: "🎤", accent: "#a855f7", accentSoft: "#f3e8ff" },
-  { key: "fingerstyle",   name: "Fingerstyle Path",  tagline: "Melody picking · tab reading",        emoji: "🎼", accent: "#f59e0b", accentSoft: "#fef3c7" },
-];
-const tierFor = (track: number | "fs"): TierKey => {
-  if (track === "fs") return "fingerstyle";
-  if (track <= 4) return "beginner";
-  if (track <= 8) return "adv-beginner";
-  return "casual";
-};
 
 const Journey = () => {
   const navigate = useNavigate();
@@ -62,6 +44,26 @@ const Journey = () => {
   const { data: progress = [] } = useSongProgress();
   const catalog = useStudentSongs();
   const [selected, setSelected] = useState<string | null>(null);
+
+  // Where this student sits in the admin's course plan, expressed in the same
+  // stages the song map below uses.
+  const { instrument, courseStartDate } = useStudentClassConfig();
+  const { days: planDays } = useStudentCoursePlan(instrument);
+  const currentPlanWeek = planWeekNumberFor(courseStartDate, isoMonday());
+  const currentTier = useMemo(() => {
+    if (!currentPlanWeek) return null;
+    const day = planDays.find((d) => d.week_number === currentPlanWeek);
+    return day ? getTier(day.tier) : null;
+  }, [planDays, currentPlanWeek]);
+  const planWeeksByTier = useMemo(() => {
+    const map: Partial<Record<TierKey, number[]>> = {};
+    for (const d of planDays) {
+      const key = getTier(d.tier).key;
+      if (!map[key]) map[key] = [];
+      if (!map[key]!.includes(d.week_number)) map[key]!.push(d.week_number);
+    }
+    return map;
+  }, [planDays]);
 
   const nodes: MapNode[] = useMemo(() => {
     const ordered = [...catalog].sort((a, b) => {
@@ -149,6 +151,40 @@ const Journey = () => {
           </div>
         </section>
 
+        {/* Where the student is in the course, in the same stages as the map. */}
+        {currentPlanWeek && currentTier && (
+          <section className="rounded-2xl p-4 md:p-5 mb-6" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--ink-soft)" }}>
+              Your course
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {TIERS.map((t) => {
+                const weeksIn = planWeeksByTier[t.key] ?? [];
+                if (!weeksIn.length) return null;
+                const done = weeksIn.every((w) => w < currentPlanWeek);
+                const active = t.key === currentTier.key;
+                return (
+                  <span
+                    key={t.key}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                    style={
+                      active
+                        ? { background: t.accent, color: "#fff" }
+                        : { background: t.accentSoft, color: "var(--ink)", opacity: done ? 1 : 0.6 }
+                    }
+                  >
+                    {t.emoji} {t.name}{done && !active ? " ✓" : ""}
+                  </span>
+                );
+              })}
+            </div>
+            <div className="text-sm mt-2" style={{ color: "var(--ink-soft)" }}>
+              You're on <strong style={{ color: "var(--ink)" }}>week {currentPlanWeek}</strong> of{" "}
+              {currentTier.name} — {currentTier.tagline.toLowerCase()}.
+            </div>
+          </section>
+        )}
+
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-xl font-bold" style={{ color: "var(--ink)" }}>Song map</h2>
           <div className="text-xs flex items-center gap-3" style={{ color: "var(--ink-soft)" }}>
@@ -178,7 +214,7 @@ const Journey = () => {
 
           <div className="relative space-y-10">
             {TIERS.map((tier) => {
-              const tierNodes = nodes.filter((n) => tierFor(n.track) === tier.key);
+              const tierNodes = nodes.filter((n) => tierForTrack(n.track) === tier.key);
               if (tierNodes.length === 0) return null;
               const tierMastered = tierNodes.filter((n) => n.state === "mastered").length;
               const tierPct = Math.round((tierMastered / tierNodes.length) * 100);

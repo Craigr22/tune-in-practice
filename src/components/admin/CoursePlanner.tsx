@@ -19,6 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CalendarDays, Plus, Trash2, Film, ChevronDown, ChevronRight } from "lucide-react";
+import { TIERS, getTier, type TierKey } from "@/lib/tiers";
 import { toast } from "sonner";
 
 const NO_SONG = "__none__";
@@ -206,6 +207,19 @@ function WeekBlock({
   const delWeek = useDeletePlanWeek(instrument);
   const day1 = days.find((d) => d.day_number === 1);
   const [topic, setTopic] = useState(day1?.class_topic ?? "");
+  const tier = getTier(day1?.tier);
+
+  // A tier belongs to the whole week, so write it to all three days.
+  const setTier = async (key: TierKey) => {
+    try {
+      await Promise.all(
+        [1, 2, 3].map((n) => save.mutateAsync({ week_number: weekNumber, day_number: n, tier: key })),
+      );
+      toast.success(`Week ${weekNumber} moved to ${getTier(key).name}`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to save");
+    }
+  };
 
   useEffect(() => setTopic(day1?.class_topic ?? ""), [day1?.id, day1?.class_topic]);
 
@@ -224,9 +238,10 @@ function WeekBlock({
 
   return (
     <div className="rounded-lg border">
-      <div className="flex items-center gap-3 px-4 py-3 bg-muted/30 border-b">
+      <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ background: tier.accentSoft }}>
         <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 text-left min-w-0">
           {open ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
+          <span className="shrink-0" aria-hidden>{tier.emoji}</span>
           <span className="font-medium text-sm shrink-0">Week {weekNumber}</span>
           {!open && (
             <span className="text-xs text-muted-foreground truncate ml-1">
@@ -252,6 +267,27 @@ function WeekBlock({
                 placeholder="e.g. C and F chords, how to tune"
               />
               <Button variant="outline" onClick={saveTopic} disabled={save.isPending}>Save</Button>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Journey stage</Label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {TIERS.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTier(t.key)}
+                  disabled={save.isPending}
+                  className="px-3 py-1.5 rounded-md text-sm border disabled:opacity-60"
+                  style={
+                    tier.key === t.key
+                      ? { background: t.accent, color: "#fff", borderColor: t.accent }
+                      : { background: t.accentSoft, borderColor: "transparent" }
+                  }
+                >
+                  {t.emoji} {t.name}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -324,9 +360,25 @@ export default function CoursePlanner({ instrument }: { instrument: Instrument }
         </p>
       </div>
 
-      {weeks.map((w) => (
-        <WeekBlock key={w} instrument={instrument} weekNumber={w} days={daysForWeek(days, w)} />
-      ))}
+      {/* Grouped by Journey stage so the plan reads the way students see it. */}
+      {TIERS.map((t) => {
+        const tierWeeks = weeks.filter((w) => getTier(daysForWeek(days, w)[0]?.tier).key === t.key);
+        if (!tierWeeks.length) return null;
+        return (
+          <div key={t.key} className="space-y-2">
+            <div className="flex items-baseline gap-2 pt-2">
+              <span aria-hidden>{t.emoji}</span>
+              <span className="font-semibold text-sm" style={{ color: t.accent }}>{t.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {t.tagline} · {tierWeeks.length} week{tierWeeks.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            {tierWeeks.map((w) => (
+              <WeekBlock key={w} instrument={instrument} weekNumber={w} days={daysForWeek(days, w)} />
+            ))}
+          </div>
+        );
+      })}
 
       <Button
         variant="outline"

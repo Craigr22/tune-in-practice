@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import type { Instrument } from "@/hooks/useSongCatalog";
+import type { TierKey } from "@/lib/tiers";
 
 /** Practice days in a week — matches the three weekly-plan sessions. */
 export const PLAN_DAYS_PER_WEEK = 3;
@@ -16,6 +17,8 @@ export interface CoursePlanDay {
   focus_instruction: string;
   bonus_instruction: string;
   video_ids: string[];
+  /** Which Journey stage this week belongs to. */
+  tier: TierKey;
   updated_at?: string;
 }
 
@@ -38,7 +41,11 @@ export function useCoursePlanDays(instrument: Instrument) {
         .order("week_number")
         .order("day_number");
       if (error) throw error;
-      return (data ?? []).map((d: any) => ({ ...d, video_ids: d.video_ids ?? [] })) as CoursePlanDay[];
+      return (data ?? []).map((d: any) => ({
+        ...d,
+        video_ids: d.video_ids ?? [],
+        tier: (d.tier ?? "beginner") as TierKey,
+      })) as CoursePlanDay[];
     },
   });
 }
