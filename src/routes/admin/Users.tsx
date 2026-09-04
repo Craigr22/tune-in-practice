@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 type AppRole = "admin" | "teacher" | "student";
@@ -168,6 +168,32 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<"all" | AppRole>("all");
   const [pending, setPending] = useState<{ userId: string; name: string; current: AppRole; next: AppRole } | null>(null);
+  const [invitingEmail, setInvitingEmail] = useState<string | null>(null);
+  const [invitedEmails, setInvitedEmails] = useState<Set<string>>(new Set());
+
+  /**
+   * Emails a sign-in link. Supabase creates the account when they click it,
+   * and a database trigger links it to this teacher/student record and sets
+   * their role — so there are no passwords to set, send or store.
+   */
+  const sendInvite = async (email: string, name: string) => {
+    setInvitingEmail(email);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true, emailRedirectTo: window.location.origin },
+    });
+    setInvitingEmail(null);
+    if (error) {
+      toast.error(
+        error.message.toLowerCase().includes("rate")
+          ? "Too many invites just now — Supabase limits how fast its built-in mail sends. Try again shortly, or set up a custom SMTP sender."
+          : error.message,
+      );
+      return;
+    }
+    setInvitedEmails((s) => new Set(s).add(email));
+    toast.success(`Invite sent to ${name} at ${email}`);
+  };
   const [applying, setApplying] = useState(false);
 
   const { data: instrumentsMap = new Map() } = useQuery({
@@ -330,9 +356,19 @@ export default function AdminUsers() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">
                       Linked
                     </span>
+                  ) : r.email ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={invitingEmail === r.email}
+                      onClick={() => sendInvite(r.email!, r.name)}
+                    >
+                      <Mail className="w-3.5 h-3.5 mr-1" />
+                      {invitingEmail === r.email ? "Sending…" : invitedEmails.has(r.email) ? "Resend invite" : "Send invite"}
+                    </Button>
                   ) : (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600">
-                      Awaiting signup
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground" title="Add an email address first">
+                      No email
                     </span>
                   )}
                 </td>
@@ -346,8 +382,9 @@ export default function AdminUsers() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        “Awaiting signup” means a teacher/student record exists but no one has signed in with that email yet.
-        When they sign up using that email, link them by setting their role here.
+        <strong>Send invite</strong> emails a sign-in link. There's no password to set or share — they
+        click the link, their account is created, and it's linked to this record with the right role
+        automatically. Rows with no email need one added on the Students or Teachers tab first.
       </p>
 
       <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}>
