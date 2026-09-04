@@ -144,6 +144,10 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
     }
 
     if (!form.name.trim()) return toast.error("Name required");
+    // Teachers sign in by email; only students get a username instead.
+    if (role === "teacher" && !form.email.trim()) {
+      return toast.error("Teachers sign in by email, so an email is required");
+    }
     setSaving(true);
     if (role === "student") {
       const { error } = await supabase.from("students").insert({
@@ -217,8 +221,18 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <Label>Email</Label>
-                <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                <Label>Email {role === "teacher" ? "*" : ""}</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder={role === "teacher" ? "they sign in with this" : "optional"}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {role === "teacher"
+                    ? "Teachers sign in with their email — we'll send them an invite link."
+                    : "Optional. Students sign in with a username and password instead."}
+                </p>
               </div>
               <div className="space-y-1">
                 <Label>Phone</Label>

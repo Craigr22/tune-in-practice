@@ -96,6 +96,7 @@ function TeacherFormDialog({ open, teacher, onClose }: { open: boolean; teacher:
 
   const submit = () => {
     if (!form.name.trim()) return toast.error("Name is required");
+    if (!form.email?.trim()) return toast.error("Teachers sign in by email, so an email is required");
     save.mutate(
       {
         id: teacher?.id,
@@ -122,7 +123,7 @@ function TeacherFormDialog({ open, teacher, onClose }: { open: boolean; teacher:
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Email</Label>
+              <Label>Email *</Label>
               <Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
             <div className="space-y-1">
