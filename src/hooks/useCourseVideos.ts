@@ -109,6 +109,21 @@ export function useUploadCourseVideo() {
   });
 }
 
+export function useUpdateCourseVideo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: string; instrument: Instrument; title: string }) => {
+      const { error } = await (supabase as any)
+        .from("course_videos")
+        .update({ title: args.title.trim() })
+        .eq("id", args.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, args) =>
+      qc.invalidateQueries({ queryKey: ["course-videos", args.instrument] }),
+  });
+}
+
 export function useDeleteCourseVideo() {
   const qc = useQueryClient();
   return useMutation({

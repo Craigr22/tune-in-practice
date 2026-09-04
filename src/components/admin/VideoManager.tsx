@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import {
   useCourseVideos,
   useUploadCourseVideo,
+  useUpdateCourseVideo,
   useDeleteCourseVideo,
   useSignedVideoUrls,
   type CourseVideo,
@@ -22,7 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Film, Upload, Trash2, ExternalLink } from "lucide-react";
+import { Film, Upload, Trash2, ExternalLink, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_MB = 1024;
@@ -32,6 +33,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
   const songs = useCatalogSongs(instrument);
   const upload = useUploadCourseVideo();
+  const update = useUpdateCourseVideo();
   const del = useDeleteCourseVideo();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -40,6 +42,8 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
   const [file, setFile] = useState<File | null>(null);
   const [confirmDel, setConfirmDel] = useState<CourseVideo | null>(null);
   const [preview, setPreview] = useState<CourseVideo | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const songTitle = (id: string | null) => songs.find((s) => s.id === id)?.title;
@@ -49,6 +53,27 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
     setSongId("none");
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const startEdit = (video: CourseVideo) => {
+    setEditingId(video.id);
+    setEditTitle(video.title);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editTitle.trim()) return;
+    try {
+      await update.mutateAsync({ id: editingId, instrument, title: editTitle.trim() });
+      toast.success("Title updated");
+      cancelEdit();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to update title");
+    }
   };
 
   const doUpload = async () => {
@@ -116,7 +141,28 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                 <span className="text-white text-lg">▶</span>
               </button>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{v.title}</div>
+                {editingId === v.id ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="h-8 text-sm"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEdit();
+                        if (e.key === "Escape") cancelEdit();
+                      }}
+                    />
+                    <Button size="icon" className="h-8 w-8" onClick={saveEdit} disabled={update.isPending}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={cancelEdit} disabled={update.isPending}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-sm font-medium truncate">{v.title}</div>
+                )}
                 <div className="text-xs text-muted-foreground truncate">
                   {songTitle(v.song_id) ? `🎵 ${songTitle(v.song_id)} · ` : ""}
                   {new Date(v.created_at).toLocaleDateString()}
@@ -133,6 +179,9 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
+              <Button variant="ghost" size="icon" title="Edit title" onClick={() => startEdit(v)}>
+                <Pencil className="w-4 h-4" />
+              </Button>
               <Button variant="ghost" size="icon" title="Delete video" onClick={() => setConfirmDel(v)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
