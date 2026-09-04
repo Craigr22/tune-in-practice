@@ -405,7 +405,12 @@ export default function AdminTeachers() {
                 </div>
                 <div className="font-medium truncate">{t.name}</div>
               </div>
-              <div className="text-sm text-muted-foreground truncate">{t.phone || t.email || "—"}</div>
+              {/* Both lines: a phone-or-email fallback reads inconsistently
+                  across rows. Teachers always have an email. */}
+              <div className="text-sm text-muted-foreground min-w-0">
+                <div className="truncate">{t.email || <span className="opacity-50">no email</span>}</div>
+                {t.phone && <div className="text-xs truncate opacity-80">{t.phone}</div>}
+              </div>
               <div className="text-sm text-muted-foreground truncate">{names || "—"}</div>
               <div>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${t.is_active ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>

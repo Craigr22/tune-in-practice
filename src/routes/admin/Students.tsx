@@ -473,7 +473,12 @@ export default function AdminStudents() {
               </div>
               <div className="font-medium truncate">{s.name}</div>
             </div>
-            <div className="text-sm text-muted-foreground truncate cursor-pointer" onClick={() => setOpen(s)}>{s.phone || s.email || "—"}</div>
+            {/* Show both: falling back from phone to email made the column
+                look inconsistent once some rows had a number and others didn't. */}
+            <div className="text-sm text-muted-foreground min-w-0 cursor-pointer" onClick={() => setOpen(s)}>
+              <div className="truncate">{s.phone || <span className="opacity-50">no phone</span>}</div>
+              {s.email && <div className="text-xs truncate opacity-80">{s.email}</div>}
+            </div>
             <div className="text-sm text-muted-foreground truncate cursor-pointer" onClick={() => setOpen(s)}>{s.parent_name || "—"}</div>
             <div>
               <span className={`text-xs px-2 py-0.5 rounded-full ${s.is_active ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
