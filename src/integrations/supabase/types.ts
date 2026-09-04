@@ -702,6 +702,7 @@ export type Database = {
           id: string
           is_active: boolean
           joined_on: string
+          login_username: string | null
           name: string
           parent_name: string | null
           phone: string | null
@@ -716,6 +717,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           joined_on?: string
+          login_username?: string | null
           name: string
           parent_name?: string | null
           phone?: string | null
@@ -730,6 +732,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           joined_on?: string
+          login_username?: string | null
           name?: string
           parent_name?: string | null
           phone?: string | null
