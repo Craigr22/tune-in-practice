@@ -33,12 +33,12 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
   const saveCoursework = useSaveCoursework(batchId);
   const saveSongsPerDay = useSaveSongsPerDay(batchId);
   const saveCourseStart = useSaveCourseStart(batchId);
-  const { weekOneStart: courseDefaultStart, days: planDays } = useStudentCoursePlan(instrument);
+  const { days: planDays } = useStudentCoursePlan(instrument);
   const [courseStart, setCourseStart] = useState("");
   useEffect(() => setCourseStart(settings?.course_start_date ?? ""), [settings?.course_start_date]);
 
   const totalPlanWeeks = new Set(planDays.map((d) => d.week_number)).size;
-  const effectiveStart = settings?.course_start_date ?? courseDefaultStart;
+  const effectiveStart = settings?.course_start_date ?? null;
   const currentPlanWeek = planWeekNumberFor(effectiveStart, isoMonday());
 
   const [list, setList] = useState<EditRow[]>([]);
@@ -149,13 +149,12 @@ function CourseworkPanel({ batchId, instrumentName }: { batchId: string; instrum
           </Button>
           <span className="text-xs text-muted-foreground">
             {!effectiveStart
-              ? "No start date yet — students get generated practice."
+              ? "Not started — set a date and this class begins week 1 of the course."
               : currentPlanWeek && currentPlanWeek <= totalPlanWeeks
               ? `On week ${currentPlanWeek} of ${totalPlanWeeks} this week.`
               : currentPlanWeek
               ? `Past the ${totalPlanWeeks}-week plan — students get generated practice.`
               : `Starts ${effectiveStart}.`}
-            {!settings?.course_start_date && courseDefaultStart && " (course default)"}
           </span>
         </div>
       </div>

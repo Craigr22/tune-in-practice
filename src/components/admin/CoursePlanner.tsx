@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   useCoursePlanDays,
-  useCoursePlanSettings,
   useSaveCoursePlanDay,
-  useSaveCoursePlanSettings,
   useAddPlanWeek,
   useDeletePlanWeek,
   daysForWeek,
@@ -195,12 +193,10 @@ function WeekBlock({
   instrument,
   weekNumber,
   days,
-  startDate,
 }: {
   instrument: Instrument;
   weekNumber: number;
   days: CoursePlanDay[];
-  startDate: string | null;
 }) {
   // Collapsed by default — 12 day editors open at once was the main reason
   // this page felt unmanageable.
@@ -217,16 +213,6 @@ function WeekBlock({
   const lessonCount = days.reduce((n, d) => n + (d.video_ids?.length ?? 0), 0);
   const plannedDays = days.filter((d) => d.focus_instruction?.trim()).length;
 
-  const weekDates = useMemo(() => {
-    if (!startDate) return null;
-    const start = new Date(startDate);
-    start.setDate(start.getDate() + (weekNumber - 1) * 7);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    const f = (d: Date) => d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
-    return `${f(start)} – ${f(end)}`;
-  }, [startDate, weekNumber]);
-
   const saveTopic = async () => {
     try {
       await save.mutateAsync({ week_number: weekNumber, day_number: 1, class_topic: topic });
@@ -242,7 +228,6 @@ function WeekBlock({
         <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 text-left min-w-0">
           {open ? <ChevronDown className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
           <span className="font-medium text-sm shrink-0">Week {weekNumber}</span>
-          {weekDates && <span className="text-xs text-muted-foreground shrink-0">{weekDates}</span>}
           {!open && (
             <span className="text-xs text-muted-foreground truncate ml-1">
               · {topic || "no class topic"}
@@ -316,26 +301,12 @@ function WeekBlock({
 
 export default function CoursePlanner({ instrument }: { instrument: Instrument }) {
   const { data: days = [], isLoading } = useCoursePlanDays(instrument);
-  const { data: settings } = useCoursePlanSettings(instrument);
-  const saveSettings = useSaveCoursePlanSettings(instrument);
   const addWeek = useAddPlanWeek(instrument);
-
-  const [startDate, setStartDate] = useState("");
-  useEffect(() => setStartDate(settings?.week_one_start ?? ""), [settings?.week_one_start]);
 
   const weeks = useMemo(
     () => [...new Set(days.map((d) => d.week_number))].sort((a, b) => a - b),
     [days],
   );
-
-  const saveStart = async () => {
-    try {
-      await saveSettings.mutateAsync({ week_one_start: startDate || null });
-      toast.success("Course start saved");
-    } catch (e: any) {
-      toast.error(e.message ?? "Failed to save");
-    }
-  };
 
   if (isLoading) return <div className="text-sm">Loading course plan…</div>;
 
@@ -346,38 +317,15 @@ export default function CoursePlanner({ instrument }: { instrument: Instrument }
           <CalendarDays className="w-4 h-4" /> Course plan
         </div>
         <p className="text-xs text-muted-foreground mt-0.5 max-w-2xl">
-          Plan each week's three practice days — the instructions students follow and the lessons
-          they see that day. Students' weekly plans are built from this.
+          A reusable template of {weeks.length} week{weeks.length === 1 ? "" : "s"} — the instructions
+          students follow and the lessons they see each day. It has no dates of its own: every class
+          sets its own start date in <span className="font-medium">My Classes → the class → Coursework</span>,
+          and runs these weeks from there.
         </p>
-        <div className="mt-3 flex items-end gap-2 flex-wrap">
-          <div>
-            <Label className="text-xs">Week 1 starts (Monday)</Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-44"
-            />
-          </div>
-          <Button variant="outline" onClick={saveStart} disabled={saveSettings.isPending}>
-            Save start date
-          </Button>
-          <span className="text-xs text-muted-foreground ml-1">
-            {settings?.week_one_start
-              ? `Plan runs from ${settings.week_one_start} for ${weeks.length} week${weeks.length === 1 ? "" : "s"}.`
-              : "Set a start date so the plan reaches students."}
-          </span>
-        </div>
       </div>
 
       {weeks.map((w) => (
-        <WeekBlock
-          key={w}
-          instrument={instrument}
-          weekNumber={w}
-          days={daysForWeek(days, w)}
-          startDate={settings?.week_one_start ?? null}
-        />
+        <WeekBlock key={w} instrument={instrument} weekNumber={w} days={daysForWeek(days, w)} />
       ))}
 
       <Button

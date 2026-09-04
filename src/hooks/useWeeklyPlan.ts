@@ -265,13 +265,13 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const { data: logs = [] } = usePracticeLogs();
   const classSongs = useStudentSongs();
   const { songsPerSession, songsPerDay, instrument, courseStartDate } = useStudentClassConfig();
-  const { weekOneStart: courseDefaultStart, days: allPlanDays } = useStudentCoursePlan(instrument);
+  const { days: allPlanDays } = useStudentCoursePlan(instrument);
   const weekStart = weekStartArg ?? isoMonday();
   const { data: existing } = useWeeklyPlan(weekStart);
 
-  // The plan is a template: each class runs it from its own start date, so a
-  // batch starting later gets week 1 when it begins, not mid-course.
-  const weekOneStart = courseStartDate ?? courseDefaultStart;
+  // The plan is a pure template with no dates of its own: a student follows it
+  // only from their class's start date.
+  const weekOneStart = courseStartDate;
   const planWeek = planWeekNumberFor(weekOneStart, weekStart);
   const planDays = planWeek ? daysForWeek(allPlanDays, planWeek) : [];
 
