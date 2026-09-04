@@ -6,6 +6,7 @@ import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
 import { useEnsureWeeklyPlan, useTodaysSession, useCompleteSegment, useMarkSessionComplete, isoMonday } from "@/hooks/useWeeklyPlan";
 import { useLogPractice, usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
+import LessonVideo from "@/components/student/LessonVideo";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 import type { CourseVideo } from "@/hooks/useCourseVideos";
 
@@ -214,19 +215,7 @@ const Home = () => {
                   <div className="mt-3 flex flex-col gap-3">
                     {s.videos.map((v) => (
                       <div key={v.id}>
-                        {urls[v.storage_path] ? (
-                          <video
-                            controls
-                            preload="none"
-                            playsInline
-                            src={urls[v.storage_path]}
-                            style={{ width: "100%", borderRadius: 14, background: "#000", maxHeight: 220 }}
-                          />
-                        ) : (
-                          <div style={{ width: "100%", aspectRatio: "16 / 9", maxHeight: 220, borderRadius: 14, background: "rgba(0,0,0,0.85)", display: "grid", placeItems: "center", color: "#fff", fontSize: 13 }}>
-                            Loading video…
-                          </div>
-                        )}
+                        <LessonVideo src={urls[v.storage_path]} maxHeight={220} />
                         <div className="text-xs font-semibold mt-1.5" style={{ color: "var(--ink-soft)" }}>{v.title}</div>
                       </div>
                     ))}

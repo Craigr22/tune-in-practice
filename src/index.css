@@ -1589,3 +1589,23 @@ a { color: inherit; text-decoration: none; }
   .bamt-body { padding: 20px; }
   .bamt-head { padding: 22px 20px 20px; }
 }
+
+/* Placeholder for a lesson clip that hasn't painted a frame yet — a light
+   sweep rather than a black rectangle, which read as a broken player. */
+.video-skeleton {
+  background: linear-gradient(
+    100deg,
+    var(--paper-cool) 30%,
+    var(--paper-warm) 50%,
+    var(--paper-cool) 70%
+  );
+  background-size: 220% 100%;
+  animation: videoShimmer 1.6s ease-in-out infinite;
+}
+@keyframes videoShimmer {
+  from { background-position: 180% 0; }
+  to   { background-position: -80% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .video-skeleton { animation: none; }
+}
