@@ -18,7 +18,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plus, Mail } from "lucide-react";
+import { Plus, Mail, KeyRound } from "lucide-react";
+import StudentLoginDialog, { type StudentLoginTarget } from "@/components/admin/StudentLoginDialog";
 import { toast } from "sonner";
 
 type AppRole = "admin" | "teacher" | "student";
@@ -30,6 +31,8 @@ type UserRow = {
   name: string;
   email: string | null;
   phone: string | null;
+  /** Students only: the username they sign in with, once provisioned. */
+  login_username?: string | null;
   source: "auth" | "teacher" | "student";
 };
 
@@ -217,6 +220,7 @@ export default function AdminUsers() {
   const [pending, setPending] = useState<{ userId: string; name: string; current: AppRole; next: AppRole } | null>(null);
   const [invitingEmail, setInvitingEmail] = useState<string | null>(null);
   const [invitedEmails, setInvitedEmails] = useState<Set<string>>(new Set());
+  const [loginFor, setLoginFor] = useState<StudentLoginTarget | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editEmail, setEditEmail] = useState("");
 
@@ -274,7 +278,10 @@ export default function AdminUsers() {
       const [{ data: roles }, { data: teachers }, { data: students }, { data: invited }] = await Promise.all([
         supabase.from("user_roles").select("user_id, role"),
         supabase.from("teachers").select("id, user_id, name, email, phone"),
-        supabase.from("students").select("id, user_id, name, email, phone"),
+        // select("*") rather than naming login_username: the column arrives with
+        // a migration, and naming it would fail the whole query until then —
+        // silently emptying the list.
+        supabase.from("students").select("*"),
         // Invited but not yet signed in — mostly admins, who have no record.
         (supabase as any).from("pending_roles").select("email, role"),
       ]);
@@ -304,7 +311,7 @@ export default function AdminUsers() {
       });
       (students ?? []).forEach((s: any) => {
         if (s.user_id && seenUserIds.has(s.user_id)) return;
-        list.push({ key: `s:${s.id}`, user_id: s.user_id, role: "student", name: s.name, email: s.email, phone: s.phone, source: "student" });
+        list.push({ key: `s:${s.id}`, user_id: s.user_id, role: "student", name: s.name, email: s.email, phone: s.phone, source: "student", login_username: (s as any).login_username ?? null });
       });
 
       // Invited people with no record of their own (admins) — shown so an
@@ -463,7 +470,25 @@ export default function AdminUsers() {
                   )}
                 </td>
                 <td className="p-3">
-                  {r.user_id ? (
+                  {/* Students are children with no inbox: they get a username
+                      and password rather than an emailed invite. */}
+                  {r.role === "student" ? (
+                    <div className="flex items-center gap-2">
+                      {r.login_username && (
+                        <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted" title="Username">
+                          {r.login_username}
+                        </span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setLoginFor({ id: r.key.split(":")[1], name: r.name, username: r.login_username ?? null })}
+                      >
+                        <KeyRound className="w-3.5 h-3.5 mr-1" />
+                        {r.login_username ? "Reset password" : "Create login"}
+                      </Button>
+                    </div>
+                  ) : r.user_id ? (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">
                       Linked
                     </span>
@@ -497,6 +522,8 @@ export default function AdminUsers() {
         click the link, their account is created, and it's linked to this record with the right role
         automatically. Rows with no email need one added on the Students or Teachers tab first.
       </p>
+
+      <StudentLoginDialog student={loginFor} onClose={() => setLoginFor(null)} />
 
       <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}>
         <AlertDialogContent>

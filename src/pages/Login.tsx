@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/lib/db";
+import { toLoginEmail } from "@/lib/studentLogin";
 
 const Login = () => {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -22,7 +23,12 @@ const Login = () => {
         setMsg("Account created — you can sign in now.");
         setMode("signin");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        // Students sign in with a username; the account behind it uses a
+        // synthetic address that never receives mail.
+        const { error } = await supabase.auth.signInWithPassword({
+          email: toLoginEmail(email),
+          password,
+        });
         if (error) throw error;
       }
     } catch (e: unknown) {
@@ -35,6 +41,10 @@ const Login = () => {
   /** Emails a recovery link that lands on /reset-password. */
   const forgotPassword = async () => {
     if (!email) { setErr("Enter your email first, then tap this again."); return; }
+    if (!email.includes("@")) {
+      setErr("Usernames can't be reset by email — ask your teacher to set a new password for you.");
+      return;
+    }
     setErr(null); setMsg(null); setBusy(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -51,6 +61,10 @@ const Login = () => {
 
   const magic = async () => {
     if (!email) { setErr("Enter your email first."); return; }
+    if (!email.includes("@")) {
+      setErr("Magic links need an email address. Sign in with your username and password instead.");
+      return;
+    }
     setErr(null); setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -79,9 +93,19 @@ const Login = () => {
           BAM Academy of Music
         </p>
 
-        <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Email</label>
+        <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>
+          {mode === "signin" ? "Username or email" : "Email"}
+        </label>
         <input
-          type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+          // Students type a username, so this can't be type="email".
+          type={mode === "signup" ? "email" : "text"}
+          required
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={mode === "signin" ? "your username, or your email" : ""}
           style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 8, marginBottom: 12, fontSize: 14 }}
         />
 
