@@ -103,18 +103,21 @@ export type Database = {
       batch_settings: {
         Row: {
           batch_id: string
+          course_start_date: string | null
           songs_per_day: number[] | null
           songs_per_session: number
           updated_at: string
         }
         Insert: {
           batch_id: string
+          course_start_date?: string | null
           songs_per_day?: number[] | null
           songs_per_session?: number
           updated_at?: string
         }
         Update: {
           batch_id?: string
+          course_start_date?: string | null
           songs_per_day?: number[] | null
           songs_per_session?: number
           updated_at?: string
