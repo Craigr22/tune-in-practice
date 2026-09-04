@@ -113,36 +113,44 @@ const Home = () => {
   return (
     <section className="view view-home active">
       <div className="home" style={{ paddingBottom: 60, maxWidth: 640, margin: "0 auto" }}>
-        {/* Where they are in the week: practice days and the class day. */}
-        <WeeklyCalendarStrip />
+        {/* One header: who they are, where they are in the week, and how
+            they're doing — these belong together, not stacked as separate
+            cards. */}
+        <section
+          className="rounded-2xl mb-4 overflow-hidden"
+          style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+        >
+          <div className="flex items-end justify-between gap-3 px-4 pt-4 md:px-5">
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--gold-deep)" }}>
+                Today · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
+              </div>
+              <h1 className="mt-1 text-2xl md:text-3xl font-bold" style={{ color: "var(--ink)" }}>
+                Hi {firstName}
+              </h1>
+              {session && tpl && (
+                <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
+                  {tpl.emoji} {tpl.label} · {totalMins} min
+                </p>
+              )}
+            </div>
+            <div
+              className="shrink-0 text-center"
+              title={streak === 0 ? "Practise today to start a streak" : `${streak}-day streak`}
+            >
+              <div className="text-2xl font-bold leading-none" style={{ color: "var(--ink)" }}>
+                <span className="bounce-soft">🔥</span> {streak}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider mt-1" style={{ color: "var(--ink-faint)" }}>
+                day{streak === 1 ? "" : "s"}
+              </div>
+            </div>
+          </div>
 
-        <header className="flex items-end justify-between gap-3 mb-4">
-          <div>
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--gold-deep)" }}>
-              Today · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
-            </div>
-            <h1 className="mt-1 text-2xl md:text-3xl font-bold" style={{ color: "var(--ink)" }}>
-              Hi {firstName}
-            </h1>
-            {session && tpl && (
-              <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-                {tpl.emoji} {tpl.label} · {totalMins} min
-              </p>
-            )}
+          <div className="px-4 pb-4 pt-3 md:px-5">
+            <WeeklyCalendarStrip embedded />
           </div>
-          <div
-            className="shrink-0 rounded-2xl px-4 py-2 text-center"
-            style={{ background: "var(--gold-bg)", border: "1px solid var(--gold-soft)" }}
-            title={streak === 0 ? "Practise today to start a streak" : `${streak}-day streak`}
-          >
-            <div className="text-xl font-bold" style={{ color: "var(--ink)" }}>
-              <span className="bounce-soft">🔥</span> {streak}
-            </div>
-            <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-              day{streak === 1 ? "" : "s"}
-            </div>
-          </div>
-        </header>
+        </section>
 
         {!session ? (
           <div

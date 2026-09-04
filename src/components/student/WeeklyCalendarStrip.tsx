@@ -21,7 +21,7 @@ function fmtRange(weekStart: string) {
     : `${sm} ${start.getDate()} – ${em} ${end.getDate()}`;
 }
 
-export default function WeeklyCalendarStrip() {
+export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const { songs } = useSongs();
   const currentWeek = isoMonday();
@@ -94,8 +94,13 @@ export default function WeeklyCalendarStrip() {
 
   return (
     <section
-      className="rounded-2xl p-4 md:p-5 mb-4"
-      style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+      className={embedded ? "" : "rounded-2xl p-4 md:p-5 mb-4"}
+      style={
+        embedded
+          // Part of a larger header card — no card of its own.
+          ? undefined
+          : { background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }
+      }
     >
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="flex items-center gap-2">
