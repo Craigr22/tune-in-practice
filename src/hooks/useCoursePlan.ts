@@ -203,3 +203,78 @@ export function daysForWeek(days: CoursePlanDay[], weekNumber: number): CoursePl
     .filter((d) => d.week_number === weekNumber)
     .sort((a, b) => a.day_number - b.day_number);
 }
+
+/** One song's place on the course. */
+export interface CourseStop {
+  songId: string;
+  /** Curriculum week it is taught in — real if planned, projected if not. */
+  week: number;
+  tier: TierKey;
+  /** False for songs the admin hasn't scheduled a week for yet. */
+  planned: boolean;
+}
+
+/** A song's place in the plan: the first week that teaches it. */
+function plannedStops(days: CoursePlanDay[]): CourseStop[] {
+  const seen = new Set<string>();
+  const stops: CourseStop[] = [];
+  const inOrder = [...days].sort(
+    (a, b) => a.week_number - b.week_number || a.day_number - b.day_number,
+  );
+  for (const d of inOrder) {
+    if (!d.focus_song_id || seen.has(d.focus_song_id)) continue;
+    seen.add(d.focus_song_id);
+    stops.push({ songId: d.focus_song_id, week: d.week_number, tier: d.tier, planned: true });
+  }
+  return stops;
+}
+
+/**
+ * The course in the order it is taught.
+ *
+ * The admin's plan comes first and is authoritative: a song sits at the week
+ * that teaches it. Songs the plan hasn't reached yet follow in the course's
+ * own order, each projected a week later than the last planned week, so the
+ * map keeps reading as a sequence rather than stopping dead at the end of
+ * whatever has been scheduled.
+ */
+export function courseOrder(
+  days: CoursePlanDay[],
+  fallback: Record<string, number>,
+  fallbackTier: TierKey = "beginner",
+): CourseStop[] {
+  const planned = plannedStops(days);
+  const already = new Set(planned.map((s) => s.songId));
+  const lastWeek = planned.reduce((n, s) => Math.max(n, s.week), 0);
+
+  const upcoming = Object.entries(fallback)
+    .filter(([songId]) => !already.has(songId))
+    .sort((a, b) => a[1] - b[1])
+    .map(([songId], i) => ({
+      songId,
+      week: lastWeek + 1 + i,
+      tier: fallbackTier,
+      planned: false,
+    }));
+
+  return [...planned, ...upcoming];
+}
+
+/** How far ahead of the current week the map shows. */
+export const WEEKS_AHEAD = 2;
+
+/**
+ * The part of the course a student may see.
+ *
+ * Two weeks ahead and no further: enough to know what's coming, not so much
+ * that the whole course is laid out before it is taught. Before the course
+ * starts, that means weeks 1 and 2.
+ */
+export function visibleStops(
+  stops: CourseStop[],
+  currentWeek: number | null,
+  weeksAhead: number = WEEKS_AHEAD,
+): CourseStop[] {
+  const week = currentWeek ?? 0;
+  return stops.filter((s) => s.week <= week + weeksAhead);
+}

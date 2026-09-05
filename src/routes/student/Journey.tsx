@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useStudentCoursePlan, shiftedPlanWeek } from "@/hooks/useCoursePlan";
+import { useStudentCoursePlan, shiftedPlanWeek, courseOrder, visibleStops } from "@/hooks/useCoursePlan";
+import { BEGINNER_ORDER } from "@/data/courseOrder";
 import { isoMonday, useStudentBatchDay, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 import {
   usePracticeLogs,
@@ -12,13 +13,16 @@ import {
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
-import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
+import { TIERS, getTier, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
 interface MapNode {
   songId: string;
+  /** Curriculum week this song is taught in. */
+  planWeek: number;
+  tier: TierKey;
   title: string;
   artist: string;
   order: number;
@@ -64,49 +68,56 @@ const Journey = () => {
     return map;
   }, [planDays]);
 
-  const nodes: MapNode[] = useMemo(() => {
-    const ordered = [...catalog].sort((a, b) => {
-      if (a.track !== b.track) return (a.track === "fs" ? 99 : a.track) - (b.track === "fs" ? 99 : b.track);
-      return a.order - b.order;
-    });
+  /**
+   * The map is the course in teaching order, cut off two weeks ahead.
+   *
+   * It used to sort by the song catalogue's own track/order, which had nothing
+   * to do with what a class is taught — the plan opens with You Are My
+   * Sunshine while the map opened with Piyu Bole. The admin's plan decides the
+   * order now; BEGINNER_ORDER carries it on past the weeks that have been
+   * planned.
+   */
+  const stops = useMemo(() => courseOrder(planDays, BEGINNER_ORDER), [planDays]);
+  const visible = useMemo(
+    () => visibleStops(stops, currentPlanWeek),
+    [stops, currentPlanWeek],
+  );
 
-    let foundCurrent = false;
-    return ordered.map((s) => {
-      const p = progress.find((x) => x.song_id === s.id);
-      const songLogs = logs.filter((l) => l.song_id === s.id);
+  const nodes: MapNode[] = useMemo(() => {
+    return visible.map((stop) => {
+      const song = catalog.find((c) => c.id === stop.songId);
+      const p = progress.find((x) => x.song_id === stop.songId);
+      const songLogs = logs.filter((l) => l.song_id === stop.songId);
       const tb = p?.teacher_badge ?? null;
+
       // Mastery belongs to this student's persisted teacher assessment. The
       // song catalog may contain curriculum defaults, never student progress.
-      const isMastered = (tb ?? 0) >= 5;
-      const hasProgress = songLogs.length > 0 || (tb ?? 0) > 0;
-
       let state: NodeState;
-      // FOR NOW: nothing locks — every song is open to explore and play.
-      if (isMastered) state = "mastered";
-      else if (hasProgress) { state = "current"; foundCurrent = true; }
+      if ((tb ?? 0) >= 5) state = "mastered";
+      else if (songLogs.length > 0 || (tb ?? 0) > 0) state = "current";
       else state = "next";
-      void foundCurrent;
 
-      const firstDate = songLogs.length ? songLogs.reduce((a, l) => (l.played_on < a ? l.played_on : a), songLogs[0].played_on) : undefined;
-      const lastDate = songLogs.length ? songLogs.reduce((a, l) => (l.played_on > a ? l.played_on : a), songLogs[0].played_on) : undefined;
+      const dates = songLogs.map((l) => l.played_on).sort();
 
       return {
-        songId: s.id,
-        title: s.title,
-        artist: s.artist,
-        order: s.order,
+        songId: stop.songId,
+        planWeek: stop.week,
+        tier: stop.tier,
+        title: song?.title ?? stop.songId,
+        artist: song?.artist ?? "",
+        order: stop.week,
+        track: song?.track ?? 1,
         state,
         teacherBadge: tb,
         selfBadge: p?.self_badge ?? null,
         sessions: songLogs.length,
         totalMin: songLogs.reduce((a, l) => a + (l.duration_min || 0), 0),
-        firstDate,
-        lastDate,
-        track: s.track,
-        fingerstyle: s.fingerstyle,
+        firstDate: dates[0],
+        lastDate: dates[dates.length - 1],
+        fingerstyle: song?.fingerstyle,
       };
     });
-  }, [logs, progress, catalog]);
+  }, [visible, logs, progress, catalog]);
 
   const avg = avgCourseBadge(progress);
   const course = getBadge(avg);
@@ -212,7 +223,7 @@ const Journey = () => {
 
           <div className="relative space-y-10">
             {TIERS.map((tier) => {
-              const tierNodes = nodes.filter((n) => tierForTrack(n.track) === tier.key);
+              const tierNodes = nodes.filter((n) => n.tier === tier.key);
               if (tierNodes.length === 0) return null;
               const tierMastered = tierNodes.filter((n) => n.state === "mastered").length;
               const tierPct = Math.round((tierMastered / tierNodes.length) * 100);
