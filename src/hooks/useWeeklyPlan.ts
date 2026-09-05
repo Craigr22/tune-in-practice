@@ -18,6 +18,7 @@ import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursewo
 import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
 import { isoMondayOf, addDaysIso, todayLocalIso } from "@/lib/date";
+import { rowsToWrite } from "@/lib/planSync";
 
 export interface WeeklyPlanSession {
   id: string;
@@ -292,10 +293,18 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   // A student's practice can't begin before their class does.
   const notBefore = courseStartDate ?? batch?.semester_start ?? null;
 
+  /**
+   * What a planned week currently says. When an admin edits the plan — or when
+   * a class's start date moves the week onto different plan content — sessions
+   * that were generated earlier are stale, so this drives a re-sync.
+   */
+  const planSignature = planDays
+    .map((d) => `${d.focus_song_id}|${d.focus_instruction}|${d.warmup_instruction}|${d.bonus_instruction}`)
+    .join("~");
+
   useEffect(() => {
     if (!student?.id) return;
     if (existing === undefined) return; // still loading
-    if (existing.length >= 3) return;
     // Wait for the course plan before generating, so a planned week isn't
     // filled with generated content just because the query hadn't landed.
     if (weekOneStart && !allPlanDays.length) return;
@@ -320,18 +329,20 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       notBefore,
     });
 
-    // A first week can be short, so don't keep regenerating it.
-    if (!rows.length || existing.length >= rows.length) return;
+    if (!rows.length) return;
+
+    const toWrite = rowsToWrite(rows, existing, { planned: planDays.length > 0, today: todayIso() });
+    if (!toWrite.length) return;
 
     (async () => {
       const { error } = await supabase
         .from("weekly_plan_sessions")
-        .upsert(rows, { onConflict: "student_id,week_start,session_index" });
+        .upsert(toWrite, { onConflict: "student_id,week_start,session_index" });
       if (error) console.error("[weekly-plan] upsert failed", error);
       qc.invalidateQueries({ queryKey: ["weekly-plan", student.id, weekStart] });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, existing?.length, batch?.day_of_week, weekStart, weekOneStart, allPlanDays.length]);
+  }, [student?.id, existing?.length, batch?.day_of_week, weekStart, weekOneStart, allPlanDays.length, planSignature]);
 }
 
 export function useCompleteSegment() {
