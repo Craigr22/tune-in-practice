@@ -1,6 +1,13 @@
 import { useRef, useState } from "react";
 import { isAudioPath } from "@/hooks/useCourseVideos";
 
+/** Practice speeds. Slow to learn it, half-speed to untangle a hard bar. */
+const SPEEDS = [
+  { value: 0.5, label: "50%" },
+  { value: 0.75, label: "75%" },
+  { value: 1, label: "Full" },
+] as const;
+
 /**
  * A lesson clip: what it is, what to watch for, then the picture.
  *
@@ -20,6 +27,7 @@ export default function LessonVideo({
   title,
   above,
   below,
+  showSpeed = false,
   radius = 14,
   maxHeight,
 }: {
@@ -33,6 +41,8 @@ export default function LessonVideo({
   above?: string | null;
   /** And after it. */
   below?: string | null;
+  /** Offer 50/75/100% — for a backing track you play along to. */
+  showSpeed?: boolean;
   radius?: number;
   maxHeight?: number;
 }) {
@@ -43,6 +53,35 @@ export default function LessonVideo({
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const ref = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [rate, setRate] = useState(1);
+
+  /**
+   * Play along slower without dropping the key.
+   *
+   * preservesPitch is the whole point: at half speed without it, the track
+   * falls an octave and the chords a student is holding no longer match what
+   * they hear. The prefixed names are still needed on Safari and older
+   * WebKit, which is most of the phones this runs on.
+   */
+  const applyRate = (media: HTMLMediaElement | null, value: number) => {
+    if (!media) return;
+    const m = media as HTMLMediaElement & {
+      preservesPitch?: boolean;
+      webkitPreservesPitch?: boolean;
+      mozPreservesPitch?: boolean;
+    };
+    m.preservesPitch = true;
+    m.webkitPreservesPitch = true;
+    m.mozPreservesPitch = true;
+    media.playbackRate = value;
+  };
+
+  const setSpeed = (value: number) => {
+    setRate(value);
+    applyRate(ref.current, value);
+    applyRate(audioRef.current, value);
+  };
   // An mp3 backing track has no picture: it needs a player, not a thumbnail.
   const isAudio = !!path && isAudioPath(path);
   const showPlaceholder = !isAudio && (!src || !ready);
@@ -85,7 +124,14 @@ export default function LessonVideo({
           style={{ background: "var(--paper-cool)", border: "1px solid var(--border)" }}
         >
           {src ? (
-            <audio src={src} controls preload="metadata" style={{ width: "100%" }} />
+            <audio
+              ref={audioRef}
+              src={src}
+              controls
+              preload="metadata"
+              onLoadedMetadata={() => applyRate(audioRef.current, rate)}
+              style={{ width: "100%" }}
+            />
           ) : (
             <div className="text-xs py-2 text-center" style={{ color: "var(--ink-soft)" }}>
               Loading track…
@@ -114,7 +160,7 @@ export default function LessonVideo({
             playsInline
             src={`${src}#t=0.1`}
             onLoadedMetadata={primeFirstFrame}
-            onLoadedData={() => setReady(true)}
+            onLoadedData={() => { setReady(true); applyRate(ref.current, rate); }}
             onSeeked={() => setReady(true)}
             onError={() => { setFailed(true); setReady(true); }}
             style={{
@@ -168,6 +214,35 @@ export default function LessonVideo({
           </div>
         )}
       </div>
+      )}
+
+      {showSpeed && src && (
+        <div className="flex items-center gap-2 mt-2.5">
+          <span
+            className="text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: "var(--ink-faint)" }}
+          >
+            Speed
+          </span>
+          {SPEEDS.map((s) => {
+            const on = rate === s.value;
+            return (
+              <button
+                key={s.value}
+                onClick={() => setSpeed(s.value)}
+                aria-pressed={on}
+                className="rounded-full px-3 py-1 text-xs font-bold transition-colors"
+                style={{
+                  background: on ? "var(--navy)" : "var(--paper-cool)",
+                  color: on ? "#fff" : "var(--ink-soft)",
+                  border: `1px solid ${on ? "var(--navy)" : "var(--border)"}`,
+                }}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {below && <Note text={below} className="mt-4" />}

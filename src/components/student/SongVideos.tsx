@@ -39,7 +39,15 @@ export default function SongVideos({ songId, inset = true }: { songId: string; i
       </div>
       {videos.map((v) => (
         <div key={v.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <LessonVideo src={urls[v.storage_path]} path={v.storage_path} title={v.title} radius={12} />
+          <LessonVideo
+            src={urls[v.storage_path]}
+            path={v.storage_path}
+            title={v.title}
+            // Play-alongs get the speed control; a tutorial is watched, not
+            // played along to.
+            showSpeed={v.kind === "track"}
+            radius={12}
+          />
         </div>
       ))}
     </div>
