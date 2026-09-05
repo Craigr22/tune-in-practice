@@ -1055,6 +1055,7 @@ export type Database = {
         Args: { _batch_id: string }
         Returns: undefined
       }
+      get_batch_shift_weeks: { Args: { _batch_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
