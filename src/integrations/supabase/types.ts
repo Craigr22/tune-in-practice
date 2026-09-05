@@ -273,6 +273,7 @@ export type Database = {
           instrument: string
           kind: string
           song_id: string | null
+          sort_order: number
           storage_path: string
           title: string
         }
@@ -283,6 +284,7 @@ export type Database = {
           instrument?: string
           kind?: string
           song_id?: string | null
+          sort_order?: number
           storage_path: string
           title: string
         }
@@ -293,6 +295,7 @@ export type Database = {
           instrument?: string
           kind?: string
           song_id?: string | null
+          sort_order?: number
           storage_path?: string
           title?: string
         }
