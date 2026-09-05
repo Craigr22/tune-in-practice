@@ -52,27 +52,6 @@ export function totalShiftWeeks(shifts: BatchPlanShift[]): number {
   return shifts.reduce((n, s) => n + (s.weeks || 0), 0);
 }
 
-/**
- * Weeks a class is behind, for anyone who belongs to it.
- *
- * Students can't read the pause list itself — the reasons are staff notes —
- * so the number comes back on its own from the database.
- */
-export function useBatchShiftWeeks(batchId?: string | null) {
-  return useQuery({
-    queryKey: ["batch-shift-weeks", batchId],
-    enabled: !!batchId,
-    queryFn: async (): Promise<number> => {
-      const { data, error } = await (supabase as any).rpc("get_batch_shift_weeks", {
-        _batch_id: batchId,
-      });
-      if (error) return 0;
-      return (data as number) ?? 0;
-    },
-  });
-}
-
-
 export function useAddPlanShift(batchId: string) {
   const qc = useQueryClient();
   return useMutation({

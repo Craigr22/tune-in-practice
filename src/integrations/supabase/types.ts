@@ -880,18 +880,21 @@ export type Database = {
       user_profiles: {
         Row: {
           email: string | null
+          last_seen_at: string | null
           name: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           email?: string | null
+          last_seen_at?: string | null
           name?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           email?: string | null
+          last_seen_at?: string | null
           name?: string | null
           updated_at?: string
           user_id?: string
@@ -1056,6 +1059,7 @@ export type Database = {
         Returns: undefined
       }
       get_batch_shift_weeks: { Args: { _batch_id: string }; Returns: number }
+      get_student_last_seen: { Args: { _student_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1083,6 +1087,7 @@ export type Database = {
         Args: { _student_id: string; _user_id: string }
         Returns: boolean
       }
+      mark_app_open: { Args: never; Returns: undefined }
       set_user_role: {
         Args: {
           p_role: Database["public"]["Enums"]["app_role"]
