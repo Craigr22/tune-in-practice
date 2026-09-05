@@ -108,3 +108,24 @@ describe("courseOrder with the rest of the catalogue", () => {
     expect(new Set(later).size).toBe(later.length);
   });
 });
+
+describe("hiding an upcoming song's name", () => {
+  // Mirrors maskTitle in Journey: the shape of the name, not the name.
+  const maskTitle = (title: string) =>
+    title.split(/\s+/).map((w) => "▪".repeat(Math.min(w.length, 8))).join(" ");
+
+  it("gives nothing of the name away", () => {
+    for (const t of ["Piyu Bole", "You Are My Sunshine", "Riptide"]) {
+      expect(maskTitle(t)).not.toMatch(/[a-z]/i);
+    }
+  });
+
+  it("keeps the word count, so the card doesn't reflow when it opens up", () => {
+    expect(maskTitle("You Are My Sunshine").split(" ")).toHaveLength(4);
+    expect(maskTitle("Riptide").split(" ")).toHaveLength(1);
+  });
+
+  it("caps a long word so one title can't stretch the card", () => {
+    expect(maskTitle("Supercalifragilistic")).toBe("▪".repeat(8));
+  });
+});

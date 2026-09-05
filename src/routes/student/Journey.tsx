@@ -18,6 +18,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
+/** The shape of a title without giving it away: "Piyu Bole" → "▪▪▪▪ ▪▪▪▪". */
+const maskTitle = (title: string) =>
+  title.split(/\s+/).map((word) => "▪".repeat(Math.min(word.length, 8))).join(" ");
+
 interface MapNode {
   songId: string;
   /** Curriculum week this song is taught in. */
@@ -304,7 +308,9 @@ const Journey = () => {
                       return (
                         <button
                           key={n.songId}
-                          onClick={() => setSelected(isOpen ? null : n.songId)}
+                          onClick={() => n.state !== "locked" && setSelected(isOpen ? null : n.songId)}
+                          aria-disabled={n.state === "locked"}
+                          title={n.state === "locked" ? `Coming up · ${n.artist}` : undefined}
                           className={`relative rounded-2xl p-4 text-left transition-all hover:-translate-y-0.5 cursor-pointer ${n.state === "locked" ? "opacity-80" : ""}`}
                           style={{ background: bg, border: `2px solid ${border}`, boxShadow: ring, transform: `translateY(${offsetY}px)` }}
                         >
@@ -335,8 +341,10 @@ const Journey = () => {
                           </div>
 
                           <div className="text-center">
-                            <div className="text-sm font-bold leading-tight line-clamp-2" style={{ color: n.state === "locked" ? "var(--ink-faint)" : "var(--ink)" }}>
-                              {n.title}
+                            <div
+                              className="text-sm font-bold leading-tight line-clamp-2"
+                              aria-label={n.state === "locked" ? "Song name hidden until it comes up" : undefined} style={{ color: n.state === "locked" ? "var(--ink-faint)" : "var(--ink)" }}>
+                              {n.state === "locked" ? maskTitle(n.title) : n.title}
                             </div>
                             <div className="text-[10px] mt-0.5 line-clamp-1" style={{ color: "var(--ink-soft)" }}>{n.artist}</div>
                             {n.state === "current" && (
@@ -346,7 +354,7 @@ const Journey = () => {
                               <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--gold-deep)" }}>Up next</div>
                             )}
                             {n.state === "locked" && (
-                              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>Peek ahead</div>
+                              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>Coming up</div>
                             )}
                           </div>
 
