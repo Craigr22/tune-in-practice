@@ -241,40 +241,50 @@ function plannedStops(days: CoursePlanDay[]): CourseStop[] {
 export function courseOrder(
   days: CoursePlanDay[],
   fallback: Record<string, number>,
-  fallbackTier: TierKey = "beginner",
+  opts: {
+    fallbackTier?: TierKey;
+    /** Everything else in the catalogue, so no song drops off the map. */
+    rest?: { songId: string; tier: TierKey }[];
+  } = {},
 ): CourseStop[] {
+  const { fallbackTier = "beginner", rest = [] } = opts;
   const planned = plannedStops(days);
-  const already = new Set(planned.map((s) => s.songId));
-  const lastWeek = planned.reduce((n, s) => Math.max(n, s.week), 0);
+  const seen = new Set(planned.map((s) => s.songId));
+  let week = planned.reduce((n, s) => Math.max(n, s.week), 0);
 
-  const upcoming = Object.entries(fallback)
-    .filter(([songId]) => !already.has(songId))
+  const next = (songId: string, tier: TierKey): CourseStop => {
+    seen.add(songId);
+    return { songId, week: ++week, tier, planned: false };
+  };
+
+  const afterPlan = Object.entries(fallback)
+    .filter(([songId]) => !seen.has(songId))
     .sort((a, b) => a[1] - b[1])
-    .map(([songId], i) => ({
-      songId,
-      week: lastWeek + 1 + i,
-      tier: fallbackTier,
-      planned: false,
-    }));
+    .map(([songId]) => next(songId, fallbackTier));
 
-  return [...planned, ...upcoming];
+  const remainder = rest
+    .filter((r) => !seen.has(r.songId))
+    .map((r) => next(r.songId, r.tier));
+
+  return [...planned, ...afterPlan, ...remainder];
 }
 
 /** How far ahead of the current week the map shows. */
 export const WEEKS_AHEAD = 2;
 
 /**
- * The part of the course a student may see.
+ * Mark how much of the course is in reach.
  *
- * Two weeks ahead and no further: enough to know what's coming, not so much
- * that the whole course is laid out before it is taught. Before the course
- * starts, that means weeks 1 and 2.
+ * The whole map stays on screen — a student can see where the course goes —
+ * but anything more than two weeks out is greyed, so what to work on now is
+ * obvious without the rest being hidden. Before the course starts, weeks 1
+ * and 2 are the ones in reach.
  */
-export function visibleStops(
+export function withHorizon(
   stops: CourseStop[],
   currentWeek: number | null,
   weeksAhead: number = WEEKS_AHEAD,
-): CourseStop[] {
+): (CourseStop & { upcoming: boolean })[] {
   const week = currentWeek ?? 0;
-  return stops.filter((s) => s.week <= week + weeksAhead);
+  return stops.map((s) => ({ ...s, upcoming: s.week > week + weeksAhead }));
 }

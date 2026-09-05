@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useStudentCoursePlan, shiftedPlanWeek, courseOrder, visibleStops } from "@/hooks/useCoursePlan";
+import { useStudentCoursePlan, shiftedPlanWeek, courseOrder, withHorizon } from "@/hooks/useCoursePlan";
 import { BEGINNER_ORDER } from "@/data/courseOrder";
 import { isoMonday, useStudentBatchDay, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 import {
@@ -13,7 +13,7 @@ import {
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
-import { TIERS, getTier, type TierKey } from "@/lib/tiers";
+import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
@@ -77,15 +77,23 @@ const Journey = () => {
    * order now; BEGINNER_ORDER carries it on past the weeks that have been
    * planned.
    */
-  const stops = useMemo(() => courseOrder(planDays, BEGINNER_ORDER), [planDays]);
-  const visible = useMemo(
-    () => visibleStops(stops, currentPlanWeek),
-    [stops, currentPlanWeek],
+  const stops = useMemo(
+    () =>
+      courseOrder(planDays, BEGINNER_ORDER, {
+        // Everything else in the catalogue still shows, just further out.
+        rest: catalog.map((c) => ({ songId: c.id, tier: tierForTrack(c.track) })),
+      }),
+    [planDays, catalog],
   );
+  const visible = useMemo(() => withHorizon(stops, currentPlanWeek), [stops, currentPlanWeek]);
 
   const nodes: MapNode[] = useMemo(() => {
-    return visible.map((stop) => {
+    return visible.flatMap((stop) => {
       const song = catalog.find((c) => c.id === stop.songId);
+      // The course order may name a song the catalogue doesn't have yet — it
+      // keeps the sequence right for when it is added, but there is nothing
+      // to draw until then.
+      if (!song) return [];
       const p = progress.find((x) => x.song_id === stop.songId);
       const songLogs = logs.filter((l) => l.song_id === stop.songId);
       const tb = p?.teacher_badge ?? null;
@@ -95,18 +103,20 @@ const Journey = () => {
       let state: NodeState;
       if ((tb ?? 0) >= 5) state = "mastered";
       else if (songLogs.length > 0 || (tb ?? 0) > 0) state = "current";
+      // Further out than the next two weeks: still on the map, greyed.
+      else if (stop.upcoming) state = "locked";
       else state = "next";
 
       const dates = songLogs.map((l) => l.played_on).sort();
 
-      return {
+      return [{
         songId: stop.songId,
         planWeek: stop.week,
         tier: stop.tier,
-        title: song?.title ?? stop.songId,
-        artist: song?.artist ?? "",
+        title: song.title,
+        artist: song.artist,
         order: stop.week,
-        track: song?.track ?? 1,
+        track: song.track,
         state,
         teacherBadge: tb,
         selfBadge: p?.self_badge ?? null,
@@ -114,8 +124,8 @@ const Journey = () => {
         totalMin: songLogs.reduce((a, l) => a + (l.duration_min || 0), 0),
         firstDate: dates[0],
         lastDate: dates[dates.length - 1],
-        fingerstyle: song?.fingerstyle,
-      };
+        fingerstyle: song.fingerstyle,
+      }];
     });
   }, [visible, logs, progress, catalog]);
 

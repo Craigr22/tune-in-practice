@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { courseOrder, visibleStops, type CoursePlanDay } from "@/hooks/useCoursePlan";
+import { courseOrder, withHorizon, type CoursePlanDay } from "@/hooks/useCoursePlan";
 import { BEGINNER_ORDER } from "@/data/courseOrder";
 
 const day = (week: number, dayNo: number, songId: string | null, tier = "beginner"): CoursePlanDay =>
@@ -53,28 +53,58 @@ describe("courseOrder", () => {
   });
 });
 
-describe("visibleStops", () => {
+describe("withHorizon", () => {
   const stops = courseOrder(plan, BEGINNER_ORDER);
-  const shown = (week: number | null) => visibleStops(stops, week).map((s) => s.songId);
+  const at = (week: number | null) => withHorizon(stops, week);
+  const inReach = (week: number | null) => at(week).filter((s) => !s.upcoming).map((s) => s.songId);
 
-  it("shows two weeks ahead and no further", () => {
-    expect(shown(3)).toEqual(["sunshine", "piyu-bole", "photograph", "im-yours", "kaisi-paheli"]);
-  });
-
-  it("shows weeks 1 and 2 before the course starts", () => {
-    expect(shown(null)).toEqual(["sunshine", "piyu-bole"]);
-  });
-
-  it("never shows a song more than two weeks out", () => {
-    for (let week = 0; week <= 12; week++) {
-      for (const s of visibleStops(stops, week)) {
-        expect(s.week).toBeLessThanOrEqual(week + 2);
-      }
+  it("keeps every song on the map, however far out it is", () => {
+    for (const week of [null, 0, 1, 5, 99]) {
+      expect(at(week)).toHaveLength(stops.length);
     }
   });
 
-  it("reveals one more song as each week passes", () => {
-    expect(shown(1).length).toBeLessThan(shown(2).length);
-    expect(shown(2).length).toBeLessThan(shown(3).length);
+  it("greys out anything more than two weeks ahead", () => {
+    const upcoming = at(3).filter((s) => s.upcoming);
+    expect(upcoming.every((s) => s.week > 5)).toBe(true);
+  });
+
+  it("has weeks 1 and 2 in reach before the course starts", () => {
+    expect(inReach(null)).toEqual(["sunshine", "piyu-bole"]);
+  });
+
+  it("brings one more song into reach as each week passes", () => {
+    expect(inReach(1).length).toBeLessThan(inReach(2).length);
+    expect(inReach(2).length).toBeLessThan(inReach(3).length);
+  });
+
+  it("never puts a song out of reach that is within two weeks", () => {
+    for (let week = 0; week <= 12; week++) {
+      for (const s of at(week)) {
+        expect(s.upcoming).toBe(s.week > week + 2);
+      }
+    }
+  });
+});
+
+describe("courseOrder with the rest of the catalogue", () => {
+  it("appends everything else after the beginner course, in order", () => {
+    const rest = [
+      { songId: "yellow", tier: "casual" as const },
+      { songId: "riptide", tier: "casual" as const }, // already in BEGINNER_ORDER
+    ];
+    const stops = courseOrder(plan, BEGINNER_ORDER, { rest });
+    const ids = stops.map((s) => s.songId);
+    expect(ids).toContain("yellow");
+    expect(ids.filter((i) => i === "riptide")).toHaveLength(1);
+    expect(ids.indexOf("yellow")).toBeGreaterThan(ids.indexOf("sham"));
+  });
+
+  it("gives every song its own week, none shared", () => {
+    const stops = courseOrder(plan, BEGINNER_ORDER, {
+      rest: [{ songId: "yellow", tier: "casual" as const }],
+    });
+    const later = stops.filter((s) => !s.planned).map((s) => s.week);
+    expect(new Set(later).size).toBe(later.length);
   });
 });
