@@ -394,7 +394,13 @@ const Journey = () => {
 
             {/* The song's clips: tutorial and backing tracks. Nothing opens
                 out of here — what a student needs is the video itself. */}
-            <SongVideos songId={selectedNode.songId} inset={false} />
+            <SongVideos
+              songId={selectedNode.songId}
+              inset={false}
+              bpm={catalog.find((c) => c.id === selectedNode.songId)?.bpm}
+              sections={catalog.find((c) => c.id === selectedNode.songId)?.sections}
+              strum={catalog.find((c) => c.id === selectedNode.songId)?.strum}
+            />
           </>
           )}
           </DialogContent>

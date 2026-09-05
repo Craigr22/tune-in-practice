@@ -1,55 +1,70 @@
 import { useMemo } from "react";
-import { useSongVideos, useSignedVideoUrls, type CourseVideo } from "@/hooks/useCourseVideos";
+import { useSongVideos, useSignedVideoUrls, isAudioPath, type CourseVideo } from "@/hooks/useCourseVideos";
 import LessonVideo from "@/components/student/LessonVideo";
+import PlayAlong, { type PlayAlongSection } from "@/components/student/PlayAlong";
 
 /**
- * A song's two clips: the backing track to play along to, then the tutorial
- * that teaches it — in that order, because a student opening a song they
- * already know wants to play, not to be taught again.
+ * What a song gives a student: one video to learn from, and a backing track
+ * to play along to.
  *
- * A song can have several of each (slow and normal play-alongs, a tutorial
- * and a completed version). Showing them all made the panel a wall of
- * players, so this takes the first of each in the admin's own order.
+ * A song can carry several of each — slow and normal play-alongs, a tutorial
+ * and a completed version — and listing them all made this a wall of players.
+ * The first of each kind in the admin's order is the one that shows.
  */
-function pickTwo(videos: CourseVideo[]): CourseVideo[] {
-  const first = (kind: CourseVideo["kind"]) =>
-    videos.filter((v) => v.kind === kind).sort((a, b) => a.sort_order - b.sort_order)[0];
-  return [first("track"), first("lesson")].filter(Boolean) as CourseVideo[];
+function pick(videos: CourseVideo[]) {
+  const byOrder = (a: CourseVideo, b: CourseVideo) => a.sort_order - b.sort_order;
+  const tracks = videos.filter((v) => v.kind === "track").sort(byOrder);
+  return {
+    lesson: videos.filter((v) => v.kind === "lesson").sort(byOrder)[0],
+    // The play-along wants sound, not picture — prefer an mp3 where there is
+    // one, and fall back to whatever backing track exists.
+    track: tracks.find((v) => isAudioPath(v.storage_path)) ?? tracks[0],
+  };
 }
 
-export default function SongVideos({ songId, inset = true }: { songId: string; inset?: boolean }) {
+export default function SongVideos({
+  songId,
+  inset = true,
+  bpm,
+  sections,
+  strum,
+}: {
+  songId: string;
+  inset?: boolean;
+  bpm?: number;
+  sections?: PlayAlongSection[];
+  strum?: string;
+}) {
   const { data: all = [] } = useSongVideos(songId);
-  const videos = useMemo(() => pickTwo(all), [all]);
-  const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
+  const { lesson, track } = useMemo(() => pick(all), [all]);
+  const paths = useMemo(
+    () => [lesson, track].filter(Boolean).map((v) => (v as CourseVideo).storage_path),
+    [lesson, track],
+  );
+  const { data: urls = {} } = useSignedVideoUrls(paths);
 
-  if (!videos.length) return null;
+  if (!lesson && !track) return null;
 
   return (
-    <div style={{ padding: inset ? "12px 16px 0" : "12px 0 0", display: "flex", flexDirection: "column", gap: 20 }}>
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: "var(--ink-soft)",
-          textTransform: "uppercase",
-          letterSpacing: 0.5,
-        }}
-      >
-        📺 Watch & learn
-      </div>
-      {videos.map((v) => (
-        <div key={v.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <LessonVideo
-            src={urls[v.storage_path]}
-            path={v.storage_path}
-            title={v.title}
-            // Play-alongs get the speed control; a tutorial is watched, not
-            // played along to.
-            showSpeed={v.kind === "track"}
-            radius={12}
-          />
-        </div>
-      ))}
+    <div style={{ padding: inset ? "12px 16px 0" : "12px 0 0", display: "flex", flexDirection: "column", gap: 16 }}>
+      {track && (
+        <PlayAlong
+          src={urls[track.storage_path]}
+          title={track.title}
+          bpm={bpm}
+          sections={sections}
+          strum={strum}
+        />
+      )}
+
+      {lesson && (
+        <LessonVideo
+          src={urls[lesson.storage_path]}
+          path={lesson.storage_path}
+          title={lesson.title}
+          radius={12}
+        />
+      )}
     </div>
   );
 }
