@@ -27,8 +27,7 @@ export default function SongVideos({ songId, inset = true }: { songId: string; i
       </div>
       {videos.map((v) => (
         <div key={v.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <LessonVideo src={urls[v.storage_path]} caption={v.description} radius={12} />
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>{v.title}</div>
+          <LessonVideo src={urls[v.storage_path]} title={v.title} caption={v.description} radius={12} />
         </div>
       ))}
     </div>
