@@ -246,7 +246,13 @@ function WeekBlock({
           {!open && (
             <span className="text-xs text-muted-foreground truncate ml-1">
               · {topic || "no class topic"}
-              {lessonCount > 0 && ` · ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}`}
+              {/* Say so when a week has no videos: students see nothing to watch
+                  that week, and silence made that impossible to spot here. */}
+              {lessonCount > 0 ? (
+                ` · ${lessonCount} lesson${lessonCount === 1 ? "" : "s"}`
+              ) : (
+                <span className="text-amber-700"> · no lessons</span>
+              )}
               {plannedDays < 3 && ` · ${3 - plannedDays} day${plannedDays === 2 ? "" : "s"} empty`}
             </span>
           )}

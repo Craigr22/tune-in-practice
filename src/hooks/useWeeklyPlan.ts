@@ -63,6 +63,23 @@ export function practiceDaysForWeek(weekStart: string, classDayOfWeek: number /*
   return presets[0].map((o) => addDays(weekStart, o));
 }
 
+/**
+ * The Monday of course week 1.
+ *
+ * Week numbers used to be counted from the calendar week containing the class's
+ * start date. But practice never runs before that date, so a class starting on
+ * a Sunday — the last day of its week — had no practice days left in it: course
+ * week 1 passed without a single session, and the student's first real week of
+ * practice was served week 2's material and week 2's videos.
+ *
+ * Week 1 is therefore the first week that actually holds a practice day.
+ */
+export function planWeekOneMonday(courseStart: string, classDayOfWeek: number): string {
+  const monday = isoMondayOf(courseStart);
+  const hasPractice = practiceDaysForWeek(monday, classDayOfWeek).some((d) => d >= courseStart);
+  return hasPractice ? monday : addDays(monday, 7);
+}
+
 /* ----- focus song pick ----- */
 /** Minimal shape both the static catalog and a class's effective song list satisfy. */
 export type FocusPoolSong = {
@@ -266,8 +283,10 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const { data: existing } = useWeeklyPlan(weekStart);
 
   // The plan is a pure template with no dates of its own: a student follows it
-  // only from their class's start date.
-  const weekOneStart = courseStartDate;
+  // from their class's first practice week.
+  const weekOneStart = courseStartDate
+    ? planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6)
+    : null;
   const planWeek = planWeekNumberFor(weekOneStart, weekStart);
   const planDays = planWeek ? daysForWeek(allPlanDays, planWeek) : [];
   // A student's practice can't begin before their class does.

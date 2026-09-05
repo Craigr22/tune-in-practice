@@ -3,7 +3,7 @@ import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
 import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
-import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, useMarkSessionComplete, isoMonday, addWeeks } from "@/hooks/useWeeklyPlan";
+import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, useMarkSessionComplete, isoMonday, addWeeks, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 import { useLogPractice, usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import LessonVideo from "@/components/student/LessonVideo";
@@ -47,10 +47,12 @@ const Home = () => {
 
   const planDay = useMemo(() => {
     if (!materialFor) return null;
-    const wk = planWeekNumberFor(courseStartDate, isoMonday(new Date(materialFor.scheduled_date)));
+    if (!courseStartDate) return null;
+    const weekOne = planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6);
+    const wk = planWeekNumberFor(weekOne, isoMonday(new Date(materialFor.scheduled_date)));
     if (!wk) return null;
     return daysForWeek(planDays, wk)[materialFor.session_index] ?? null;
-  }, [materialFor, courseStartDate, planDays]);
+  }, [materialFor, courseStartDate, batch?.day_of_week, planDays]);
 
   const videos = useMemo(() => {
     const ids = planDay?.video_ids ?? [];

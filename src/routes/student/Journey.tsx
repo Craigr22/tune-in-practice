@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, planWeekNumberFor } from "@/hooks/useCoursePlan";
-import { isoMonday } from "@/hooks/useWeeklyPlan";
+import { isoMonday, useStudentBatchDay, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 import {
   usePracticeLogs,
   useSongProgress,
@@ -49,7 +49,10 @@ const Journey = () => {
   // stages the song map below uses.
   const { instrument, courseStartDate } = useStudentClassConfig();
   const { days: planDays } = useStudentCoursePlan(instrument);
-  const currentPlanWeek = planWeekNumberFor(courseStartDate, isoMonday());
+  const { data: batch } = useStudentBatchDay();
+  const currentPlanWeek = courseStartDate
+    ? planWeekNumberFor(planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6), isoMonday())
+    : null;
   const currentTier = useMemo(() => {
     if (!currentPlanWeek) return null;
     const day = planDays.find((d) => d.week_number === currentPlanWeek);

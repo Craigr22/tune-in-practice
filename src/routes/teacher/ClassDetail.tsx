@@ -7,7 +7,7 @@ import { StudentRow, StudentDetail } from "@/components/teacher/StudentRoster";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
 import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
-import { isoMonday } from "@/hooks/useWeeklyPlan";
+import { isoMonday, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 
 /**
  * What this class is working through — read-only.
@@ -17,14 +17,16 @@ import { isoMonday } from "@/hooks/useWeeklyPlan";
  * per class here only created a second source of truth that the plan then
  * ignored. Teachers see the plan and grade against it.
  */
-function CoursePanel({ startDate, instrumentName }: { startDate: string | null; instrumentName?: string }) {
+function CoursePanel({ startDate, dayOfWeek, instrumentName }: { startDate: string | null; dayOfWeek: number | null; instrumentName?: string }) {
   const instrument = toInstrument(instrumentName);
   const catalog = useCatalogSongs(instrument, { showInactive: false });
   const { days: planDays } = useStudentCoursePlan(instrument);
 
   const start = startDate;
   const totalWeeks = new Set(planDays.map((d) => d.week_number)).size;
-  const currentWeek = planWeekNumberFor(start, isoMonday());
+  const currentWeek = start
+    ? planWeekNumberFor(planWeekOneMonday(start, dayOfWeek ?? 6), isoMonday())
+    : null;
   const thisWeek = currentWeek ? daysForWeek(planDays, currentWeek) : [];
   const songTitle = (id: string | null) => (id ? catalog.find((c) => c.id === id)?.title ?? id : null);
 
@@ -140,7 +142,7 @@ export default function ClassDetail() {
           </TabsList>
 
           <TabsContent value="coursework" className="pt-4">
-            <CoursePanel startDate={batch.semester_start ?? null} instrumentName={batch.instruments?.name} />
+            <CoursePanel startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
           </TabsContent>
 
           <TabsContent value="roster" className="pt-4">
