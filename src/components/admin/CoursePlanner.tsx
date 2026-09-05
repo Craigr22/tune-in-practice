@@ -10,6 +10,13 @@ import {
 import { useCourseVideos } from "@/hooks/useCourseVideos";
 import { useCatalogSongs, type Instrument } from "@/hooks/useSongCatalog";
 import { videoKind } from "@/lib/videoKind";
+
+/**
+ * What a clip is: the recorded kind once the column exists, and the naming
+ * as a fallback until then.
+ */
+const kindOf = (v: { kind?: string | null; title: string }) =>
+  (v.kind as "lesson" | "track" | "exercise" | undefined) ?? videoKind(v.title);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +26,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CalendarDays, Plus, Trash2, Film, ChevronDown, ChevronRight } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Film, ChevronDown, ChevronRight, ChevronUp, X } from "lucide-react";
 import { TIERS, getTier, type TierKey } from "@/lib/tiers";
 import { toast } from "sonner";
 
@@ -58,12 +65,12 @@ function DayEditor({
       .filter(([k]) => k)
       .map(([songId, items]) => ({
         label: songs.find((c) => c.id === songId)?.title ?? songId,
-        items: [...items].sort((a, b) => order[videoKind(a.title)] - order[videoKind(b.title)]),
+        items: [...items].sort((a, b) => order[kindOf(a)] - order[kindOf(b)]),
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
     const general = bySong.get("") ?? [];
     return general.length
-      ? [...named, { label: "General", items: [...general].sort((a, b) => order[videoKind(a.title)] - order[videoKind(b.title)]) }]
+      ? [...named, { label: "General", items: [...general].sort((a, b) => order[kindOf(a)] - order[kindOf(b)]) }]
       : named;
   }, [videos, songs]);
   const save = useSaveCoursePlanDay(instrument);
@@ -98,6 +105,15 @@ function DayEditor({
     const next = draft.video_ids.includes(id)
       ? draft.video_ids.filter((v) => v !== id)
       : [...draft.video_ids, id];
+    set("video_ids", next);
+  };
+
+  /** Students see the day's clips in this order, so it has to be editable. */
+  const moveVideo = (index: number, delta: number) => {
+    const next = [...draft.video_ids];
+    const to = index + delta;
+    if (to < 0 || to >= next.length) return;
+    [next[index], next[to]] = [next[to], next[index]];
     set("video_ids", next);
   };
 
@@ -181,9 +197,50 @@ function DayEditor({
         <Label className="text-xs flex items-center gap-1">
           <Film className="w-3 h-3" /> Lessons shown this day
           {draft.video_ids.length > 0 && (
-            <span className="ml-1 text-muted-foreground">({draft.video_ids.length} selected)</span>
+            <span className="ml-1 text-muted-foreground">
+              ({draft.video_ids.length} selected · students see them in this order)
+            </span>
           )}
         </Label>
+        {draft.video_ids.length > 0 && (
+          <ol className="mt-1.5 mb-2 rounded-md border divide-y bg-muted/30">
+            {draft.video_ids.map((id, i) => {
+              const v = videos.find((x) => x.id === id);
+              return (
+                <li key={id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                  <span
+                    className="shrink-0 grid place-items-center rounded text-[10px] font-bold"
+                    style={{ width: 20, height: 20, background: "var(--navy)", color: "#fff" }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className="truncate flex-1">{v?.title ?? "(missing clip)"}</span>
+                  <Button
+                    type="button" variant="ghost" size="icon" className="h-6 w-6"
+                    title="Move up" disabled={i === 0}
+                    onClick={() => moveVideo(i, -1)}
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    type="button" variant="ghost" size="icon" className="h-6 w-6"
+                    title="Move down" disabled={i === draft.video_ids.length - 1}
+                    onClick={() => moveVideo(i, 1)}
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    type="button" variant="ghost" size="icon" className="h-6 w-6"
+                    title="Remove" onClick={() => toggleVideo(id)}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+
         {videos.length === 0 ? (
           <p className="text-xs text-muted-foreground mt-1">
             No videos uploaded yet — add them in Course videos below.
@@ -199,7 +256,7 @@ function DayEditor({
                   {g.items.map((v) => {
                     const on = draft.video_ids.includes(v.id);
                     const order = draft.video_ids.indexOf(v.id) + 1;
-                    const kind = videoKind(v.title);
+                    const kind = kindOf(v);
                     return (
                       <button
                         key={v.id}

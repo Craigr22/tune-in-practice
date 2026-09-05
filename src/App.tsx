@@ -62,7 +62,7 @@ const RoleHome = () => {
 };
 
 /** Keep each role inside its own area. Admins may go anywhere. */
-const RequireRole = ({ role: need, children }: { role: "teacher" | "admin"; children: React.ReactNode }) => {
+export const RequireRole = ({ role: need, children }: { role: "teacher" | "admin"; children: React.ReactNode }) => {
   const { role } = useAuth();
   if (role === "admin" || role === need) return <>{children}</>;
   return <Navigate to="/" replace />;
@@ -97,10 +97,10 @@ const App = () => (
 
                 
                 <Route path="/admin" element={<Navigate to="/admin/schedule" replace />} />
-                <Route path="/admin/people" element={<AdminPeople />} />
-                <Route path="/admin/people/:tab" element={<AdminPeople />} />
-                <Route path="/admin/schedule" element={<AdminSchedule />} />
-                <Route path="/admin/coursework" element={<AdminCoursework />} />
+                <Route path="/admin/people" element={<RequireRole role="admin"><AdminPeople /></RequireRole>} />
+                <Route path="/admin/people/:tab" element={<RequireRole role="admin"><AdminPeople /></RequireRole>} />
+                <Route path="/admin/schedule" element={<RequireRole role="admin"><AdminSchedule /></RequireRole>} />
+                <Route path="/admin/coursework" element={<RequireRole role="admin"><AdminCoursework /></RequireRole>} />
                 {/* Legacy routes → consolidated People page */}
                 <Route path="/admin/students" element={<Navigate to="/admin/people/students" replace />} />
                 <Route path="/admin/teachers" element={<Navigate to="/admin/people/teachers" replace />} />
