@@ -1,11 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
-import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
 import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, useMarkSessionComplete, isoMonday, addWeeks, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 import { useLogPractice, usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
+import { useDayLessons, type LessonDay } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 import type { CourseVideo } from "@/hooks/useCourseVideos";
@@ -22,8 +21,6 @@ const Home = () => {
   const { data: student } = useStudentMe();
   const catalog = useStudentSongs();
   const { instrument, courseStartDate } = useStudentClassConfig();
-  const { days: planDays } = useStudentCoursePlan(instrument);
-  const { data: allVideos = [] } = useCourseVideos(instrument);
   const completeSeg = useCompleteSegment();
   const markComplete = useMarkSessionComplete();
   const logPractice = useLogPractice();
@@ -36,29 +33,19 @@ const Home = () => {
   useEnsureWeeklyPlan(addWeeks(isoMonday(), 1));
   const session = useTodaysSession();
   const nextSession = useNextSession();
+  const [peek, setPeek] = useState<LessonDay | null>(null);
   const { data: batch } = useStudentBatchDay();
 
+  // Today's clips belong to today's Focus step and stay there.
+  const todayLessons = useDayLessons(session);
+
   /**
-   * The plan day whose material is currently relevant: today's session, or on
-   * a rest day the next one — the clips are worth watching ahead of a session,
-   * not only during it.
+   * The day the student is looking at away from today's work: one they tapped
+   * in the week strip, or — on a rest day — the next session, since the clips
+   * are worth watching ahead of a session rather than only during it.
    */
-  const materialFor = session ?? nextSession;
-
-  const planDay = useMemo(() => {
-    if (!materialFor) return null;
-    if (!courseStartDate) return null;
-    const weekOne = planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6);
-    const wk = planWeekNumberFor(weekOne, isoMonday(new Date(materialFor.scheduled_date)));
-    if (!wk) return null;
-    return daysForWeek(planDays, wk)[materialFor.session_index] ?? null;
-  }, [materialFor, courseStartDate, batch?.day_of_week, planDays]);
-
-  const videos = useMemo(() => {
-    const ids = planDay?.video_ids ?? [];
-    return ids.map((id) => allVideos.find((v) => v.id === id)).filter(Boolean) as typeof allVideos;
-  }, [planDay, allVideos]);
-  const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
+  const viewingDay = peek ?? (session ? null : nextSession);
+  const viewing = useDayLessons(viewingDay);
 
   /**
    * Ticking off a segment. When the last one lands, the session is marked
@@ -150,7 +137,7 @@ const Home = () => {
           done: session.focus_completed,
           // The day's videos are planned per day, not per segment, so they
           // belong to the step that actually works on the material.
-          videos,
+          videos: todayLessons.videos,
         },
         {
           key: "bonus" as const,
@@ -207,29 +194,31 @@ const Home = () => {
           </div>
 
           <div className="px-4 pb-4 pt-3 md:px-5">
-            <WeeklyCalendarStrip embedded />
+            <WeeklyCalendarStrip embedded onSelectDay={setPeek} />
           </div>
         </section>
 
-        {!session ? (
-          /* A rest day still has material. The clips for the next session sit
-             directly under the header — same page, no card of their own. */
-          videos.length > 0 && (
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--ink-soft)" }}>
-                Watch ahead{nextSession ? ` · ${dayLabel(nextSession.scheduled_date).toLowerCase()}` : ""}
-              </div>
-              <div className="flex flex-col gap-4">
-                {videos.map((v) => (
-                  <div key={v.id}>
-                    <LessonVideo src={urls[v.storage_path]} maxHeight={220} />
-                    <div className="text-sm font-semibold mt-1.5" style={{ color: "var(--ink)" }}>{v.title}</div>
-                  </div>
-                ))}
-              </div>
+        {/* Clips for the day being looked at: one tapped in the week strip, or
+            the next session on a rest day. Same page, no card of its own. */}
+        {viewingDay && viewing.videos.length > 0 && (
+          <div className={session ? "mb-4" : ""}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--ink-soft)" }}>
+              {peek
+                ? `Lessons · ${dayLabel(peek.scheduled_date)}`
+                : `Watch ahead · ${dayLabel(viewingDay.scheduled_date).toLowerCase()}`}
             </div>
-          )
-        ) : (
+            <div className="flex flex-col gap-4">
+              {viewing.videos.map((v) => (
+                <div key={v.id}>
+                  <LessonVideo src={viewing.urls[v.storage_path]} maxHeight={220} />
+                  <div className="text-sm font-semibold mt-1.5" style={{ color: "var(--ink)" }}>{v.title}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {session && (
           /* Today's three steps, in order. The lesson videos live inside the
              step that refers to them rather than in a section of their own —
              the focus instruction usually says to watch and then play, so
@@ -272,7 +261,7 @@ const Home = () => {
                   <div className="mt-3 flex flex-col gap-3">
                     {s.videos.map((v) => (
                       <div key={v.id}>
-                        <LessonVideo src={urls[v.storage_path]} maxHeight={220} />
+                        <LessonVideo src={todayLessons.urls[v.storage_path]} maxHeight={220} />
                         <div className="text-xs font-semibold mt-1.5" style={{ color: "var(--ink-soft)" }}>{v.title}</div>
                       </div>
                     ))}

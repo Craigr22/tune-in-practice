@@ -1,24 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { todayLocalIso, addDaysIso } from "@/lib/date";
 
 /**
- * The rest-day state on the student home.
+ * The student home away from a practice session: what it says on a rest day,
+ * and how it follows the day the student is looking at in the week strip.
  *
  * Practice runs three days a week, so on the other four the page has nothing
- * to show — including the day before class. It used to say only "no practice
- * planned", which read as broken. These cover what it says instead.
+ * of today's to show — it used to say only "no practice planned", which read
+ * as broken.
  *
- * Mocked at the hook boundary: the page's own logic (what's next, in what
- * order, how it's worded) is what's under test, not Supabase.
+ * Mocked at the hook boundary: the page's own logic — what's next, in what
+ * order, which day's clips — is what's under test, not Supabase.
  */
 
 const today = todayLocalIso();
 
-let nextSession: any = null;
-let batch: any = null;
-let courseVideos: any[] = [];
-let planDayForWeek: any = null;
+/** Mutable fixture state. Hoisted so the vi.mock factories can reach it. */
+const st = vi.hoisted(() => ({
+  nextSession: null as any,
+  batch: null as any,
+  courseVideos: [] as any[],
+  planDays: [] as any[],
+}));
 
 vi.mock("@/hooks/useStudentMe", () => ({
   useStudentMe: () => ({ data: { id: "s1", name: "Elroy Rodrigues", joined_on: "2026-09-01" } }),
@@ -28,14 +32,14 @@ vi.mock("@/hooks/useBatchCoursework", () => ({
   useStudentClassConfig: () => ({ instrument: "ukulele", courseStartDate: "2026-09-06", songsPerSession: 3 }),
 }));
 vi.mock("@/hooks/useCoursePlan", () => ({
-  useStudentCoursePlan: () => ({ weekOneStart: null, days: planDayForWeek ? [planDayForWeek] : [] }),
-  planWeekNumberFor: () => (planDayForWeek ? 1 : null),
-  daysForWeek: () => (planDayForWeek ? [planDayForWeek] : []),
+  useStudentCoursePlan: () => ({ weekOneStart: null, days: st.planDays }),
+  planWeekNumberFor: () => (st.planDays.length ? 1 : null),
+  daysForWeek: () => st.planDays,
 }));
 vi.mock("@/hooks/useCourseVideos", () => ({
-  useCourseVideos: () => ({ data: courseVideos }),
+  useCourseVideos: () => ({ data: st.courseVideos }),
   useSignedVideoUrls: () => ({
-    data: Object.fromEntries(courseVideos.map((v) => [v.storage_path, `blob:${v.id}`])),
+    data: Object.fromEntries(st.courseVideos.map((v) => [v.storage_path, `blob:${v.id}`])),
   }),
 }));
 vi.mock("@/hooks/useStudentProgress", () => ({
@@ -43,15 +47,24 @@ vi.mock("@/hooks/useStudentProgress", () => ({
   usePracticeLogs: () => ({ data: [] }),
   computeStreak: () => 0,
 }));
-vi.mock("@/components/student/WeeklyCalendarStrip", () => ({ default: () => null }));
+
+/** Stands in for the week strip, exposing the day-picking it reports upward. */
+vi.mock("@/components/student/WeeklyCalendarStrip", () => ({
+  default: ({ onSelectDay }: { onSelectDay?: (d: any) => void }) => (
+    <button onClick={() => onSelectDay?.({ scheduled_date: "2026-09-16", session_index: 1 })}>
+      pick a later day
+    </button>
+  ),
+}));
+
 vi.mock("@/hooks/useWeeklyPlan", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/useWeeklyPlan")>("@/hooks/useWeeklyPlan");
   return {
     ...actual,
     useEnsureWeeklyPlan: () => {},
     useTodaysSession: () => undefined, // a rest day
-    useNextSession: () => nextSession,
-    useStudentBatchDay: () => ({ data: batch }),
+    useNextSession: () => st.nextSession,
+    useStudentBatchDay: () => ({ data: st.batch }),
     useCompleteSegment: () => ({ mutate: vi.fn(), isPending: false }),
     useMarkSessionComplete: () => ({ mutate: vi.fn() }),
   };
@@ -60,10 +73,10 @@ vi.mock("@/hooks/useWeeklyPlan", async () => {
 import Home from "@/routes/student/Home";
 
 beforeEach(() => {
-  nextSession = null;
-  batch = null;
-  courseVideos = [];
-  planDayForWeek = null;
+  st.nextSession = null;
+  st.batch = null;
+  st.courseVideos = [];
+  st.planDays = [];
 });
 afterEach(cleanup);
 
@@ -74,40 +87,61 @@ describe("student home on a rest day", () => {
     semester_start: "2026-09-06",
   });
 
-  /** A plan day carrying one clip, wired to the next session. */
-  const withVideo = () => {
-    courseVideos = [{ id: "v1", title: "Kho Gaye Normal Plucking", storage_path: "p/v1.mp4" }];
-    planDayForWeek = { week_number: 1, day_number: 1, video_ids: ["v1"], tier: "beginner" };
+  /** Two plan days, each with its own clip, so the two can be told apart. */
+  const withLessons = () => {
+    st.courseVideos = [
+      { id: "v1", title: "Piyu Bole Tutorial", storage_path: "p/v1.mp4" },
+      { id: "v2", title: "Photograph Tutorial", storage_path: "p/v2.mp4" },
+    ];
+    st.planDays = [
+      { week_number: 1, day_number: 1, video_ids: ["v1"], tier: "beginner" },
+      { week_number: 1, day_number: 2, video_ids: ["v2"], tier: "beginner" },
+    ];
   };
 
   it("shows the next session's clips on a rest day", () => {
-    nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
-    batch = classTomorrow();
-    withVideo();
+    st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
+    st.batch = classTomorrow();
+    withLessons();
 
     const { container } = render(<Home />);
 
     expect(container.querySelector("video")).toBeTruthy();
-    expect(screen.getByText("Kho Gaye Normal Plucking")).toBeTruthy();
+    expect(screen.getByText("Piyu Bole Tutorial")).toBeTruthy();
     expect(screen.getByText(/watch ahead/i)).toBeTruthy();
   });
 
+  it("follows the day picked in the week strip", () => {
+    st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
+    st.batch = classTomorrow();
+    withLessons();
+
+    render(<Home />);
+    expect(screen.getByText("Piyu Bole Tutorial")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("pick a later day"));
+
+    // Day 2's clip replaces day 1's, and the heading names the day.
+    expect(screen.getByText("Photograph Tutorial")).toBeTruthy();
+    expect(screen.queryByText("Piyu Bole Tutorial")).toBeNull();
+    expect(screen.getByText(/lessons ·/i)).toBeTruthy();
+  });
+
   it("says what's next in the header, not in a card of its own", () => {
-    nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1" };
-    batch = classTomorrow();
+    st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1" };
+    st.batch = classTomorrow();
 
     const { container } = render(<Home />);
 
     expect(screen.getByText(/no practice today/i)).toBeTruthy();
     // The week strip already shows practice and class days, so with no clips
-    // to watch the header card is the whole page — and nothing is pressable.
+    // to watch the header card is the whole page.
     expect(container.querySelector(".home")!.children.length).toBe(1);
-    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("names the nearer of the two, with its time", () => {
-    nextSession = { scheduled_date: addDaysIso(today, 3), focus_song_id: "song1" };
-    batch = classTomorrow();
+    st.nextSession = { scheduled_date: addDaysIso(today, 3), focus_song_id: "song1" };
+    st.batch = classTomorrow();
 
     render(<Home />);
 
@@ -115,8 +149,8 @@ describe("student home on a rest day", () => {
   });
 
   it("names practice when practice comes first", () => {
-    nextSession = { scheduled_date: addDaysIso(today, 1), focus_song_id: "song1" };
-    batch = { ...classTomorrow(), day_of_week: new Date(`${addDaysIso(today, 4)}T00:00:00`).getDay() };
+    st.nextSession = { scheduled_date: addDaysIso(today, 1), focus_song_id: "song1" };
+    st.batch = { ...classTomorrow(), day_of_week: new Date(`${addDaysIso(today, 4)}T00:00:00`).getDay() };
 
     render(<Home />);
 
@@ -131,7 +165,7 @@ describe("student home on a rest day", () => {
 
   it("does not offer a class before the course has started", () => {
     // Class day is tomorrow, but the course does not begin for another month.
-    batch = { ...classTomorrow(), semester_start: addDaysIso(today, 30) };
+    st.batch = { ...classTomorrow(), semester_start: addDaysIso(today, 30) };
 
     render(<Home />);
 

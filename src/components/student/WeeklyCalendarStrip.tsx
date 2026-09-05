@@ -21,7 +21,14 @@ function fmtRange(weekStart: string) {
     : `${sm} ${start.getDate()} – ${em} ${end.getDate()}`;
 }
 
-export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: boolean } = {}) {
+export default function WeeklyCalendarStrip({
+  embedded = false,
+  onSelectDay,
+}: {
+  embedded?: boolean;
+  /** Told which day the student is looking at, so the page can follow along. */
+  onSelectDay?: (day: { scheduled_date: string; session_index: number } | null) => void;
+} = {}) {
   const { songs } = useSongs();
   const currentWeek = isoMonday();
   const [weekStart, setWeekStart] = useState(currentWeek);
@@ -79,6 +86,12 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
   }, [weekStart, classOffset, practiceDates, plan, todayIso, practicedDays, startsOn]);
 
   const [selectedIso, setSelectedIso] = useState<string | null>(null);
+
+  const select = (iso: string | null) => {
+    setSelectedIso(iso);
+    const s = iso ? days.find((d) => d.iso === iso)?.session : undefined;
+    onSelectDay?.(s ? { scheduled_date: s.scheduled_date, session_index: s.session_index } : null);
+  };
   const selected = days.find((d) => d.iso === selectedIso);
   const selectedSong = selected?.session ? songs.find((s) => s.id === selected.session!.focus_song_id) : null;
   const selectedTpl = selected?.session ? SESSION_TEMPLATES[selected.session.session_type] : null;
@@ -102,7 +115,7 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setWeekStart(addWeeks(weekStart, -1)); setSelectedIso(null); }}
+            onClick={() => { setWeekStart(addWeeks(weekStart, -1)); select(null); }}
             className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold hover:opacity-80"
             style={{ background: "var(--paper-cool)", color: "var(--ink)" }}
             aria-label="Previous week"
@@ -114,14 +127,14 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
             <div className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{fmtRange(weekStart)}</div>
           </div>
           <button
-            onClick={() => { setWeekStart(addWeeks(weekStart, 1)); setSelectedIso(null); }}
+            onClick={() => { setWeekStart(addWeeks(weekStart, 1)); select(null); }}
             className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold hover:opacity-80"
             style={{ background: "var(--paper-cool)", color: "var(--ink)" }}
             aria-label="Next week"
           >›</button>
           {weekStart !== currentWeek && (
             <button
-              onClick={() => { setWeekStart(currentWeek); setSelectedIso(null); }}
+              onClick={() => { setWeekStart(currentWeek); select(null); }}
               className="ml-1 text-[11px] font-semibold underline"
               style={{ color: "var(--navy)" }}
             >Today</button>
@@ -148,7 +161,7 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
           return (
             <button
               key={d.iso}
-              onClick={() => clickable && setSelectedIso(isSelected ? null : d.iso)}
+              onClick={() => clickable && select(isSelected ? null : d.iso)}
               disabled={!clickable}
               className="rounded-xl py-2.5 px-1 flex flex-col items-center gap-1.5 transition-all disabled:cursor-default"
               style={{
