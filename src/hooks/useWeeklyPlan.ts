@@ -344,6 +344,36 @@ export function useMarkSessionComplete() {
   });
 }
 
+/**
+ * The next practice session after today, whichever week it falls in.
+ *
+ * `useTodaysSession` only sees the current week, so from the last practice day
+ * until Monday it has nothing to offer — on a Mon/Wed/Fri plan that's three
+ * days in seven where the page could say nothing about what comes next.
+ */
+export function useNextSession(): WeeklyPlanSession | undefined {
+  const { data: student } = useStudentMe();
+  const today = todayIso();
+  const { data } = useQuery({
+    queryKey: ["next-session", student?.id, today],
+    enabled: !!student?.id,
+    queryFn: async (): Promise<WeeklyPlanSession | null> => {
+      const { data, error } = await supabase
+        .from("weekly_plan_sessions")
+        .select("*")
+        .eq("student_id", student!.id)
+        .gt("scheduled_date", today)
+        .is("completed_at", null)
+        .order("scheduled_date")
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as unknown as WeeklyPlanSession | null;
+    },
+  });
+  return data ?? undefined;
+}
+
 export function useTodaysSession(): WeeklyPlanSession | undefined {
   const { data: plan } = useWeeklyPlan();
   const today = todayIso();

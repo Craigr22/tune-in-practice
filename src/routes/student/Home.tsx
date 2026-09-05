@@ -3,12 +3,13 @@ import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
 import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
-import { useEnsureWeeklyPlan, useTodaysSession, useCompleteSegment, useMarkSessionComplete, isoMonday } from "@/hooks/useWeeklyPlan";
+import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, useMarkSessionComplete, isoMonday, addWeeks } from "@/hooks/useWeeklyPlan";
 import { useLogPractice, usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import LessonVideo from "@/components/student/LessonVideo";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 import type { CourseVideo } from "@/hooks/useCourseVideos";
+import { todayLocalIso, addDaysIso, onOrAfterDayOfWeek, dayLabel, timeLabel } from "@/lib/date";
 
 const NO_VIDEOS: CourseVideo[] = [];
 
@@ -30,7 +31,12 @@ const Home = () => {
   const streak = useMemo(() => computeStreak(logs), [logs]);
 
   useEnsureWeeklyPlan();
+  // Also build next week, so that on a rest day there is a "next practice"
+  // to point at rather than a gap until Monday.
+  useEnsureWeeklyPlan(addWeeks(isoMonday(), 1));
   const session = useTodaysSession();
+  const nextSession = useNextSession();
+  const { data: batch } = useStudentBatchDay();
 
   const planDay = useMemo(() => {
     if (!session) return null;
@@ -74,6 +80,45 @@ const Home = () => {
       sharedWithTeacher: true,
     });
   };
+
+  /**
+   * What's next when today is a rest day: the next planned practice and the
+   * next class, nearest first. The class repeats weekly from its start date,
+   * so it's derived rather than stored per-week.
+   */
+  const upcoming = useMemo(() => {
+    const today = todayLocalIso();
+    const items: { key: string; emoji: string; label: string; detail: string | null; date: string }[] = [];
+
+    if (nextSession) {
+      items.push({
+        key: "practice",
+        emoji: "🎸",
+        label: "Practice",
+        detail: catalog.find((x) => x.id === nextSession.focus_song_id)?.title ?? null,
+        date: nextSession.scheduled_date,
+      });
+    }
+
+    if (batch?.day_of_week != null) {
+      // From tomorrow at the earliest — today's class isn't "next up" — and
+      // never before the class has started at all.
+      const tomorrow = addDaysIso(today, 1);
+      const earliest =
+        batch.semester_start && batch.semester_start > tomorrow ? batch.semester_start : tomorrow;
+      const date = onOrAfterDayOfWeek(earliest, batch.day_of_week);
+      const at = timeLabel(batch.start_time);
+      items.push({
+        key: "class",
+        emoji: "🎓",
+        label: "Class",
+        detail: at ? `In person at ${at}` : "In person",
+        date,
+      });
+    }
+
+    return items.sort((a, b) => a.date.localeCompare(b.date));
+  }, [nextSession, batch, catalog]);
 
   const firstName = (student?.name || "").split(" ")[0] || "there";
   const title = (id: string | null) => (id ? catalog.find((s) => s.id === id)?.title ?? null : null);
@@ -162,15 +207,45 @@ const Home = () => {
         </section>
 
         {!session ? (
+          /* A day off still needs to answer "so when am I next on?" — otherwise
+             the page reads as broken on the three days a week with no
+             practice, including the day before class. */
           <div
-            className="rounded-2xl p-6 text-center"
+            className="rounded-2xl p-6"
             style={{ background: "var(--card)", border: "1px solid var(--border)" }}
           >
-            <div className="text-3xl mb-2" aria-hidden>🌤️</div>
-            <div className="font-semibold" style={{ color: "var(--ink)" }}>No practice planned today</div>
-            <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
-              Enjoy the day off — your next session will be here when it's due.
-            </p>
+            <div className="text-center">
+              <div className="text-3xl mb-2" aria-hidden>🌤️</div>
+              <div className="font-semibold" style={{ color: "var(--ink)" }}>
+                No practice today
+              </div>
+              <p className="text-sm mt-1" style={{ color: "var(--ink-soft)" }}>
+                {upcoming.length ? "Enjoy the day off. Next up:" : "Enjoy the day off."}
+              </p>
+            </div>
+
+            {upcoming.length > 0 && (
+              <ul className="mt-4 flex flex-col gap-2">
+                {upcoming.map((u) => (
+                  <li
+                    key={u.key}
+                    className="flex items-center gap-3 rounded-xl px-4 py-3"
+                    style={{ background: "var(--paper-cool)", border: "1px solid var(--border)" }}
+                  >
+                    <span className="text-lg" aria-hidden>{u.emoji}</span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold" style={{ color: "var(--ink)" }}>{u.label}</div>
+                      {u.detail && (
+                        <div className="text-xs" style={{ color: "var(--ink-soft)" }}>{u.detail}</div>
+                      )}
+                    </div>
+                    <div className="ml-auto text-xs font-semibold whitespace-nowrap" style={{ color: "var(--navy)" }}>
+                      {dayLabel(u.date)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ) : (
           /* Today's three steps, in order. The lesson videos live inside the

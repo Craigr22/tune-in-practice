@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { onOrAfterDayOfWeek, toLocalIso, isoMondayOf, addDaysIso } from "./date";
+import { onOrAfterDayOfWeek, toLocalIso, isoMondayOf, addDaysIso, dayLabel, timeLabel } from "./date";
 
 describe("onOrAfterDayOfWeek", () => {
   // 2026-09-02 is a Wednesday; 2026-09-06 the Sunday after it.
@@ -50,5 +50,35 @@ describe("local dates", () => {
   it("finds the Monday of a week, and is stable on Monday itself", () => {
     expect(isoMondayOf("2026-09-06")).toBe("2026-08-31"); // Sunday -> that week's Monday
     expect(isoMondayOf("2026-08-31")).toBe("2026-08-31");
+  });
+});
+
+describe("dayLabel", () => {
+  const today = "2026-09-05";
+
+  it("names today and tomorrow rather than dating them", () => {
+    expect(dayLabel("2026-09-05", today)).toBe("Today");
+    expect(dayLabel("2026-09-06", today)).toBe("Tomorrow");
+  });
+
+  it("dates anything further out", () => {
+    expect(dayLabel("2026-09-07", today)).toMatch(/Monday/);
+    expect(dayLabel("2026-09-07", today)).toMatch(/7/);
+  });
+
+  it("crosses a month boundary for tomorrow", () => {
+    expect(dayLabel("2026-10-01", "2026-09-30")).toBe("Tomorrow");
+  });
+});
+
+describe("timeLabel", () => {
+  it("reads a stored time as a clock time", () => {
+    expect(timeLabel("15:00:00")).toMatch(/3[:.]00/);
+  });
+
+  it("returns null for nothing to show", () => {
+    expect(timeLabel(null)).toBeNull();
+    expect(timeLabel("")).toBeNull();
+    expect(timeLabel("not-a-time")).toBeNull();
   });
 });

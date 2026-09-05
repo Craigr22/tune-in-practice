@@ -46,3 +46,21 @@ export function onOrAfterDayOfWeek(iso: string, dayOfWeek: number): string {
   if (Number.isNaN(d.getTime())) return iso;
   return addDaysIso(iso, (dayOfWeek - d.getDay() + 7) % 7);
 }
+
+/** "Today" / "Tomorrow" / "Sunday 6 Sep" — how a student would say the date. */
+export function dayLabel(iso: string, today: string = todayLocalIso()): string {
+  if (iso === today) return "Today";
+  if (iso === addDaysIso(today, 1)) return "Tomorrow";
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+}
+
+/** "3:00 pm" from a stored "15:00:00". */
+export function timeLabel(hhmmss: string | null | undefined): string | null {
+  if (!hhmmss) return null;
+  const [h, m] = hhmmss.split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  const d = new Date(2000, 0, 1, h, m);
+  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
