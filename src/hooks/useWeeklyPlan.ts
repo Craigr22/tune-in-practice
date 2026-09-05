@@ -9,7 +9,7 @@ import { SESSION_ORDER, SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { generateWarmup, generateBonus } from "@/lib/sessionSegments";
 import { SONGS } from "@/data/songs";
 import {
-  planWeekNumberFor,
+  shiftedPlanWeek,
   daysForWeek,
   useStudentCoursePlan,
   type CoursePlanDay,
@@ -278,7 +278,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const { data: progress = [] } = useSongProgress();
   const { data: logs = [] } = usePracticeLogs();
   const classSongs = useStudentSongs();
-  const { songsPerSession, songsPerDay, instrument, courseStartDate } = useStudentClassConfig();
+  const { songsPerSession, songsPerDay, instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
   const { days: allPlanDays } = useStudentCoursePlan(instrument);
   const weekStart = weekStartArg ?? isoMonday();
   const { data: existing } = useWeeklyPlan(weekStart);
@@ -288,7 +288,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const weekOneStart = courseStartDate
     ? planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6)
     : null;
-  const planWeek = planWeekNumberFor(weekOneStart, weekStart);
+  const planWeek = shiftedPlanWeek(weekOneStart, weekStart, shiftWeeks);
   const planDays = planWeek ? daysForWeek(allPlanDays, planWeek) : [];
   // A student's practice can't begin before their class does.
   const notBefore = courseStartDate ?? batch?.semester_start ?? null;
@@ -342,7 +342,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       qc.invalidateQueries({ queryKey: ["weekly-plan", student.id, weekStart] });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, existing?.length, batch?.day_of_week, weekStart, weekOneStart, allPlanDays.length, planSignature]);
+  }, [student?.id, existing?.length, batch?.day_of_week, weekStart, weekOneStart, shiftWeeks, allPlanDays.length, planSignature]);
 }
 
 export function useCompleteSegment() {

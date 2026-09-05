@@ -29,11 +29,17 @@ vi.mock("@/hooks/useStudentMe", () => ({
 }));
 vi.mock("@/hooks/useBatchCoursework", () => ({
   useStudentSongs: () => [{ id: "song1", title: "You Are My Sunshine", track: 1, order: 1 }],
-  useStudentClassConfig: () => ({ instrument: "ukulele", courseStartDate: "2026-09-06", songsPerSession: 3 }),
+  useStudentClassConfig: () => ({
+    instrument: "ukulele",
+    courseStartDate: "2026-09-06",
+    songsPerSession: 3,
+    shiftWeeks: 0,
+  }),
 }));
 vi.mock("@/hooks/useCoursePlan", () => ({
   useStudentCoursePlan: () => ({ weekOneStart: null, days: st.planDays }),
   planWeekNumberFor: () => (st.planDays.length ? 1 : null),
+  shiftedPlanWeek: () => (st.planDays.length ? 1 : null),
   daysForWeek: () => st.planDays,
 }));
 vi.mock("@/hooks/useCourseVideos", async () => {

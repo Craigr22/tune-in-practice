@@ -6,7 +6,9 @@ import { toInstrument } from "@/hooks/useBatchCoursework";
 import { StudentRow, StudentDetail } from "@/components/teacher/StudentRoster";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
-import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
+import { useStudentCoursePlan, shiftedPlanWeek, daysForWeek } from "@/hooks/useCoursePlan";
+import { useBatchPlanShifts, totalShiftWeeks } from "@/hooks/useBatchPlanShift";
+import PausePlanCard from "@/components/teacher/PausePlanCard";
 import { isoMonday, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 
 /**
@@ -17,15 +19,27 @@ import { isoMonday, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
  * per class here only created a second source of truth that the plan then
  * ignored. Teachers see the plan and grade against it.
  */
-function CoursePanel({ startDate, dayOfWeek, instrumentName }: { startDate: string | null; dayOfWeek: number | null; instrumentName?: string }) {
+function CoursePanel({
+  batchId,
+  startDate,
+  dayOfWeek,
+  instrumentName,
+}: {
+  batchId: string;
+  startDate: string | null;
+  dayOfWeek: number | null;
+  instrumentName?: string;
+}) {
   const instrument = toInstrument(instrumentName);
   const catalog = useCatalogSongs(instrument, { showInactive: false });
   const { days: planDays } = useStudentCoursePlan(instrument);
 
   const start = startDate;
+  const { data: shifts = [] } = useBatchPlanShifts(batchId);
+  const behind = totalShiftWeeks(shifts);
   const totalWeeks = new Set(planDays.map((d) => d.week_number)).size;
   const currentWeek = start
-    ? planWeekNumberFor(planWeekOneMonday(start, dayOfWeek ?? 6), isoMonday())
+    ? shiftedPlanWeek(planWeekOneMonday(start, dayOfWeek ?? 6), isoMonday(), behind)
     : null;
   const thisWeek = currentWeek ? daysForWeek(planDays, currentWeek) : [];
   const songTitle = (id: string | null) => (id ? catalog.find((c) => c.id === id)?.title ?? id : null);
@@ -42,6 +56,7 @@ function CoursePanel({ startDate, dayOfWeek, instrumentName }: { startDate: stri
         ) : currentWeek && currentWeek <= totalWeeks ? (
           <p className="text-sm text-muted-foreground mt-1">
             Week <strong className="text-foreground">{currentWeek}</strong> of {totalWeeks} · started {start}
+            {behind > 0 && ` · paused ${behind} week${behind === 1 ? "" : "s"}`}
           </p>
         ) : (
           <p className="text-sm text-muted-foreground mt-1">
@@ -50,6 +65,8 @@ function CoursePanel({ startDate, dayOfWeek, instrumentName }: { startDate: stri
           </p>
         )}
       </div>
+
+      <PausePlanCard batchId={batchId} />
 
       {thisWeek.length > 0 && (
         <div className="rounded-lg border">
@@ -142,7 +159,7 @@ export default function ClassDetail() {
           </TabsList>
 
           <TabsContent value="coursework" className="pt-4">
-            <CoursePanel startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
+            <CoursePanel batchId={batch.id} startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
           </TabsContent>
 
           <TabsContent value="roster" className="pt-4">

@@ -169,6 +169,24 @@ export function planWeekNumberFor(weekOneStart: string | null, weekStart: string
   return Math.round((week - start) / (7 * 86_400_000)) + 1;
 }
 
+/**
+ * The curriculum week a date falls on, once the class's pauses are taken off.
+ *
+ * A class that lost a week is a week behind the calendar, so it should still
+ * be shown the week it hasn't done yet.
+ */
+export function shiftedPlanWeek(
+  weekOneStart: string | null,
+  weekStart: string,
+  shiftWeeks: number,
+): number | null {
+  const wk = planWeekNumberFor(weekOneStart, weekStart);
+  if (wk == null) return null;
+  const adjusted = wk - shiftWeeks;
+  // Before week 1 there is nothing planned yet.
+  return adjusted >= 1 ? adjusted : null;
+}
+
 /** The plan (settings + days) a student's weekly plan should be built from. */
 export function useStudentCoursePlan(instrument: Instrument) {
   const { data: settings } = useCoursePlanSettings(instrument);

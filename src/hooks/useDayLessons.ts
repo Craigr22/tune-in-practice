@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
+import { useStudentCoursePlan, shiftedPlanWeek, daysForWeek } from "@/hooks/useCoursePlan";
 import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
 import { isoMonday, planWeekOneMonday, useStudentBatchDay } from "@/hooks/useWeeklyPlan";
 import type { VideoNote } from "@/hooks/useCoursePlan";
@@ -22,7 +22,7 @@ export interface LessonDay {
  * lookup serves today's practice and any other day the student looks at.
  */
 export function useDayLessons(day: LessonDay | null | undefined) {
-  const { instrument, courseStartDate } = useStudentClassConfig();
+  const { instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
   const { days: planDays } = useStudentCoursePlan(instrument);
   const { data: allVideos = [] } = useCourseVideos(instrument);
   const { data: batch } = useStudentBatchDay();
@@ -31,10 +31,10 @@ export function useDayLessons(day: LessonDay | null | undefined) {
   const planDay = useMemo(() => {
     if (!day || !courseStartDate) return null;
     const weekOne = planWeekOneMonday(courseStartDate, classDow);
-    const wk = planWeekNumberFor(weekOne, isoMonday(new Date(day.scheduled_date)));
+    const wk = shiftedPlanWeek(weekOne, isoMonday(new Date(day.scheduled_date)), shiftWeeks);
     if (!wk) return null;
     return daysForWeek(planDays, wk)[day.session_index] ?? null;
-  }, [day?.scheduled_date, day?.session_index, courseStartDate, classDow, planDays]);
+  }, [day?.scheduled_date, day?.session_index, courseStartDate, classDow, shiftWeeks, planDays]);
 
   const videos = useMemo(() => {
     const ids = planDay?.video_ids ?? [];

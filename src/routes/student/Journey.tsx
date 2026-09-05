@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useStudentCoursePlan, planWeekNumberFor } from "@/hooks/useCoursePlan";
+import { useStudentCoursePlan, shiftedPlanWeek } from "@/hooks/useCoursePlan";
 import { isoMonday, useStudentBatchDay, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 import {
   usePracticeLogs,
@@ -43,11 +43,11 @@ const Journey = () => {
 
   // Where this student sits in the admin's course plan, expressed in the same
   // stages the song map below uses.
-  const { instrument, courseStartDate } = useStudentClassConfig();
+  const { instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
   const { days: planDays } = useStudentCoursePlan(instrument);
   const { data: batch } = useStudentBatchDay();
   const currentPlanWeek = courseStartDate
-    ? planWeekNumberFor(planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6), isoMonday())
+    ? shiftedPlanWeek(planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6), isoMonday(), shiftWeeks)
     : null;
   const currentTier = useMemo(() => {
     if (!currentPlanWeek) return null;
