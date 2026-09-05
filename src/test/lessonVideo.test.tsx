@@ -8,7 +8,7 @@ describe("LessonVideo caption", () => {
   const multiline = "Watch the left hand.\nKeep the strum steady.\n\nSlow it down if it slips.";
 
   it("keeps the line breaks an admin pasted in", () => {
-    render(<LessonVideo src="blob:x" title="Piyu Bole Tutorial" caption={multiline} />);
+    render(<LessonVideo src="blob:x" title="Piyu Bole Tutorial" above={multiline} />);
 
     const el = screen.getByText(/Watch the left hand/);
     // The text is one node, breaks intact — not collapsed into a paragraph.
@@ -18,7 +18,7 @@ describe("LessonVideo caption", () => {
 
   it("shows the title and caption above the player", () => {
     const { container } = render(
-      <LessonVideo src="blob:x" title="Piyu Bole Tutorial" caption="Watch the left hand." />,
+      <LessonVideo src="blob:x" title="Piyu Bole Tutorial" above="Watch the left hand." />,
     );
     const video = container.querySelector("video")!;
     const caption = screen.getByText("Watch the left hand.");
@@ -44,7 +44,24 @@ describe("LessonVideo caption", () => {
     expect(container.querySelector("audio")).toBeNull();
   });
 
-  it("renders nothing extra when there's no caption", () => {
+  it("puts one note above the player and the other below it", () => {
+    const { container } = render(
+      <LessonVideo
+        src="blob:x"
+        path="x.mp4"
+        title="Piyu Bole Tutorial"
+        above="Watch the left hand."
+        below="Now play it through twice."
+      />,
+    );
+    const video = container.querySelector("video")!;
+    const before = screen.getByText("Watch the left hand.");
+    const after = screen.getByText("Now play it through twice.");
+    expect(before.compareDocumentPosition(video) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(after.compareDocumentPosition(video) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  });
+
+  it("renders nothing extra when a day has no notes", () => {
     render(<LessonVideo src="blob:x" title="Piyu Bole Tutorial" />);
     expect(screen.getByText("Piyu Bole Tutorial")).toBeTruthy();
   });

@@ -18,7 +18,8 @@ export default function LessonVideo({
   src,
   path,
   title,
-  caption,
+  above,
+  below,
   radius = 14,
   maxHeight,
 }: {
@@ -28,8 +29,10 @@ export default function LessonVideo({
   path?: string;
   /** The clip's name. */
   title?: string | null;
-  /** What to watch for, set per clip by an admin in Course Work → Videos. */
-  caption?: string | null;
+  /** What a student reads before the clip, set per day in the course plan. */
+  above?: string | null;
+  /** And after it. */
+  below?: string | null;
   radius?: number;
   maxHeight?: number;
 }) {
@@ -57,7 +60,7 @@ export default function LessonVideo({
 
   return (
     <div>
-      {(title || caption) && (
+      {(title || above) && (
         <div className="mb-3 mt-1.5">
           {title && (
             <div
@@ -67,24 +70,7 @@ export default function LessonVideo({
               {title}
             </div>
           )}
-          {caption && (
-            // Black text on the tinted panel — the note is the thing to read,
-            // so the blue stays on the rule and the title around it.
-            <div
-              className="text-sm leading-relaxed mt-2.5 mb-4 rounded-xl px-4 py-3.5"
-              style={{
-                color: "var(--ink)",
-                background: "var(--paper-cool)",
-                // Keep the line breaks an admin typed or pasted in.
-                whiteSpace: "pre-wrap",
-                borderLeft: "3px solid var(--blue-bright)",
-                borderTopLeftRadius: 0,
-                borderBottomLeftRadius: 0,
-              }}
-            >
-              {caption}
-            </div>
-          )}
+          {above && <Note text={above} className="mt-2.5 mb-4" />}
         </div>
       )}
 
@@ -155,6 +141,31 @@ export default function LessonVideo({
         )}
       </div>
       )}
+
+      {below && <Note text={below} className="mt-4" />}
+    </div>
+  );
+}
+
+/**
+ * A line of the teacher's writing around a clip. Black text on a tinted panel
+ * with a blue rule — the note is the thing to read, so the colour stays on the
+ * edge, and line breaks are kept exactly as they were typed.
+ */
+function Note({ text, className = "" }: { text: string; className?: string }) {
+  return (
+    <div
+      className={`text-sm leading-relaxed rounded-xl px-4 py-3.5 ${className}`}
+      style={{
+        color: "var(--ink)",
+        background: "var(--paper-cool)",
+        borderLeft: "3px solid var(--blue-bright)",
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0,
+        whiteSpace: "pre-wrap",
+      }}
+    >
+      {text}
     </div>
   );
 }

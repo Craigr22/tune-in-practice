@@ -214,7 +214,8 @@ const Home = () => {
                     src={viewing.urls[v.storage_path]}
                     path={v.storage_path}
                     title={v.title}
-                    caption={v.description}
+                    above={viewing.notes[v.id]?.above}
+                    below={viewing.notes[v.id]?.below}
                     maxHeight={220}
                   />
                 </div>
@@ -270,7 +271,8 @@ const Home = () => {
                           src={todayLessons.urls[v.storage_path]}
                           path={v.storage_path}
                           title={v.title}
-                          caption={v.description}
+                          above={todayLessons.notes[v.id]?.above}
+                          below={todayLessons.notes[v.id]?.below}
                           maxHeight={220}
                         />
                       </div>

@@ -3,6 +3,9 @@ import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, planWeekNumberFor, daysForWeek } from "@/hooks/useCoursePlan";
 import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
 import { isoMonday, planWeekOneMonday, useStudentBatchDay } from "@/hooks/useWeeklyPlan";
+import type { VideoNote } from "@/hooks/useCoursePlan";
+
+const EMPTY_NOTES: Record<string, VideoNote> = {};
 
 /** Enough of a session to locate its day in the course plan. */
 export interface LessonDay {
@@ -40,5 +43,8 @@ export function useDayLessons(day: LessonDay | null | undefined) {
 
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
 
-  return { videos, urls };
+  // What the admin wrote around each clip for this particular day.
+  const notes = planDay?.video_notes ?? EMPTY_NOTES;
+
+  return { videos, urls, notes };
 }

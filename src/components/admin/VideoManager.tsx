@@ -12,7 +12,6 @@ import { useCatalogSongs, type Instrument } from "@/hooks/useSongCatalog";
 import { isAudioPath, type MediaKind } from "@/hooks/useCourseVideos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -81,7 +80,6 @@ export default function VideoManager({
   const [preview, setPreview] = useState<CourseVideo | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editCaption, setEditCaption] = useState("");
   const [progress, setProgress] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -100,19 +98,17 @@ export default function VideoManager({
   const startEdit = (video: CourseVideo) => {
     setEditingId(video.id);
     setEditTitle(video.title);
-    setEditCaption(video.description ?? "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditTitle("");
-    setEditCaption("");
   };
 
   const saveEdit = async () => {
     if (!editingId || !editTitle.trim()) return;
     try {
-      await update.mutateAsync({ id: editingId, instrument, title: editTitle.trim(), description: editCaption });
+      await update.mutateAsync({ id: editingId, instrument, title: editTitle.trim() });
       toast.success("Title updated");
       cancelEdit();
     } catch (e: any) {
@@ -222,30 +218,10 @@ export default function VideoManager({
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Textarea
-                      value={editCaption}
-                      onChange={(e) => setEditCaption(e.target.value)}
-                      className="text-sm min-h-[76px] resize-y"
-                      rows={3}
-                      placeholder={"Caption shown above the clip. Line breaks are kept, so you can paste in several lines."}
-                      onKeyDown={(e) => {
-                        // Enter belongs to the text now; save deliberately.
-                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveEdit();
-                        if (e.key === "Escape") cancelEdit();
-                      }}
-                    />
-                    <div className="text-[11px] text-muted-foreground">
-                      Line breaks are kept. {navigator.platform.startsWith("Mac") ? "⌘" : "Ctrl"}+Enter to save.
-                    </div>
                   </div>
                 ) : (
                   <>
                     <div className="text-sm font-medium truncate">{v.title}</div>
-                    {v.description && (
-                      <div className="text-xs truncate" style={{ color: "var(--gold-deep)" }}>
-                        “{v.description.replace(/\s*\n\s*/g, " ")}”
-                      </div>
-                    )}
                   </>
                 )}
                 <div className="text-xs text-muted-foreground truncate">
@@ -278,7 +254,7 @@ export default function VideoManager({
               >
                 <ChevronDown className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" title="Edit title and caption" onClick={() => startEdit(v)}>
+              <Button variant="ghost" size="icon" title="Edit title" onClick={() => startEdit(v)}>
                 <Pencil className="w-4 h-4" />
               </Button>
               <Button variant="ghost" size="icon" title="Delete video" onClick={() => setConfirmDel(v)}>

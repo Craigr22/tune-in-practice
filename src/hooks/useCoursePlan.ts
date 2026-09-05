@@ -7,6 +7,12 @@ import { isoMondayOf } from "@/lib/date";
 /** Practice days in a week — matches the three weekly-plan sessions. */
 export const PLAN_DAYS_PER_WEEK = 3;
 
+/** What a student reads around a clip on this day. */
+export interface VideoNote {
+  above?: string;
+  below?: string;
+}
+
 export interface CoursePlanDay {
   id: string;
   instrument: Instrument;
@@ -18,6 +24,8 @@ export interface CoursePlanDay {
   focus_instruction: string;
   bonus_instruction: string;
   video_ids: string[];
+  /** Per-clip notes for this day, keyed by video id. */
+  video_notes: Record<string, VideoNote>;
   /** Which Journey stage this week belongs to. */
   tier: TierKey;
   updated_at?: string;
@@ -45,6 +53,7 @@ export function useCoursePlanDays(instrument: Instrument) {
       return (data ?? []).map((d: any) => ({
         ...d,
         video_ids: d.video_ids ?? [],
+        video_notes: (d.video_notes ?? {}) as Record<string, VideoNote>,
         tier: (d.tier ?? "beginner") as TierKey,
       })) as CoursePlanDay[];
     },
@@ -75,13 +84,26 @@ export function useSaveCoursePlanDay(instrument: Instrument) {
   return useMutation({
     mutationFn: async (day: Partial<CoursePlanDay> & { week_number: number; day_number: number }) => {
       const { id, ...rest } = day;
-      const { error } = await (supabase as any)
-        .from("course_plan_days")
-        .upsert(
-          { ...rest, instrument, updated_at: new Date().toISOString() },
-          { onConflict: "instrument,week_number,day_number" },
-        );
-      if (error) throw error;
+      const write = (row: Record<string, unknown>) =>
+        (supabase as any)
+          .from("course_plan_days")
+          .upsert(
+            { ...row, instrument, updated_at: new Date().toISOString() },
+            { onConflict: "instrument,week_number,day_number" },
+          );
+
+      const { error } = await write(rest);
+      if (!error) return;
+
+      // The per-clip notes are a column added by migration. Until it lands,
+      // save everything else rather than losing the whole day's edits.
+      if (/video_notes/.test(error.message ?? "")) {
+        const { video_notes, ...withoutNotes } = rest as Record<string, unknown>;
+        const retry = await write(withoutNotes);
+        if (retry.error) throw retry.error;
+        return;
+      }
+      throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["course-plan-days", instrument] }),
   });

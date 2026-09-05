@@ -6,6 +6,7 @@ import {
   useDeletePlanWeek,
   daysForWeek,
   type CoursePlanDay,
+  type VideoNote,
 } from "@/hooks/useCoursePlan";
 import { useCourseVideos } from "@/hooks/useCourseVideos";
 import { useCatalogSongs, type Instrument } from "@/hooks/useSongCatalog";
@@ -81,6 +82,7 @@ function DayEditor({
     focus_instruction: day?.focus_instruction ?? "",
     bonus_instruction: day?.bonus_instruction ?? "",
     video_ids: day?.video_ids ?? ([] as string[]),
+    video_notes: day?.video_notes ?? ({} as Record<string, VideoNote>),
   });
   const [dirty, setDirty] = useState(false);
 
@@ -92,6 +94,7 @@ function DayEditor({
       focus_instruction: day?.focus_instruction ?? "",
       bonus_instruction: day?.bonus_instruction ?? "",
       video_ids: day?.video_ids ?? [],
+      video_notes: day?.video_notes ?? {},
     });
     setDirty(false);
   }, [day?.id, day?.updated_at]);
@@ -107,6 +110,10 @@ function DayEditor({
       : [...draft.video_ids, id];
     set("video_ids", next);
   };
+
+  /** The words a student reads above or below one clip on this day. */
+  const setNote = (id: string, side: "above" | "below", text: string) =>
+    set("video_notes", { ...draft.video_notes, [id]: { ...draft.video_notes[id], [side]: text } });
 
   /** Students see the day's clips in this order, so it has to be editable. */
   const moveVideo = (index: number, delta: number) => {
@@ -127,6 +134,7 @@ function DayEditor({
         focus_instruction: draft.focus_instruction,
         bonus_instruction: draft.bonus_instruction,
         video_ids: draft.video_ids,
+        video_notes: draft.video_notes,
       });
       setDirty(false);
       toast.success(`Week ${weekNumber} · ${DAY_LABELS[dayNumber - 1]} saved`);
@@ -206,8 +214,10 @@ function DayEditor({
           <ol className="mt-1.5 mb-2 rounded-md border divide-y bg-muted/30">
             {draft.video_ids.map((id, i) => {
               const v = videos.find((x) => x.id === id);
+              const note = draft.video_notes[id] ?? {};
               return (
-                <li key={id} className="flex items-center gap-2 px-2 py-1.5 text-sm">
+                <li key={id} className="px-2 py-2 text-sm">
+                <div className="flex items-center gap-2">
                   <span
                     className="shrink-0 grid place-items-center rounded text-[10px] font-bold"
                     style={{ width: 20, height: 20, background: "var(--navy)", color: "#fff" }}
@@ -235,6 +245,25 @@ function DayEditor({
                   >
                     <X className="w-3.5 h-3.5" />
                   </Button>
+                </div>
+
+                {/* What the student reads around this clip, on this day. */}
+                <div className="mt-1.5 ml-7 space-y-1.5">
+                  <Textarea
+                    value={note.above ?? ""}
+                    onChange={(e) => setNote(id, "above", e.target.value)}
+                    rows={2}
+                    className="text-xs min-h-[46px] resize-y"
+                    placeholder="Text above the clip — what to watch for"
+                  />
+                  <Textarea
+                    value={note.below ?? ""}
+                    onChange={(e) => setNote(id, "below", e.target.value)}
+                    rows={2}
+                    className="text-xs min-h-[46px] resize-y"
+                    placeholder="Text below the clip — what to do next"
+                  />
+                </div>
                 </li>
               );
             })}
