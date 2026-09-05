@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useStudentCoursePlan, shiftedPlanWeek } from "@/hooks/useCoursePlan";
+import { useStudentCoursePlan, shiftedPlanWeek, planSongOrder, weekProgress, visibleStops } from "@/hooks/useCoursePlan";
 import { isoMonday, useStudentBatchDay, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
 import {
   usePracticeLogs,
@@ -12,13 +12,18 @@ import {
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
-import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
+import { TIERS, getTier, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
 interface MapNode {
   songId: string;
+  /** Curriculum week the admin first teaches this song. */
+  planWeek: number;
+  tier: TierKey;
+  /** Next week's song, still mostly covered over. */
+  teaser: boolean;
   title: string;
   artist: string;
   order: number;
@@ -64,53 +69,61 @@ const Journey = () => {
     return map;
   }, [planDays]);
 
+  /**
+   * The map is the admin's course plan, in the admin's order.
+   *
+   * It used to sort by the song catalogue's own track/order, which had nothing
+   * to do with what the class is being taught — the plan opened with You Are
+   * My Sunshine while the map opened with Piyu Bole. There is one order now.
+   *
+   * Only as far as next week is shown: everything beyond that is a spoiler,
+   * and next week's song is covered over and scratches open as the week runs
+   * down.
+   */
+  const stops = useMemo(() => planSongOrder(planDays), [planDays]);
+  const reveal = weekProgress();
+
   const nodes: MapNode[] = useMemo(() => {
-    const ordered = [...catalog].sort((a, b) => {
-      if (a.track !== b.track) return (a.track === "fs" ? 99 : a.track) - (b.track === "fs" ? 99 : b.track);
-      return a.order - b.order;
+    return visibleStops(stops, currentPlanWeek).map(({ stop, teaser }) => {
+        const song = catalog.find((c) => c.id === stop.songId);
+        const p = progress.find((x) => x.song_id === stop.songId);
+        const songLogs = logs.filter((l) => l.song_id === stop.songId);
+        const tb = p?.teacher_badge ?? null;
+
+        let state: NodeState;
+        if (teaser) state = "locked";
+        else if ((tb ?? 0) >= 5) state = "mastered";
+        else if (songLogs.length > 0 || (tb ?? 0) > 0) state = "current";
+        else state = "next";
+
+        const dates = songLogs.map((l) => l.played_on).sort();
+
+        return {
+          songId: stop.songId,
+          planWeek: stop.week,
+          tier: stop.tier,
+          teaser,
+          title: song?.title ?? stop.songId,
+          artist: song?.artist ?? "",
+          order: stop.week,
+          track: song?.track ?? 1,
+          state,
+          teacherBadge: tb,
+          selfBadge: p?.self_badge ?? null,
+          sessions: songLogs.length,
+          totalMin: songLogs.reduce((a, l) => a + (l.duration_min || 0), 0),
+          firstDate: dates[0],
+          lastDate: dates[dates.length - 1],
+          fingerstyle: song?.fingerstyle,
+        };
     });
-
-    let foundCurrent = false;
-    return ordered.map((s) => {
-      const p = progress.find((x) => x.song_id === s.id);
-      const songLogs = logs.filter((l) => l.song_id === s.id);
-      const tb = p?.teacher_badge ?? null;
-      const isMastered = (tb ?? 0) >= 5 || s.state === "mastered";
-      const hasProgress = songLogs.length > 0 || (tb ?? 0) > 0;
-
-      let state: NodeState;
-      // FOR NOW: nothing locks — every song is open to explore and play.
-      if (isMastered) state = "mastered";
-      else if (hasProgress) { state = "current"; foundCurrent = true; }
-      else state = "next";
-      void foundCurrent;
-
-      const firstDate = songLogs.length ? songLogs.reduce((a, l) => (l.played_on < a ? l.played_on : a), songLogs[0].played_on) : undefined;
-      const lastDate = songLogs.length ? songLogs.reduce((a, l) => (l.played_on > a ? l.played_on : a), songLogs[0].played_on) : undefined;
-
-      return {
-        songId: s.id,
-        title: s.title,
-        artist: s.artist,
-        order: s.order,
-        state,
-        teacherBadge: tb,
-        selfBadge: p?.self_badge ?? null,
-        sessions: songLogs.length,
-        totalMin: songLogs.reduce((a, l) => a + (l.duration_min || 0), 0),
-        firstDate,
-        lastDate,
-        track: s.track,
-        fingerstyle: s.fingerstyle,
-      };
-    });
-  }, [logs, progress, catalog]);
+  }, [stops, currentPlanWeek, logs, progress, catalog]);
 
   const avg = avgCourseBadge(progress);
   const course = getBadge(avg);
   const courseNext = nextBadge(avg);
   const masteredCount = nodes.filter((n) => n.state === "mastered").length;
-  const totalCount = nodes.length;
+  const totalCount = stops.length || nodes.length;
   const overallPct = Math.round((masteredCount / Math.max(1, totalCount)) * 100);
 
   const selectedNode = nodes.find((n) => n.songId === selected) || null;
@@ -210,13 +223,14 @@ const Journey = () => {
 
           <div className="relative space-y-10">
             {TIERS.map((tier) => {
-              const tierNodes = nodes.filter((n) => tierForTrack(n.track) === tier.key);
+              const tierNodes = nodes.filter((n) => n.tier === tier.key);
               if (tierNodes.length === 0) return null;
               const tierMastered = tierNodes.filter((n) => n.state === "mastered").length;
               const tierPct = Math.round((tierMastered / tierNodes.length) * 100);
               const tierActive = tierNodes.some((n) => n.state === "current" || n.state === "next");
               const tierComplete = tierMastered === tierNodes.length;
-              const tierLocked = !tierActive && !tierComplete && tierMastered === 0;
+              const tierStarting = tierNodes.every((n) => n.teaser);
+              const tierLocked = !tierStarting && !tierActive && !tierComplete && tierMastered === 0;
 
               return (
                 <div key={tier.key} className="relative">
@@ -226,7 +240,7 @@ const Journey = () => {
                     style={{
                       background: `linear-gradient(90deg, ${tier.accentSoft}, transparent)`,
                       borderLeft: `4px solid ${tier.accent}`,
-                      opacity: tierLocked ? 0.65 : 1,
+                      opacity: tierLocked || tierStarting ? 0.75 : 1,
                     }}
                   >
                     <div
@@ -241,7 +255,10 @@ const Journey = () => {
                         {tierComplete && (
                           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: tier.accent, color: "#fff" }}>Complete ✓</span>
                         )}
-                        {tierActive && !tierComplete && (
+                        {tierStarting && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: "var(--border-strong)", color: "#fff" }}>Starts next week</span>
+                        )}
+                        {tierActive && !tierComplete && !tierStarting && (
                           <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full animate-pulse" style={{ background: tier.accent, color: "#fff" }}>In progress</span>
                         )}
                         {tierLocked && (
@@ -259,7 +276,7 @@ const Journey = () => {
                   </div>
 
                   {/* Tier stops */}
-                  <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+                  <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}>
                     {tierNodes.map((n, i) => {
                       const globalIndex = nodes.indexOf(n);
                       const isOpen = selected === n.songId;
@@ -281,7 +298,11 @@ const Journey = () => {
                       return (
                         <button
                           key={n.songId}
-                          onClick={() => setSelected(isOpen ? null : n.songId)}
+                          // A teaser has nothing to open yet — it isn't taught
+                          // until next week.
+                          onClick={() => !n.teaser && setSelected(isOpen ? null : n.songId)}
+                          aria-disabled={n.teaser}
+                          title={n.teaser ? "Next week's song" : undefined}
                           className={`relative rounded-2xl p-4 text-left transition-all hover:-translate-y-0.5 cursor-pointer ${n.state === "locked" ? "opacity-80" : ""}`}
                           style={{ background: bg, border: `2px solid ${border}`, boxShadow: ring, transform: `translateY(${offsetY}px)` }}
                         >
@@ -293,15 +314,44 @@ const Journey = () => {
                               boxShadow: "var(--shadow-sm)",
                             }}
                           >
-                            {n.state === "locked" ? "🔒" : globalIndex + 1}
+                            {n.teaser ? "?" : globalIndex + 1}
                           </div>
+
+                          {n.teaser && (
+                            <>
+                              {/* The foil. It thins across the week, so by
+                                  Sunday the shape of next week's song is
+                                  showing through without being given away. */}
+                              <div
+                                className="absolute inset-0 rounded-2xl pointer-events-none"
+                                style={{
+                                  background:
+                                    "repeating-linear-gradient(115deg, var(--paper-cool) 0 8px, var(--paper-warm) 8px 16px)",
+                                  opacity: 1 - reveal * 0.55,
+                                  transition: "opacity 0.4s ease",
+                                }}
+                              />
+                              <div
+                                className="absolute inset-x-0 bottom-2 text-center text-[9px] font-bold uppercase tracking-wider pointer-events-none"
+                                style={{ color: "var(--ink-faint)" }}
+                              >
+                                Next week
+                              </div>
+                            </>
+                          )}
 
                           {/* Tier accent stripe */}
                           <div className="absolute top-0 right-0 w-1.5 h-8 rounded-bl-md" style={{ background: tier.accent, opacity: n.state === "locked" ? 0.4 : 1 }} />
 
-                          <div className="flex justify-center mb-2 mt-1" style={{ minHeight: 56 }}>
+                          <div
+                            className="flex justify-center mb-2 mt-1"
+                            style={{
+                              minHeight: 56,
+                              filter: n.teaser ? `blur(${(1 - reveal) * 5}px)` : undefined,
+                            }}
+                          >
                             {n.state === "mastered" || (n.teacherBadge ?? 0) > 0 ? (
-                              <BadgeDisplay level={n.teacherBadge ?? (n.state === "mastered" ? 5 : null)} size="md" showLabel={false} />
+                              <BadgeDisplay level={n.teacherBadge} size="md" showLabel={false} />
                             ) : n.state === "current" ? (
                               <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl animate-pulse" style={{ background: "hsl(var(--primary) / 0.1)" }}>⭐</div>
                             ) : n.state === "next" ? (
@@ -311,7 +361,10 @@ const Journey = () => {
                             )}
                           </div>
 
-                          <div className="text-center">
+                          <div
+                            className="text-center"
+                            style={{ filter: n.teaser ? `blur(${(1 - reveal) * 4.5}px)` : undefined }}
+                          >
                             <div className="text-sm font-bold leading-tight line-clamp-2" style={{ color: n.state === "locked" ? "var(--ink-faint)" : "var(--ink)" }}>
                               {n.title}
                             </div>
@@ -322,8 +375,10 @@ const Journey = () => {
                             {n.state === "next" && (
                               <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--gold-deep)" }}>Up next</div>
                             )}
-                            {n.state === "locked" && (
-                              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>Peek ahead</div>
+                            {n.teaser && (
+                              <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--ink-faint)" }}>
+                                Coming up
+                              </div>
                             )}
                           </div>
 

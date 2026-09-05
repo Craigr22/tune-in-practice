@@ -203,3 +203,62 @@ export function daysForWeek(days: CoursePlanDay[], weekNumber: number): CoursePl
     .filter((d) => d.week_number === weekNumber)
     .sort((a, b) => a.day_number - b.day_number);
 }
+
+/** One song's place on the course: where the admin first teaches it. */
+export interface PlanStop {
+  songId: string;
+  /** Curriculum week it is first taught in. */
+  week: number;
+  tier: TierKey;
+}
+
+/**
+ * The order the admin teaches songs in.
+ *
+ * The Journey map used to sort by the song catalogue's own track/order, which
+ * had nothing to do with the plan — so the map could show a song first that
+ * the course teaches second. There is one order now, and it is this one.
+ * A song appears at the first week that uses it.
+ */
+export function planSongOrder(days: CoursePlanDay[]): PlanStop[] {
+  const seen = new Set<string>();
+  const stops: PlanStop[] = [];
+  const inOrder = [...days].sort(
+    (a, b) => a.week_number - b.week_number || a.day_number - b.day_number,
+  );
+  for (const d of inOrder) {
+    if (!d.focus_song_id || seen.has(d.focus_song_id)) continue;
+    seen.add(d.focus_song_id);
+    stops.push({ songId: d.focus_song_id, week: d.week_number, tier: d.tier });
+  }
+  return stops;
+}
+
+/**
+ * How far through the current week we are, 0–1.
+ *
+ * Next week's song is covered over and scratches open across the week, so this
+ * is the amount showing. Never quite 0 or 1: there is always a hint of what's
+ * coming, and it is never given away before its week arrives.
+ */
+export function weekProgress(today: Date = new Date()): number {
+  const daysIn = (today.getDay() + 6) % 7; // Monday = 0 … Sunday = 6
+  return 0.08 + (daysIn / 6) * 0.84;
+}
+
+/**
+ * What a student may see of the map, and what is still covered.
+ *
+ * The course is shown as far as next week and no further: anything beyond is
+ * a spoiler. Next week's songs are returned as teasers — present, but not yet
+ * taught. Before the course starts, week 1 is the teaser.
+ */
+export function visibleStops(
+  stops: PlanStop[],
+  currentWeek: number | null,
+): { stop: PlanStop; teaser: boolean }[] {
+  const week = currentWeek ?? 0;
+  return stops
+    .filter((s) => s.week <= week + 1)
+    .map((s) => ({ stop: s, teaser: s.week > week }));
+}
