@@ -3,7 +3,6 @@ import { supabase } from "@/lib/db";
 import { toLoginEmail } from "@/lib/studentLogin";
 
 const Login = () => {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -14,23 +13,13 @@ const Login = () => {
     e.preventDefault();
     setErr(null); setMsg(null); setBusy(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        setMsg("Account created — you can sign in now.");
-        setMode("signin");
-      } else {
-        // Students sign in with a username; the account behind it uses a
-        // synthetic address that never receives mail.
-        const { error } = await supabase.auth.signInWithPassword({
-          email: toLoginEmail(email),
-          password,
-        });
-        if (error) throw error;
-      }
+      // Accounts are provisioned by an admin. Students sign in with a username;
+      // the account behind it uses a synthetic address that never receives mail.
+      const { error } = await supabase.auth.signInWithPassword({
+        email: toLoginEmail(email),
+        password,
+      });
+      if (error) throw error;
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Authentication failed");
     } finally {
@@ -88,29 +77,39 @@ const Login = () => {
         <div className="brand text-center" style={{ marginBottom: 18 }}>
           <span className="dot"></span>bam
         </div>
-        <h2 style={{ marginBottom: 4 }}>{mode === "signup" ? "Create account" : "Sign in"}</h2>
+        <h2 style={{ marginBottom: 4 }}>Sign in</h2>
         <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 18 }}>
           BAM Academy of Music
         </p>
 
-        <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>
-          {mode === "signin" ? "Username or email" : "Email"}
+        <label
+          htmlFor="login-id"
+          style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}
+        >
+          Username or email
         </label>
         <input
           // Students type a username, so this can't be type="email".
-          type={mode === "signup" ? "email" : "text"}
+          id="login-id"
+          type="text"
           required
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder={mode === "signin" ? "your username, or your email" : ""}
+          placeholder="your username, or your email"
           style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 8, marginBottom: 12, fontSize: 14 }}
         />
 
-        <label style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Password</label>
+        <label
+          htmlFor="login-password"
+          style={{ display: "block", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}
+        >
+          Password
+        </label>
         <input
+          id="login-password"
           type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
           style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 8, marginBottom: 14, fontSize: 14 }}
         />
@@ -119,26 +118,19 @@ const Login = () => {
         {msg && <div style={{ color: "var(--olive)", fontSize: 12, marginBottom: 10 }}>{msg}</div>}
 
         <button type="submit" disabled={busy} className="bam-cta" style={{ width: "100%", marginBottom: 8 }}>
-          {busy ? "…" : mode === "signup" ? "Create account" : "Sign in"}
+          {busy ? "…" : "Sign in"}
         </button>
         <button type="button" onClick={magic} disabled={busy} className="bam-cta bam-cta-gold" style={{ width: "100%", marginBottom: 12 }}>
           Email me a magic link
         </button>
 
-        {mode === "signin" && (
-          <button type="button" onClick={forgotPassword} disabled={busy}
-            style={{ background: "none", border: 0, color: "var(--navy)", fontSize: 12, cursor: "pointer", width: "100%", marginBottom: 8, textDecoration: "underline" }}>
-            Forgot your password?
-          </button>
-        )}
-
-        <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setErr(null); setMsg(null); }}
-          style={{ background: "none", border: 0, color: "var(--ink-soft)", fontSize: 12, cursor: "pointer", width: "100%" }}>
-          {mode === "signin" ? "No account? Create one" : "Already have an account? Sign in"}
+        <button type="button" onClick={forgotPassword} disabled={busy}
+          style={{ background: "none", border: 0, color: "var(--navy)", fontSize: 12, cursor: "pointer", width: "100%", marginBottom: 8, textDecoration: "underline" }}>
+          Forgot your password?
         </button>
 
-        <p style={{ fontSize: 10, color: "var(--ink-faint)", marginTop: 14, lineHeight: 1.5, textAlign: "center" }}>
-          ​
+        <p style={{ fontSize: 11, color: "var(--ink-faint)", marginTop: 14, lineHeight: 1.5, textAlign: "center" }}>
+          Need an account? Ask your BAM administrator.
         </p>
       </form>
     </div>

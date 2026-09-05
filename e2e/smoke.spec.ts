@@ -41,3 +41,11 @@ test("a protected page sends a signed-out visitor to sign in", async ({ page }) 
   await page.goto("/admin/coursework");
   await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
 });
+
+test("both sign-in fields are reachable by their labels", async ({ page }) => {
+  await page.goto("/");
+  // Not cosmetic: unlabelled inputs are unusable with a screen reader, and
+  // they made the signed-in test unrunnable without anyone noticing.
+  await expect(page.getByLabel(/username or email/i)).toBeVisible();
+  await expect(page.getByLabel(/^password$/i)).toBeVisible();
+});

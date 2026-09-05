@@ -8,20 +8,21 @@ import { test, expect } from "@playwright/test";
  * RPC, RLS, and back out through the teacher's roster. Most of the failures
  * in this project's history would have been caught here and nowhere else.
  *
- * It needs a real account, so it reads credentials from the environment and
- * skips without them. To run it:
- *   E2E_STUDENT_EMAIL=… E2E_STUDENT_PASSWORD=… npx playwright test
+ * Students sign in with a username, not an email — the app appends the
+ * synthetic domain itself — so this takes whatever the student would type.
+ * It skips without credentials. To run it:
+ *   E2E_STUDENT_LOGIN=elroy E2E_STUDENT_PASSWORD=… npx playwright test
  */
-const email = process.env.E2E_STUDENT_EMAIL;
+const login = process.env.E2E_STUDENT_LOGIN;
 const password = process.env.E2E_STUDENT_PASSWORD;
 
 test.describe("a student's practice reaches the teacher", () => {
-  test.skip(!email || !password, "set E2E_STUDENT_EMAIL and E2E_STUDENT_PASSWORD to run");
+  test.skip(!login || !password, "set E2E_STUDENT_LOGIN and E2E_STUDENT_PASSWORD to run");
 
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
-    await page.getByLabel(/email/i).fill(email!);
-    await page.getByLabel(/password/i).fill(password!);
+    await page.getByLabel(/username or email/i).fill(login!);
+    await page.getByLabel(/^password$/i).fill(password!);
     await page.getByRole("button", { name: /sign in/i }).click();
     await expect(page.getByRole("heading", { name: /^hi /i })).toBeVisible();
   });
