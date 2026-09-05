@@ -100,6 +100,41 @@ export type Database = {
           },
         ]
       }
+      batch_plan_shifts: {
+        Row: {
+          batch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string | null
+          weeks: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          weeks?: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          weeks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_plan_shifts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_settings: {
         Row: {
           batch_id: string
