@@ -9,6 +9,7 @@ import {
 } from "@/hooks/useCoursePlan";
 import { useCourseVideos } from "@/hooks/useCourseVideos";
 import { useCatalogSongs, type Instrument } from "@/hooks/useSongCatalog";
+import { videoKind } from "@/lib/videoKind";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,32 @@ function DayEditor({
 }) {
   const songs = useCatalogSongs(instrument);
   const { data: videos = [] } = useCourseVideos(instrument);
+
+  /**
+   * Clips grouped by the song they belong to, tutorials before their backing
+   * tracks, with everything general (tuning, drills, tempo tracks) last. A
+   * flat list of 37 put a song's play-alongs nowhere near its tutorial.
+   */
+  const videoGroups = useMemo(() => {
+    const order: Record<string, number> = { lesson: 0, track: 1, exercise: 2 };
+    const bySong = new Map<string, typeof videos>();
+    for (const v of videos) {
+      const key = v.song_id ?? "";
+      if (!bySong.has(key)) bySong.set(key, []);
+      bySong.get(key)!.push(v);
+    }
+    const named = [...bySong.entries()]
+      .filter(([k]) => k)
+      .map(([songId, items]) => ({
+        label: songs.find((c) => c.id === songId)?.title ?? songId,
+        items: [...items].sort((a, b) => order[videoKind(a.title)] - order[videoKind(b.title)]),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const general = bySong.get("") ?? [];
+    return general.length
+      ? [...named, { label: "General", items: [...general].sort((a, b) => order[videoKind(a.title)] - order[videoKind(b.title)]) }]
+      : named;
+  }, [videos, songs]);
   const save = useSaveCoursePlanDay(instrument);
 
   const [draft, setDraft] = useState({
@@ -162,27 +189,45 @@ function DayEditor({
             No videos uploaded yet — add them in Course videos below.
           </p>
         ) : (
-          <div className="mt-1 max-h-44 overflow-y-auto rounded-md border divide-y">
-            {videos.map((v) => {
-              const on = draft.video_ids.includes(v.id);
-              const order = draft.video_ids.indexOf(v.id) + 1;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => toggleVideo(v.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/50 ${on ? "bg-primary/5" : ""}`}
-                >
-                  <span
-                    className="shrink-0 grid place-items-center rounded border text-[10px] font-bold"
-                    style={{ width: 20, height: 20, background: on ? "var(--navy)" : "transparent", color: on ? "#fff" : "var(--ink-faint)" }}
-                  >
-                    {on ? order : ""}
-                  </span>
-                  <span className="truncate">{v.title}</span>
-                </button>
-              );
-            })}
+          <div className="mt-1 max-h-60 overflow-y-auto rounded-md border">
+            {videoGroups.map((g) => (
+              <div key={g.label}>
+                <div className="sticky top-0 px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-muted/70 backdrop-blur text-muted-foreground border-y">
+                  {g.label}
+                </div>
+                <div className="divide-y">
+                  {g.items.map((v) => {
+                    const on = draft.video_ids.includes(v.id);
+                    const order = draft.video_ids.indexOf(v.id) + 1;
+                    const kind = videoKind(v.title);
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => toggleVideo(v.id)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/50 ${on ? "bg-primary/5" : ""}`}
+                      >
+                        <span
+                          className="shrink-0 grid place-items-center rounded border text-[10px] font-bold"
+                          style={{ width: 20, height: 20, background: on ? "var(--navy)" : "transparent", color: on ? "#fff" : "var(--ink-faint)" }}
+                        >
+                          {on ? order : ""}
+                        </span>
+                        <span className="truncate flex-1">{v.title}</span>
+                        {kind !== "lesson" && (
+                          <span
+                            className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                            style={{ background: "var(--paper-cool)", color: "var(--blue-deep)" }}
+                          >
+                            {kind === "track" ? "track" : "drill"}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
