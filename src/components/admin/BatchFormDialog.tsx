@@ -9,6 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { onOrAfterDayOfWeek } from "@/lib/date";
+
+const dayName = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? "class day" : d.toLocaleDateString(undefined, { weekday: "long" });
+};
+
+const fmtLong = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(d.getTime())
+    ? "—"
+    : d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" });
+};
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -117,6 +130,10 @@ export default function BatchFormDialog({
     };
   }, [open, form.teacher_id, form.day_of_week, form.start_time, form.duration_min, batch?.id]);
 
+  /** The class begins when it first meets, so the picked date snaps forward. */
+  const firstClass = onOrAfterDayOfWeek(form.semester_start, Number(form.day_of_week));
+  const snapped = firstClass !== form.semester_start;
+
   const submit = async () => {
     if (!form.teacher_id || !form.instrument_id || !form.location_id) {
       return toast.error("Teacher, instrument, and location are required");
@@ -130,7 +147,7 @@ export default function BatchFormDialog({
       start_time: form.start_time + ":00",
       duration_min: Number(form.duration_min),
       max_students: Number(form.max_students || 0),
-      semester_start: form.semester_start,
+      semester_start: firstClass,
       semester_end: form.semester_end || null,
     };
     try {
@@ -201,7 +218,14 @@ export default function BatchFormDialog({
             <Label>Start date</Label>
             <Input type="date" value={form.semester_start} onChange={(e) => setForm({ ...form, semester_start: e.target.value })} />
             <p className="text-xs text-muted-foreground mt-1">
-              When this class begins: its first practice day, and week 1 of the course.
+              {snapped ? (
+                <>
+                  Starts <span className="font-medium text-foreground">{fmtLong(firstClass)}</span> — the
+                  first {dayName(firstClass)} on or after your date.
+                </>
+              ) : (
+                <>First class {fmtLong(firstClass)}. Week 1 of the course, and the first practice day.</>
+              )}
             </p>
           </div>
           <div>

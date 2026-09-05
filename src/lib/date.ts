@@ -31,3 +31,18 @@ export function addDaysIso(iso: string, n: number): string {
   d.setDate(d.getDate() + n);
   return toLocalIso(d);
 }
+
+/**
+ * The first `dayOfWeek` (0=Sun..6=Sat) falling on or after `iso`.
+ *
+ * A class starts when it first meets. Picking a Wednesday for a class that
+ * runs on Sundays used to store the Wednesday, so the course was treated as
+ * begun days before anyone had attended a lesson — practice appeared first
+ * and the calendar's first class sat later. Snapping forward keeps the start
+ * date and the first class the same day.
+ */
+export function onOrAfterDayOfWeek(iso: string, dayOfWeek: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return addDaysIso(iso, (dayOfWeek - d.getDay() + 7) % 7);
+}
