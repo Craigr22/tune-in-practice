@@ -201,6 +201,7 @@ export default function AdminCoursework() {
           <TabsTrigger value="plan">Course plan</TabsTrigger>
           <TabsTrigger value="songs">Songs</TabsTrigger>
           <TabsTrigger value="videos">Videos</TabsTrigger>
+          <TabsTrigger value="tracks">Backing tracks</TabsTrigger>
         </TabsList>
 
         <TabsContent value="plan" className="pt-4">
@@ -215,6 +216,10 @@ export default function AdminCoursework() {
 
         <TabsContent value="videos" className="pt-4">
           <VideoManager instrument={instrument} />
+        </TabsContent>
+
+        <TabsContent value="tracks" className="pt-4">
+          <VideoManager instrument={instrument} kind="track" />
         </TabsContent>
       </Tabs>
     </div>

@@ -212,6 +212,7 @@ const Home = () => {
                 <div key={v.id}>
                   <LessonVideo
                     src={viewing.urls[v.storage_path]}
+                    path={v.storage_path}
                     title={v.title}
                     caption={v.description}
                     maxHeight={220}
@@ -267,6 +268,7 @@ const Home = () => {
                       <div key={v.id}>
                         <LessonVideo
                           src={todayLessons.urls[v.storage_path]}
+                          path={v.storage_path}
                           title={v.title}
                           caption={v.description}
                           maxHeight={220}

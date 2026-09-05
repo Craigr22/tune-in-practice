@@ -36,12 +36,17 @@ vi.mock("@/hooks/useCoursePlan", () => ({
   planWeekNumberFor: () => (st.planDays.length ? 1 : null),
   daysForWeek: () => st.planDays,
 }));
-vi.mock("@/hooks/useCourseVideos", () => ({
-  useCourseVideos: () => ({ data: st.courseVideos }),
-  useSignedVideoUrls: () => ({
-    data: Object.fromEntries(st.courseVideos.map((v) => [v.storage_path, `blob:${v.id}`])),
-  }),
-}));
+vi.mock("@/hooks/useCourseVideos", async () => {
+  // Keep isAudioPath real — it decides sound versus picture.
+  const actual = await vi.importActual<typeof import("@/hooks/useCourseVideos")>("@/hooks/useCourseVideos");
+  return {
+    ...actual,
+    useCourseVideos: () => ({ data: st.courseVideos }),
+    useSignedVideoUrls: () => ({
+      data: Object.fromEntries(st.courseVideos.map((v) => [v.storage_path, `blob:${v.id}`])),
+    }),
+  };
+});
 vi.mock("@/hooks/useStudentProgress", () => ({
   useLogPractice: () => ({ mutate: vi.fn() }),
   usePracticeLogs: () => ({ data: [] }),

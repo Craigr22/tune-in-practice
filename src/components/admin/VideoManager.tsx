@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   useCourseVideos,
   useUploadCourseVideo,
@@ -8,6 +8,7 @@ import {
   type CourseVideo,
 } from "@/hooks/useCourseVideos";
 import { useCatalogSongs, type Instrument } from "@/hooks/useSongCatalog";
+import { isAudioPath, type MediaKind } from "@/hooks/useCourseVideos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,8 +30,22 @@ import { toast } from "sonner";
 
 const MAX_MB = 1024;
 
-export default function VideoManager({ instrument }: { instrument: Instrument }) {
-  const { data: videos = [], isLoading } = useCourseVideos(instrument);
+export default function VideoManager({
+  instrument,
+  kind = "lesson",
+}: {
+  instrument: Instrument;
+  /** Which library this is. Backing tracks also take mp3s. */
+  kind?: MediaKind;
+}) {
+  const isTracks = kind === "track";
+  const noun = isTracks ? "backing track" : "video";
+  const { data: allMedia = [], isLoading } = useCourseVideos(instrument);
+  // Backing tracks are their own library; the video library is everything else.
+  const videos = useMemo(
+    () => allMedia.filter((v) => (isTracks ? v.kind === "track" : v.kind !== "track")),
+    [allMedia, isTracks],
+  );
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
   const songs = useCatalogSongs(instrument);
   const upload = useUploadCourseVideo();
@@ -88,12 +103,13 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
     if (!file) return toast.error("Pick a video file");
     if (!title.trim()) return toast.error("Title is required");
     if (file.size > MAX_MB * 1024 * 1024)
-      return toast.error(`Video is too large — keep it under ${MAX_MB} MB`);
+      return toast.error(`That ${noun} is too large — keep it under ${MAX_MB} MB`);
     const controller = new AbortController();
     abortRef.current = controller;
     setProgress(0);
     try {
       await upload.mutateAsync({
+        kind,
         instrument,
         file,
         title: title.trim(),
@@ -132,14 +148,17 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b bg-muted/30">
         <div>
           <div className="font-medium text-sm flex items-center gap-2">
-            <Film className="w-4 h-4" /> Course videos
+            <Film className="w-4 h-4" /> {isTracks ? "Backing tracks" : "Course videos"}
           </div>
           <p className="text-xs text-muted-foreground">
-            Tutorial & demo clips for this course{videos.length ? ` · ${videos.length} uploaded` : ""}.
+            {isTracks
+              ? "Play-alongs students practise to — mp3 or video"
+              : "Tutorial & demo clips for this course"}
+            {videos.length ? ` · ${videos.length} uploaded` : ""}.
           </p>
         </div>
         <Button size="sm" onClick={() => setFormOpen(true)}>
-          <Upload className="w-4 h-4 mr-1" /> Upload video
+          <Upload className="w-4 h-4 mr-1" /> Upload {noun}
         </Button>
       </div>
 
@@ -147,7 +166,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
         <div className="px-4 py-6 text-sm text-muted-foreground">Loading…</div>
       ) : videos.length === 0 ? (
         <div className="px-4 py-8 text-center text-muted-foreground text-sm">
-          No videos yet. Upload a tutorial to get started.
+          {isTracks ? "No backing tracks yet. Upload an mp3 to get started." : "No videos yet. Upload a tutorial to get started."}
         </div>
       ) : (
         <div className="divide-y">
@@ -158,7 +177,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                 className="w-24 h-14 rounded-md bg-black/80 grid place-items-center shrink-0 hover:opacity-80"
                 title="Preview"
               >
-                <span className="text-white text-lg">▶</span>
+                <span className="text-white text-lg">{isAudioPath(v.storage_path) ? "♪" : "▶"}</span>
               </button>
               <div className="flex-1 min-w-0">
                 {editingId === v.id ? (
@@ -243,7 +262,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Upload video</DialogTitle>
+            <DialogTitle>Upload {noun}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
@@ -263,11 +282,13 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
               </Select>
             </div>
             <div>
-              <Label>Video file (max {MAX_MB >= 1024 ? `${MAX_MB / 1024} GB` : `${MAX_MB} MB`})</Label>
+              <Label>
+                {isTracks ? "Audio or video file" : "Video file"} (max {MAX_MB >= 1024 ? `${MAX_MB / 1024} GB` : `${MAX_MB} MB`})
+              </Label>
               <Input
                 ref={fileRef}
                 type="file"
-                accept="video/*"
+                accept={isTracks ? "audio/*,video/*" : "video/*"}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
               {file && (
@@ -324,15 +345,20 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
           </DialogHeader>
           {preview && (
             urls[preview.storage_path] ? (
-              <video
-                src={urls[preview.storage_path]}
-                controls
-                autoPlay
-                className="w-full rounded-md bg-black"
-              />
+              // An mp3 has no picture to show, so it gets an audio player.
+              isAudioPath(preview.storage_path) ? (
+                <audio src={urls[preview.storage_path]} controls autoPlay className="w-full" />
+              ) : (
+                <video
+                  src={urls[preview.storage_path]}
+                  controls
+                  autoPlay
+                  className="w-full rounded-md bg-black"
+                />
+              )
             ) : (
               <div className="w-full aspect-video rounded-md bg-black/80 grid place-items-center text-white text-sm">
-                Preparing video…
+                Preparing…
               </div>
             )
           )}

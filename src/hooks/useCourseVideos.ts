@@ -2,6 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import type { Instrument } from "@/hooks/useSongCatalog";
 
+/** Lessons and drills are video; a backing track may be video or an mp3. */
+export type MediaKind = "lesson" | "track" | "exercise";
+
 export type CourseVideo = {
   id: string;
   instrument: Instrument;
@@ -9,8 +12,14 @@ export type CourseVideo = {
   title: string;
   description: string | null;
   storage_path: string;
+  kind: MediaKind;
   created_at: string;
 };
+
+/** Whether a stored file plays as sound rather than picture. */
+export function isAudioPath(path: string): boolean {
+  return /\.(mp3|m4a|aac|wav|ogg|oga|flac)$/i.test(path);
+}
 
 const BUCKET = "videos";
 
@@ -130,12 +139,14 @@ export function useUploadCourseVideo() {
       title: string;
       description?: string;
       song_id?: string | null;
+      kind?: MediaKind;
       onProgress?: (pct: number) => void;
       signal?: AbortSignal;
     }) => {
       const safeName = args.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
       const path = `${args.instrument}/${crypto.randomUUID()}-${safeName}`;
-      const contentType = args.file.type || "video/mp4";
+      const contentType =
+        args.file.type || (isAudioPath(args.file.name) ? "audio/mpeg" : "video/mp4");
 
       const { data: signed, error: signErr } = await supabase.storage
         .from(BUCKET)
@@ -166,6 +177,7 @@ export function useUploadCourseVideo() {
         title: args.title,
         description: args.description?.trim() || null,
         storage_path: path,
+        kind: args.kind ?? "lesson",
       });
       if (rowErr) {
         // Don't leave an orphaned file if the metadata write failed.

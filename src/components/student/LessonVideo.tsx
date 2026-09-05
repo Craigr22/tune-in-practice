@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { isAudioPath } from "@/hooks/useCourseVideos";
 
 /**
  * A lesson clip: what it is, what to watch for, then the picture.
@@ -15,6 +16,7 @@ import { useRef, useState } from "react";
  */
 export default function LessonVideo({
   src,
+  path,
   title,
   caption,
   radius = 14,
@@ -22,6 +24,8 @@ export default function LessonVideo({
 }: {
   /** Signed URL, or undefined while it's still being minted. */
   src?: string;
+  /** Storage path — says whether this is sound or picture. */
+  path?: string;
   /** The clip's name. */
   title?: string | null;
   /** What to watch for, set per clip by an admin in Course Work → Videos. */
@@ -31,7 +35,9 @@ export default function LessonVideo({
 }) {
   const [ready, setReady] = useState(false);
   const ref = useRef<HTMLVideoElement>(null);
-  const showPlaceholder = !src || !ready;
+  // An mp3 backing track has no picture: it needs a player, not a thumbnail.
+  const isAudio = !!path && isAudioPath(path);
+  const showPlaceholder = !isAudio && (!src || !ready);
 
   /**
    * Metadata alone doesn't paint anything — the browser knows the clip's shape
@@ -82,6 +88,20 @@ export default function LessonVideo({
         </div>
       )}
 
+      {isAudio ? (
+        <div
+          className="rounded-xl px-3 py-3"
+          style={{ background: "var(--paper-cool)", border: "1px solid var(--border)" }}
+        >
+          {src ? (
+            <audio src={src} controls preload="metadata" style={{ width: "100%" }} />
+          ) : (
+            <div className="text-xs py-2 text-center" style={{ color: "var(--ink-soft)" }}>
+              Loading track…
+            </div>
+          )}
+        </div>
+      ) : (
       <div
         style={{
           position: "relative",
@@ -134,6 +154,7 @@ export default function LessonVideo({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
