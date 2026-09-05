@@ -86,7 +86,7 @@ const Login = () => {
     }}>
       <form onSubmit={submit} className="bam-card" style={{ width: "100%", maxWidth: 380, padding: 28 }}>
         <div className="brand text-center" style={{ marginBottom: 18 }}>
-          <span className="dot"></span>bam <span className="uku">Ukulele · Sem 1</span>
+          <span className="dot"></span>bam
         </div>
         <h2 style={{ marginBottom: 4 }}>{mode === "signup" ? "Create account" : "Sign in"}</h2>
         <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 18 }}>
