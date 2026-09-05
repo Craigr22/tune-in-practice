@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  HIGH_G, LOW_G, autoCorrelate, freqToMidi, midiToNote,
+  HIGH_G, LOW_G, autoCorrelate, nearestString,
   type StringDef,
 } from "@/lib/tuner";
 
@@ -137,34 +137,31 @@ export default function Tuner() {
     audioCtxRef.current?.close();
   }, [stopMic, stopTone]);
 
-  // Compute readings
-  let displayNote = "—";
-  let displayOctave = "";
-  let cents = 0;
-  let targetString: StringDef | null = null;
-  if (freq && freq > 0) {
-    const midi = freqToMidi(freq);
-    const { name, octave, midi: m } = midiToNote(midi);
-    displayNote = name;
-    displayOctave = String(octave);
-    cents = Math.round((midi - m) * 100);
-    // auto-detect closest ukulele string by cents distance
-    let best: { s: StringDef; dist: number } | null = null;
-    for (const s of STRINGS) {
-      const dist = Math.abs(1200 * Math.log2(freq / s.freq));
-      if (!best || dist < best.dist) best = { s, dist };
-    }
-    if (best && best.dist < 200) {
-      targetString = best.s;
-      // recalc cents relative to the actual string (more meaningful for tuning)
-      cents = Math.round(1200 * Math.log2(freq / best.s.freq));
-    }
-  }
+  /**
+   * A ukulele has four strings, so the reading is always about one of them.
+   *
+   * This used to name whatever chromatic note it heard — "F#", "Bb" — and only
+   * related that to a string when it was already within two semitones. A
+   * beginner with a slack string got a note name that means nothing to them
+   * and no idea which peg to turn. So: always lock to the nearest string, and
+   * measure against that string however far off it is.
+   */
+  const match = freq && freq > 0 ? nearestString(freq, STRINGS) : null;
+  const targetString: StringDef | null = match?.string ?? null;
+  const cents = match ? Math.round(match.cents) : 0;
+  const displayNote = targetString?.name ?? "—";
+  const displayOctave = targetString?.octaveLabel.slice(1) ?? "";
 
   const absCents = Math.abs(cents);
+  // Beyond a semitone the needle is pinned and the number stops being useful —
+  // what matters then is simply which way to turn.
+  const wayOff = absCents > 100;
   const needlePct = Math.max(-50, Math.min(50, cents)); // -50..50 cents range
 
   const matchedString = targetString && absCents <= 8 ? targetString.name : null;
+  // Which string is being worked on, in tune or not — so a student can see the
+  // tuner has picked up the right one before the pitch is right.
+  const activeString = targetString?.name ?? null;
 
   // Brand state for color theming (drives CSS via data-state)
   const state = !freq ? "idle" : absCents <= 5 ? "tune" : absCents <= 15 ? "near" : "off";
@@ -191,7 +188,8 @@ export default function Tuner() {
           {STRINGS.map((s) => {
             const isPlaying = tonePlaying === s.name;
             const isMatched = matchedString === s.name;
-            const cls = isMatched ? "is-matched" : isPlaying ? "is-playing" : "";
+            const isActive = !isMatched && activeString === s.name;
+            const cls = isMatched ? "is-matched" : isPlaying ? "is-playing" : isActive ? "is-active" : "";
             return (
               <button
                 key={s.name}
@@ -249,11 +247,14 @@ export default function Tuner() {
           {!freq ? (
             <span className="bamt-cents idle">—</span>
           ) : inTune ? (
-            <span className="bamt-intune">✓ In tune</span>
+            <span className="bamt-intune">✓ {targetString?.name} in tune</span>
           ) : (
             <span className="bamt-cents">
-              {cents > 0 ? `+${cents}` : cents} cents
-              <span className="dir">{cents > 0 ? "Tune down ↓" : "Tune up ↑"}</span>
+              {wayOff ? `${targetString?.name} is a long way ${cents > 0 ? "sharp" : "flat"}`
+                      : `${cents > 0 ? `+${cents}` : cents} cents`}
+              <span className="dir">
+                {cents > 0 ? `Loosen the ${targetString?.name} string ↓` : `Tighten the ${targetString?.name} string ↑`}
+              </span>
             </span>
           )}
         </div>

@@ -1409,6 +1409,13 @@ a { color: inherit; text-decoration: none; }
 }
 .bamt-string.is-playing .bamt-string-note { color: var(--gold); }
 .bamt-string.is-playing .bamt-string-label { color: rgba(255,255,255,0.75); }
+/* The string currently being tuned — picked up, but not yet in tune. */
+.bamt-string.is-active {
+  border-color: var(--gold-deep);
+  box-shadow: 0 0 0 3px rgba(191,150,50,0.14);
+}
+.bamt-string.is-active .bamt-string-note { color: var(--gold-deep); }
+
 .bamt-string.is-matched {
   background: var(--tune-soft);
   border-color: var(--tune);
