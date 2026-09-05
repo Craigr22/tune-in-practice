@@ -52,7 +52,7 @@ export default function LessonVideo({
   return (
     <div>
       {(title || caption) && (
-        <div className="mb-3 mt-1">
+        <div className="mb-3 mt-1.5">
           {title && (
             <div
               className="text-base font-bold leading-snug tracking-tight"
@@ -62,10 +62,12 @@ export default function LessonVideo({
             </div>
           )}
           {caption && (
+            // Black text on the tinted panel — the note is the thing to read,
+            // so the blue stays on the rule and the title around it.
             <div
-              className="text-sm leading-relaxed mt-2 rounded-xl px-4 py-3"
+              className="text-sm leading-relaxed mt-2.5 mb-4 rounded-xl px-4 py-3.5"
               style={{
-                color: "var(--navy)",
+                color: "var(--ink)",
                 background: "var(--paper-cool)",
                 borderLeft: "3px solid var(--blue-bright)",
                 borderTopLeftRadius: 0,
