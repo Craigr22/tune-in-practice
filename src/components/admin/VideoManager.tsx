@@ -44,6 +44,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
   const [preview, setPreview] = useState<CourseVideo | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editCaption, setEditCaption] = useState("");
   const [progress, setProgress] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -62,17 +63,19 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
   const startEdit = (video: CourseVideo) => {
     setEditingId(video.id);
     setEditTitle(video.title);
+    setEditCaption(video.description ?? "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditTitle("");
+    setEditCaption("");
   };
 
   const saveEdit = async () => {
     if (!editingId || !editTitle.trim()) return;
     try {
-      await update.mutateAsync({ id: editingId, instrument, title: editTitle.trim() });
+      await update.mutateAsync({ id: editingId, instrument, title: editTitle.trim(), description: editCaption });
       toast.success("Title updated");
       cancelEdit();
     } catch (e: any) {
@@ -158,26 +161,46 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
               </button>
               <div className="flex-1 min-w-0">
                 {editingId === v.id ? (
-                  <div className="flex items-center gap-2">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="h-8 text-sm"
+                        placeholder="Title"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit();
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                      />
+                      <Button size="icon" className="h-8 w-8" onClick={saveEdit} disabled={update.isPending}>
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={cancelEdit} disabled={update.isPending}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
                     <Input
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
+                      value={editCaption}
+                      onChange={(e) => setEditCaption(e.target.value)}
                       className="h-8 text-sm"
-                      autoFocus
+                      placeholder="Caption shown over the clip — e.g. Watch the left hand"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveEdit();
                         if (e.key === "Escape") cancelEdit();
                       }}
                     />
-                    <Button size="icon" className="h-8 w-8" onClick={saveEdit} disabled={update.isPending}>
-                      <Check className="w-4 h-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={cancelEdit} disabled={update.isPending}>
-                      <X className="w-4 h-4" />
-                    </Button>
                   </div>
                 ) : (
-                  <div className="text-sm font-medium truncate">{v.title}</div>
+                  <>
+                    <div className="text-sm font-medium truncate">{v.title}</div>
+                    {v.description && (
+                      <div className="text-xs truncate" style={{ color: "var(--gold-deep)" }}>
+                        “{v.description}”
+                      </div>
+                    )}
+                  </>
                 )}
                 <div className="text-xs text-muted-foreground truncate">
                   {songTitle(v.song_id) ? `🎵 ${songTitle(v.song_id)} · ` : ""}
@@ -195,7 +218,7 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
-              <Button variant="ghost" size="icon" title="Edit title" onClick={() => startEdit(v)}>
+              <Button variant="ghost" size="icon" title="Edit title and caption" onClick={() => startEdit(v)}>
                 <Pencil className="w-4 h-4" />
               </Button>
               <Button variant="ghost" size="icon" title="Delete video" onClick={() => setConfirmDel(v)}>

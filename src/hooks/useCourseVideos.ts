@@ -181,10 +181,20 @@ export function useUploadCourseVideo() {
 export function useUpdateCourseVideo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { id: string; instrument: Instrument; title: string }) => {
+    mutationFn: async (args: {
+      id: string;
+      instrument: Instrument;
+      title: string;
+      /** The caption shown over the clip wherever it plays. */
+      description?: string | null;
+    }) => {
+      const patch: { title: string; description?: string | null } = { title: args.title.trim() };
+      if (args.description !== undefined) {
+        patch.description = args.description?.trim() || null;
+      }
       const { error } = await (supabase as any)
         .from("course_videos")
-        .update({ title: args.title.trim() })
+        .update(patch)
         .eq("id", args.id);
       if (error) throw error;
     },

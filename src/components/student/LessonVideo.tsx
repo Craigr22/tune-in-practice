@@ -15,15 +15,19 @@ import { useRef, useState } from "react";
  */
 export default function LessonVideo({
   src,
+  caption,
   radius = 14,
   maxHeight,
 }: {
   /** Signed URL, or undefined while it's still being minted. */
   src?: string;
+  /** What to watch for, set per clip by an admin. Shown over the picture. */
+  caption?: string | null;
   radius?: number;
   maxHeight?: number;
 }) {
   const [ready, setReady] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const ref = useRef<HTMLVideoElement>(null);
   const showPlaceholder = !src || !ready;
 
@@ -64,6 +68,8 @@ export default function LessonVideo({
           preload="metadata"
           playsInline
           src={`${src}#t=0.1`}
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
           onLoadedMetadata={primeFirstFrame}
           onLoadedData={() => setReady(true)}
           onSeeked={() => setReady(true)}
@@ -76,6 +82,36 @@ export default function LessonVideo({
             background: "var(--paper-cool)",
           }}
         />
+      )}
+
+      {/* The caption sits on the picture, and steps aside while the clip is
+          playing so it never covers what the student is meant to watch. */}
+      {caption && !showPlaceholder && (
+        <div
+          aria-hidden={playing}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            padding: "10px 12px 22px",
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 600,
+            lineHeight: 1.35,
+            textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+            background: "linear-gradient(to bottom, rgba(0,0,0,0.62), rgba(0,0,0,0))",
+            opacity: playing ? 0 : 1,
+            transition: "opacity 0.25s ease",
+            pointerEvents: "none",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {caption}
+        </div>
       )}
 
       {showPlaceholder && (

@@ -210,7 +210,7 @@ const Home = () => {
             <div className="flex flex-col gap-4">
               {viewing.videos.map((v) => (
                 <div key={v.id}>
-                  <LessonVideo src={viewing.urls[v.storage_path]} maxHeight={220} />
+                  <LessonVideo src={viewing.urls[v.storage_path]} caption={v.description} maxHeight={220} />
                   <div className="text-sm font-semibold mt-1.5" style={{ color: "var(--ink)" }}>{v.title}</div>
                 </div>
               ))}
@@ -261,7 +261,7 @@ const Home = () => {
                   <div className="mt-3 flex flex-col gap-3">
                     {s.videos.map((v) => (
                       <div key={v.id}>
-                        <LessonVideo src={todayLessons.urls[v.storage_path]} maxHeight={220} />
+                        <LessonVideo src={todayLessons.urls[v.storage_path]} caption={v.description} maxHeight={220} />
                         <div className="text-xs font-semibold mt-1.5" style={{ color: "var(--ink-soft)" }}>{v.title}</div>
                       </div>
                     ))}
