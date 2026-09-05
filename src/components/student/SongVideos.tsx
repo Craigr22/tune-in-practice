@@ -1,13 +1,25 @@
-import { useSongVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
+import { useMemo } from "react";
+import { useSongVideos, useSignedVideoUrls, type CourseVideo } from "@/hooks/useCourseVideos";
 import LessonVideo from "@/components/student/LessonVideo";
 
 /**
- * Teacher-uploaded clips for this song. Renders nothing when there are none,
- * so the practice page stays uncluttered. Videos are private — the src is a
- * short-lived signed URL minted for the signed-in student.
+ * A song's two clips: the backing track to play along to, then the tutorial
+ * that teaches it — in that order, because a student opening a song they
+ * already know wants to play, not to be taught again.
+ *
+ * A song can have several of each (slow and normal play-alongs, a tutorial
+ * and a completed version). Showing them all made the panel a wall of
+ * players, so this takes the first of each in the admin's own order.
  */
+function pickTwo(videos: CourseVideo[]): CourseVideo[] {
+  const first = (kind: CourseVideo["kind"]) =>
+    videos.filter((v) => v.kind === kind).sort((a, b) => a.sort_order - b.sort_order)[0];
+  return [first("track"), first("lesson")].filter(Boolean) as CourseVideo[];
+}
+
 export default function SongVideos({ songId, inset = true }: { songId: string; inset?: boolean }) {
-  const { data: videos = [] } = useSongVideos(songId);
+  const { data: all = [] } = useSongVideos(songId);
+  const videos = useMemo(() => pickTwo(all), [all]);
   const { data: urls = {} } = useSignedVideoUrls(videos.map((v) => v.storage_path));
 
   if (!videos.length) return null;
