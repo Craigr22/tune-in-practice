@@ -190,7 +190,10 @@ export function useUpdateCourseVideo() {
     }) => {
       const patch: { title: string; description?: string | null } = { title: args.title.trim() };
       if (args.description !== undefined) {
-        patch.description = args.description?.trim() || null;
+        // Keep the line breaks, but normalise the ones Windows and some
+        // editors paste in so they render as single breaks.
+        const caption = args.description?.replace(/\r\n?/g, "\n").trim();
+        patch.description = caption || null;
       }
       const { error } = await (supabase as any)
         .from("course_videos")

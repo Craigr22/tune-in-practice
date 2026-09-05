@@ -69,6 +69,8 @@ export default function LessonVideo({
               style={{
                 color: "var(--ink)",
                 background: "var(--paper-cool)",
+                // Keep the line breaks an admin typed or pasted in.
+                whiteSpace: "pre-wrap",
                 borderLeft: "3px solid var(--blue-bright)",
                 borderTopLeftRadius: 0,
                 borderBottomLeftRadius: 0,

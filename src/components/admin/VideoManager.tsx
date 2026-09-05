@@ -10,6 +10,7 @@ import {
 import { useCatalogSongs, type Instrument } from "@/hooks/useSongCatalog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -181,23 +182,28 @@ export default function VideoManager({ instrument }: { instrument: Instrument })
                         <X className="w-4 h-4" />
                       </Button>
                     </div>
-                    <Input
+                    <Textarea
                       value={editCaption}
                       onChange={(e) => setEditCaption(e.target.value)}
-                      className="h-8 text-sm"
-                      placeholder="Caption shown over the clip — e.g. Watch the left hand"
+                      className="text-sm min-h-[76px] resize-y"
+                      rows={3}
+                      placeholder={"Caption shown above the clip. Line breaks are kept, so you can paste in several lines."}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEdit();
+                        // Enter belongs to the text now; save deliberately.
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveEdit();
                         if (e.key === "Escape") cancelEdit();
                       }}
                     />
+                    <div className="text-[11px] text-muted-foreground">
+                      Line breaks are kept. {navigator.platform.startsWith("Mac") ? "⌘" : "Ctrl"}+Enter to save.
+                    </div>
                   </div>
                 ) : (
                   <>
                     <div className="text-sm font-medium truncate">{v.title}</div>
                     {v.description && (
                       <div className="text-xs truncate" style={{ color: "var(--gold-deep)" }}>
-                        “{v.description}”
+                        “{v.description.replace(/\s*\n\s*/g, " ")}”
                       </div>
                     )}
                   </>
