@@ -1002,9 +1002,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      complete_practice_segment: {
+        Args: { p_segment: string; p_session_id: string }
+        Returns: {
+          bonus_completed: boolean
+          bonus_instruction: string
+          bonus_song_id: string | null
+          bonus_target_min: number
+          bonus_type: Database["public"]["Enums"]["bonus_type"]
+          completed_at: string | null
+          created_at: string
+          focus_completed: boolean
+          focus_instruction: string
+          focus_song_id: string
+          focus_target_min: number
+          generated_at: string
+          id: string
+          scheduled_date: string
+          session_index: number
+          session_type: Database["public"]["Enums"]["session_kind"]
+          student_id: string
+          updated_at: string
+          warmup_completed: boolean
+          warmup_instruction: string
+          warmup_song_id: string | null
+          warmup_target_min: number
+          week_start: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "weekly_plan_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_user_role: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      end_class: {
+        Args: {
+          p_attendance?: Json
+          p_badges?: Json
+          p_batch_id: string
+          p_scheduled_date: string
+          p_session_id?: string
+          p_teacher_notes: string
+        }
+        Returns: string
       }
       generate_sessions_for_batch: {
         Args: { _batch_id: string }
@@ -1036,6 +1081,13 @@ export type Database = {
       is_teacher_of_student: {
         Args: { _student_id: string; _user_id: string }
         Returns: boolean
+      }
+      set_user_role: {
+        Args: {
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: undefined
       }
       teaches_batch: { Args: { _batch_id: string }; Returns: boolean }
     }
