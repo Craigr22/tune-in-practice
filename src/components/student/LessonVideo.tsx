@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 /**
  * A lesson clip.
@@ -24,7 +24,24 @@ export default function LessonVideo({
   maxHeight?: number;
 }) {
   const [ready, setReady] = useState(false);
+  const ref = useRef<HTMLVideoElement>(null);
   const showPlaceholder = !src || !ready;
+
+  /**
+   * Metadata alone doesn't paint anything — the browser knows the clip's shape
+   * but has fetched no pictures, so the player stays blank. Seeking a hair past
+   * the start makes it fetch and decode exactly one frame, which is a byte
+   * range rather than the file, so this buffers a little and no more.
+   */
+  const primeFirstFrame = () => {
+    const v = ref.current;
+    if (!v || v.readyState >= 2) return;
+    try {
+      v.currentTime = 0.1;
+    } catch {
+      // Not seekable yet; onLoadedData still clears the placeholder.
+    }
+  };
 
   return (
     <div
@@ -42,11 +59,14 @@ export default function LessonVideo({
     >
       {src && (
         <video
+          ref={ref}
           controls
           preload="metadata"
           playsInline
           src={`${src}#t=0.1`}
+          onLoadedMetadata={primeFirstFrame}
           onLoadedData={() => setReady(true)}
+          onSeeked={() => setReady(true)}
           onError={() => setReady(true)}
           style={{
             display: "block",
