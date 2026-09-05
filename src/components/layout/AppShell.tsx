@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,12 +16,45 @@ const TopNav = () => {
   const path = location.pathname;
   const isActive = (p: string, exact = false) => (exact ? path === p : path.startsWith(p));
 
+  // Below ~900px the header's contents don't fit, so they live behind a menu.
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => setMenuOpen(false), [path]);
+
   const go = (to: string) => {
+    setMenuOpen(false);
     navigate(to);
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
   const initials = (user?.email || "?").slice(0, 2).toUpperCase();
+
+  /** One source for the nav, so the header and the phone menu can't drift. */
+  const links =
+    role === "student"
+      ? [
+          { to: "/student", label: "Home", active: isActive("/student", true) },
+          { to: "/student/journey", label: "Journey", active: isActive("/student/journey") },
+        ]
+      : role === "teacher"
+      ? [
+          { to: "/teacher/classes", label: "My Classes", active: isActive("/teacher/class") },
+          { to: "/teacher/schedule", label: "Schedule", active: isActive("/teacher/schedule") },
+        ]
+      : [
+          { to: "/admin/schedule", label: "Schedule", active: isActive("/admin/schedule") },
+          { to: "/admin/people", label: "People", active: isActive("/admin/people") },
+          { to: "/admin/coursework", label: "Course work", active: isActive("/admin/coursework") },
+          // Finance hidden for now — routes still live at /admin/finance.
+        ];
+
+  const onViewAsChange = (v: string) => {
+    if (!v) { setViewAs(null); go("/admin/schedule"); return; }
+    const [r, id] = v.split(":");
+    const person = accounts.find((a) => a.id === id && a.role === r);
+    if (!person) return;
+    setViewAs(person);
+    go(r === "teacher" ? "/teacher/classes" : "/student");
+  };
 
   return (
     <nav className="topnav">
@@ -29,30 +63,13 @@ const TopNav = () => {
       </div>
       <div className="nav-spacer"></div>
       <div className="nav-links">
-        {role === "student" && (
-          <>
-            <a className={`nav-link ${isActive("/student", true) ? "active" : ""}`} onClick={() => go("/student")}>Home</a>
-            <a className={`nav-link ${isActive("/student/journey") ? "active" : ""}`} onClick={() => go("/student/journey")}>Journey</a>
-          </>
-        )}
-        {role === "teacher" && (
-          <>
-            <a className={`nav-link ${isActive("/teacher/class") ? "active" : ""}`} onClick={() => go("/teacher/classes")}>My Classes</a>
-            <a className={`nav-link ${isActive("/teacher/schedule") ? "active" : ""}`} onClick={() => go("/teacher/schedule")}>Schedule</a>
-          </>
-        )}
-
-        {role === "admin" && (
-          <>
-            <a className={`nav-link ${isActive("/admin/schedule") ? "active" : ""}`} onClick={() => go("/admin/schedule")}>Schedule</a>
-            <a className={`nav-link ${isActive("/admin/people") ? "active" : ""}`} onClick={() => go("/admin/people")}>People</a>
-            <a className={`nav-link ${isActive("/admin/coursework") ? "active" : ""}`} onClick={() => go("/admin/coursework")}>Course work</a>
-            {/* Finance hidden for now — routes still live at /admin/finance.
-                Restore this link when finance is ready to go public. */}
-          </>
-        )}
+        {links.map((l) => (
+          <a key={l.to} className={`nav-link ${l.active ? "active" : ""}`} onClick={() => go(l.to)}>
+            {l.label}
+          </a>
+        ))}
       </div>
-      <div className="streak-chip">🔥 keep it up</div>
+      {role === "student" && <div className="streak-chip">🔥 keep it up</div>}
 
       {/* Admin-only lens: see the app as a particular teacher or student.
           Always paired with a way straight back to your own account. */}
@@ -62,15 +79,7 @@ const TopNav = () => {
             className="role-btn"
             style={{ padding: "4px 8px", fontSize: 12, maxWidth: 190 }}
             value={viewAs ? `${viewAs.role}:${viewAs.id}` : ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (!v) { setViewAs(null); go("/admin/schedule"); return; }
-              const [role, id] = v.split(":");
-              const person = accounts.find((a) => a.id === id && a.role === role);
-              if (!person) return;
-              setViewAs(person);
-              go(role === "teacher" ? "/teacher/classes" : "/student");
-            }}
+            onChange={(e) => onViewAsChange(e.target.value)}
           >
             <option value="">👤 My account (admin)</option>
             <optgroup label="Teachers">
@@ -100,6 +109,58 @@ const TopNav = () => {
         <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
         <button className="role-btn" onClick={signOut}>Sign out</button>
       </div>
+
+      {/* Phones: one button for everything the header can't fit. */}
+      <button
+        className="nav-menu-btn"
+        aria-label={menuOpen ? "Close menu" : "Open menu"}
+        aria-expanded={menuOpen}
+        onClick={() => setMenuOpen((o) => !o)}
+      >
+        <span aria-hidden>{menuOpen ? "✕" : "☰"}</span>
+        <span className="nav-menu-initials">{initials}</span>
+      </button>
+
+      {menuOpen && (
+        <div className="nav-sheet">
+          {links.map((l) => (
+            <button
+              key={l.to}
+              className={`nav-sheet-link ${l.active ? "active" : ""}`}
+              onClick={() => go(l.to)}
+            >
+              {l.label}
+            </button>
+          ))}
+
+          {actualRole === "admin" && (
+            <label className="nav-sheet-field">
+              <span>View the app as</span>
+              <select
+                value={viewAs ? `${viewAs.role}:${viewAs.id}` : ""}
+                onChange={(e) => onViewAsChange(e.target.value)}
+              >
+                <option value="">My account (admin)</option>
+                <optgroup label="Teachers">
+                  {accounts.filter((a) => a.role === "teacher").map((a) => (
+                    <option key={`mt${a.id}`} value={`teacher:${a.id}`}>{a.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Students">
+                  {accounts.filter((a) => a.role === "student").map((a) => (
+                    <option key={`ms${a.id}`} value={`student:${a.id}`}>{a.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+            </label>
+          )}
+
+          <div className="nav-sheet-foot">
+            <span className="nav-sheet-email">{user?.email}</span>
+            <button className="nav-sheet-signout" onClick={signOut}>Sign out</button>
+          </div>
+        </div>
+      )}
     </nav>
   );
 };

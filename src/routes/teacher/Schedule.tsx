@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Calendar, dateFnsLocalizer, Views, type Event } from "react-big-calendar";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
@@ -39,6 +40,13 @@ type Row = {
 };
 
 export default function TeacherSchedule() {
+  // A seven-column grid is unreadable on a phone; agenda lists the same
+  // sessions as a scrollable list of days.
+  const isPhone = useIsPhone();
+  const [calView, setCalView] = useState<any>(isPhone ? Views.AGENDA : Views.WEEK);
+  const isAgenda = calView === Views.AGENDA;
+  useEffect(() => { setCalView(isPhone ? Views.AGENDA : Views.WEEK); }, [isPhone]);
+
   const { data: teacher } = useTeacherMe();
   const teacherId = teacher?.id;
   const [selected, setSelected] = useState<Row | null>(null);
@@ -85,12 +93,14 @@ export default function TeacherSchedule() {
 
         {isLoading && <div className="text-sm">Loading…</div>}
 
-        <div className="bg-card rounded-lg p-3 border" style={{ height: 720 }}>
+        <div className="bg-card rounded-lg p-3 border" style={{ height: isPhone ? 560 : 720 }}>
           <Calendar
             localizer={dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { "en-US": enUS } })}
             events={events}
-            defaultView={Views.WEEK}
-            views={[Views.WEEK, Views.MONTH, Views.DAY]}
+            view={calView}
+            onView={(v: any) => setCalView(v)}
+            views={isPhone ? [Views.AGENDA, Views.DAY, Views.MONTH] : [Views.WEEK, Views.MONTH, Views.DAY]}
+            length={30}
             formats={calendarFormats}
             min={new Date(0, 0, 0, 9, 0, 0)}
             max={new Date(0, 0, 0, 22, 0, 0)}

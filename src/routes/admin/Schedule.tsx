@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Calendar, dateFnsLocalizer, Views, type Event } from "react-big-calendar";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
@@ -64,6 +65,13 @@ const ROOM_COLORS = [
 ];
 
 export default function AdminSchedule() {
+  // A seven-column grid is unreadable on a phone; agenda lists the same
+  // sessions as a scrollable list of days.
+  const isPhone = useIsPhone();
+  const [calView, setCalView] = useState<any>(isPhone ? Views.AGENDA : Views.WEEK);
+  const isAgenda = calView === Views.AGENDA;
+  useEffect(() => { setCalView(isPhone ? Views.AGENDA : Views.WEEK); }, [isPhone]);
+
   const { role } = useAuth();
   const qc = useQueryClient();
   const [view, setView] = useState<"calendar" | "classes">("calendar");
@@ -199,7 +207,7 @@ export default function AdminSchedule() {
               ))}
             </div>
           )}
-          <div className="bg-card rounded-lg p-3 border" style={{ height: 720 }}>
+          <div className="bg-card rounded-lg p-3 border" style={{ height: isPhone ? 560 : 720 }}>
           <DnDCalendar
             localizer={localizer}
             draggableAccessor={(ev: any) => ev.resource?.status !== "cancelled"}
@@ -207,8 +215,10 @@ export default function AdminSchedule() {
             onEventDrop={moveSession}
             onEventResize={moveSession}
             events={events}
-            defaultView={Views.WEEK}
-            views={[Views.WEEK, Views.MONTH, Views.DAY]}
+            view={calView}
+            onView={(v: any) => setCalView(v)}
+            views={isPhone ? [Views.AGENDA, Views.DAY, Views.MONTH] : [Views.WEEK, Views.MONTH, Views.DAY]}
+            length={30}
             formats={calendarFormats}
             min={new Date(0, 0, 0, 9, 0, 0)}
             max={new Date(0, 0, 0, 22, 0, 0)}
@@ -225,6 +235,11 @@ export default function AdminSchedule() {
               }
               const room = s.batches?.locations?.name;
               const c = (room && roomColors.get(room)) || { bg: "hsl(var(--primary))", fg: "hsl(var(--primary-foreground))" };
+              // Agenda is a list: a full-bleed colour block per row is heavy and
+              // hurts legibility, so the room shows as an edge instead.
+              if (isAgenda) {
+                return { style: { background: "transparent", color: "var(--ink)", borderLeft: `4px solid ${c.bg}` } };
+              }
               return { style: { background: c.bg, color: c.fg, border: "none" } };
             }}
             style={{ height: "100%" }}
