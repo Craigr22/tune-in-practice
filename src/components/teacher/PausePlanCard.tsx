@@ -49,8 +49,9 @@ export default function PausePlanCard({ batchId }: { batchId: string }) {
           <CalendarOff className="w-4 h-4" /> A class didn't happen
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Push this class's course back a week. Its start date doesn't change, and practice
-          already done stays as it was — only what's ahead moves.
+          Students run the week again rather than moving on, so there's no gap while the
+          class catches up. The start date doesn't change and practice already done stays
+          as it was — only what's ahead moves.
         </p>
       </div>
 
@@ -82,7 +83,8 @@ export default function PausePlanCard({ batchId }: { batchId: string }) {
               {behind} week{behind === 1 ? "" : "s"}
             </strong>{" "}
             behind the calendar — which is right, if it has had {behind} fewer{" "}
-            {behind === 1 ? "lesson" : "lessons"}.
+            {behind === 1 ? "lesson" : "lessons"}. Practice repeats the week they're on
+            until the class catches up.
           </p>
         )}
 

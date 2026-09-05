@@ -181,10 +181,13 @@ export function shiftedPlanWeek(
   shiftWeeks: number,
 ): number | null {
   const wk = planWeekNumberFor(weekOneStart, weekStart);
+  // Before the course starts there is genuinely nothing planned.
   if (wk == null) return null;
-  const adjusted = wk - shiftWeeks;
-  // Before week 1 there is nothing planned yet.
-  return adjusted >= 1 ? adjusted : null;
+  // A pause runs the previous week again, so a paused class keeps practising
+  // what it has been taught. Held at week 1 rather than falling off the plan:
+  // dropping out would hand students generated practice unrelated to their
+  // lessons, which is the gap a pause is meant to avoid.
+  return Math.max(1, wk - shiftWeeks);
 }
 
 /** The plan (settings + days) a student's weekly plan should be built from. */

@@ -25,10 +25,22 @@ describe("shiftedPlanWeek", () => {
     expect(shiftedPlanWeek(weekOne, "2026-09-21", 2)).toBe(1);
   });
 
-  it("gives nothing rather than a week before the course began", () => {
-    // Three weeks lost in a three-week-old course: week 1 hasn't happened yet.
-    expect(shiftedPlanWeek(weekOne, "2026-09-21", 3)).toBeNull();
-    expect(shiftedPlanWeek(weekOne, "2026-09-07", 1)).toBeNull();
+  it("holds at week 1 rather than leaving a class with no plan at all", () => {
+    // Paused more weeks than the course has run: repeat week 1, don't fall off
+    // the plan onto generated practice unrelated to their lessons.
+    expect(shiftedPlanWeek(weekOne, "2026-09-21", 3)).toBe(1);
+    expect(shiftedPlanWeek(weekOne, "2026-09-07", 1)).toBe(1);
+    expect(shiftedPlanWeek(weekOne, "2026-09-14", 9)).toBe(1);
+  });
+
+  it("never returns a week the plan could not have", () => {
+    for (let shift = 0; shift <= 12; shift++) {
+      for (const wk of ["2026-09-07", "2026-09-14", "2026-09-21", "2026-10-05"]) {
+        const got = shiftedPlanWeek(weekOne, wk, shift);
+        expect(got).not.toBeNull();
+        expect(got!).toBeGreaterThanOrEqual(1);
+      }
+    }
   });
 
   it("still refuses dates before the course starts", () => {
