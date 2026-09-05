@@ -74,25 +74,24 @@ export function useCourseVideos(instrument: Instrument) {
 }
 
 /**
- * Swap two clips' positions in their library.
+ * Write a library's running order.
  *
- * Ranks are per library, so a swap is enough — no need to renumber the rest.
- * The two writes aren't a transaction; if the second fails the pair share a
- * rank, which the created_at tiebreak still renders sensibly.
+ * Takes the list as it should now read and gives each row its position, but
+ * only touches rows whose position actually changed — a move usually writes
+ * two. Positions rather than a swap, because a fresh upload starts at 0 and
+ * swapping two rows that share a rank would do nothing at all.
  */
-export function useSwapVideoOrder() {
+export function useSetVideoOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: {
-      instrument: Instrument;
-      a: { id: string; sort_order: number };
-      b: { id: string; sort_order: number };
-    }) => {
-      const { a, b } = args;
-      for (const [row, order] of [[a, b.sort_order], [b, a.sort_order]] as const) {
+    mutationFn: async (args: { instrument: Instrument; ordered: CourseVideo[] }) => {
+      const writes = args.ordered
+        .map((v, i) => ({ id: v.id, sort_order: i + 1 }))
+        .filter((row, i) => args.ordered[i].sort_order !== row.sort_order);
+      for (const row of writes) {
         const { error } = await (supabase as any)
           .from("course_videos")
-          .update({ sort_order: order })
+          .update({ sort_order: row.sort_order })
           .eq("id", row.id);
         if (error) throw error;
       }

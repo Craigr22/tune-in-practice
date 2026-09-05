@@ -4,7 +4,7 @@ import {
   useUploadCourseVideo,
   useUpdateCourseVideo,
   useDeleteCourseVideo,
-  useSwapVideoOrder,
+  useSetVideoOrder,
   useSignedVideoUrls,
   type CourseVideo,
 } from "@/hooks/useCourseVideos";
@@ -51,22 +51,19 @@ export default function VideoManager({
   const upload = useUploadCourseVideo();
   const update = useUpdateCourseVideo();
   const del = useDeleteCourseVideo();
-  const swapOrder = useSwapVideoOrder();
+  const setOrder = useSetVideoOrder();
   // Positions live in a column added by migration; until it lands there is
   // nothing to swap, so don't offer a control that can't work.
   const canReorder = videos.length > 1 && videos.every((v) => typeof v.sort_order === "number");
 
   /** Move a clip within its library. Positions are stored, so this sticks. */
   const move = async (index: number, delta: number) => {
-    const a = videos[index];
-    const b = videos[index + delta];
-    if (!a || !b) return;
+    const to = index + delta;
+    if (to < 0 || to >= videos.length) return;
+    const ordered = [...videos];
+    [ordered[index], ordered[to]] = [ordered[to], ordered[index]];
     try {
-      await swapOrder.mutateAsync({
-        instrument,
-        a: { id: a.id, sort_order: a.sort_order },
-        b: { id: b.id, sort_order: b.sort_order },
-      });
+      await setOrder.mutateAsync({ instrument, ordered });
     } catch (e: any) {
       toast.error(e.message ?? "Couldn't reorder");
     }
@@ -242,14 +239,14 @@ export default function VideoManager({
               )}
               <Button
                 variant="ghost" size="icon" title="Move up"
-                disabled={!canReorder || i === 0 || swapOrder.isPending}
+                disabled={!canReorder || i === 0 || setOrder.isPending}
                 onClick={() => move(i, -1)}
               >
                 <ChevronUp className="w-4 h-4" />
               </Button>
               <Button
                 variant="ghost" size="icon" title="Move down"
-                disabled={!canReorder || i === videos.length - 1 || swapOrder.isPending}
+                disabled={!canReorder || i === videos.length - 1 || setOrder.isPending}
                 onClick={() => move(i, 1)}
               >
                 <ChevronDown className="w-4 h-4" />
