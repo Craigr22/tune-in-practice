@@ -38,12 +38,19 @@ const Home = () => {
   const nextSession = useNextSession();
   const { data: batch } = useStudentBatchDay();
 
+  /**
+   * The plan day whose material is currently relevant: today's session, or on
+   * a rest day the next one — the clips are worth watching ahead of a session,
+   * not only during it.
+   */
+  const materialFor = session ?? nextSession;
+
   const planDay = useMemo(() => {
-    if (!session) return null;
-    const wk = planWeekNumberFor(courseStartDate, isoMonday(new Date(session.scheduled_date)));
+    if (!materialFor) return null;
+    const wk = planWeekNumberFor(courseStartDate, isoMonday(new Date(materialFor.scheduled_date)));
     if (!wk) return null;
-    return daysForWeek(planDays, wk)[session.session_index] ?? null;
-  }, [session, courseStartDate, planDays]);
+    return daysForWeek(planDays, wk)[materialFor.session_index] ?? null;
+  }, [materialFor, courseStartDate, planDays]);
 
   const videos = useMemo(() => {
     const ids = planDay?.video_ids ?? [];
@@ -202,7 +209,25 @@ const Home = () => {
           </div>
         </section>
 
-        {!session ? null : (
+        {!session ? (
+          /* A rest day still has material. The clips for the next session sit
+             directly under the header — same page, no card of their own. */
+          videos.length > 0 && (
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--ink-soft)" }}>
+                Watch ahead{nextSession ? ` · ${dayLabel(nextSession.scheduled_date).toLowerCase()}` : ""}
+              </div>
+              <div className="flex flex-col gap-4">
+                {videos.map((v) => (
+                  <div key={v.id}>
+                    <LessonVideo src={urls[v.storage_path]} maxHeight={220} />
+                    <div className="text-sm font-semibold mt-1.5" style={{ color: "var(--ink)" }}>{v.title}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        ) : (
           /* Today's three steps, in order. The lesson videos live inside the
              step that refers to them rather than in a section of their own —
              the focus instruction usually says to watch and then play, so

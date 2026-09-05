@@ -17,6 +17,8 @@ const today = todayLocalIso();
 
 let nextSession: any = null;
 let batch: any = null;
+let courseVideos: any[] = [];
+let planDayForWeek: any = null;
 
 vi.mock("@/hooks/useStudentMe", () => ({
   useStudentMe: () => ({ data: { id: "s1", name: "Elroy Rodrigues", joined_on: "2026-09-01" } }),
@@ -26,13 +28,15 @@ vi.mock("@/hooks/useBatchCoursework", () => ({
   useStudentClassConfig: () => ({ instrument: "ukulele", courseStartDate: "2026-09-06", songsPerSession: 3 }),
 }));
 vi.mock("@/hooks/useCoursePlan", () => ({
-  useStudentCoursePlan: () => ({ weekOneStart: null, days: [] }),
-  planWeekNumberFor: () => null,
-  daysForWeek: () => [],
+  useStudentCoursePlan: () => ({ weekOneStart: null, days: planDayForWeek ? [planDayForWeek] : [] }),
+  planWeekNumberFor: () => (planDayForWeek ? 1 : null),
+  daysForWeek: () => (planDayForWeek ? [planDayForWeek] : []),
 }));
 vi.mock("@/hooks/useCourseVideos", () => ({
-  useCourseVideos: () => ({ data: [] }),
-  useSignedVideoUrls: () => ({ data: {} }),
+  useCourseVideos: () => ({ data: courseVideos }),
+  useSignedVideoUrls: () => ({
+    data: Object.fromEntries(courseVideos.map((v) => [v.storage_path, `blob:${v.id}`])),
+  }),
 }));
 vi.mock("@/hooks/useStudentProgress", () => ({
   useLogPractice: () => ({ mutate: vi.fn() }),
@@ -58,6 +62,8 @@ import Home from "@/routes/student/Home";
 beforeEach(() => {
   nextSession = null;
   batch = null;
+  courseVideos = [];
+  planDayForWeek = null;
 });
 afterEach(cleanup);
 
@@ -68,6 +74,24 @@ describe("student home on a rest day", () => {
     semester_start: "2026-09-06",
   });
 
+  /** A plan day carrying one clip, wired to the next session. */
+  const withVideo = () => {
+    courseVideos = [{ id: "v1", title: "Kho Gaye Normal Plucking", storage_path: "p/v1.mp4" }];
+    planDayForWeek = { week_number: 1, day_number: 1, video_ids: ["v1"], tier: "beginner" };
+  };
+
+  it("shows the next session's clips on a rest day", () => {
+    nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
+    batch = classTomorrow();
+    withVideo();
+
+    const { container } = render(<Home />);
+
+    expect(container.querySelector("video")).toBeTruthy();
+    expect(screen.getByText("Kho Gaye Normal Plucking")).toBeTruthy();
+    expect(screen.getByText(/watch ahead/i)).toBeTruthy();
+  });
+
   it("says what's next in the header, not in a card of its own", () => {
     nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1" };
     batch = classTomorrow();
@@ -75,8 +99,8 @@ describe("student home on a rest day", () => {
     const { container } = render(<Home />);
 
     expect(screen.getByText(/no practice today/i)).toBeTruthy();
-    // The week strip already shows practice and class days, so the header card
-    // is the whole page on a rest day — no second card, and nothing to press.
+    // The week strip already shows practice and class days, so with no clips
+    // to watch the header card is the whole page — and nothing is pressable.
     expect(container.querySelector(".home")!.children.length).toBe(1);
     expect(screen.queryByRole("button")).toBeNull();
   });
