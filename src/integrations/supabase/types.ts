@@ -271,6 +271,7 @@ export type Database = {
           description: string | null
           id: string
           instrument: string
+          kind: string
           song_id: string | null
           storage_path: string
           title: string
@@ -280,6 +281,7 @@ export type Database = {
           description?: string | null
           id?: string
           instrument?: string
+          kind?: string
           song_id?: string | null
           storage_path: string
           title: string
@@ -289,6 +291,7 @@ export type Database = {
           description?: string | null
           id?: string
           instrument?: string
+          kind?: string
           song_id?: string | null
           storage_path?: string
           title?: string
