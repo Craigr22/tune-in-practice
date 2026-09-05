@@ -75,7 +75,9 @@ const Journey = () => {
       const p = progress.find((x) => x.song_id === s.id);
       const songLogs = logs.filter((l) => l.song_id === s.id);
       const tb = p?.teacher_badge ?? null;
-      const isMastered = (tb ?? 0) >= 5 || s.state === "mastered";
+      // Mastery belongs to this student's persisted teacher assessment. The
+      // song catalog may contain curriculum defaults, never student progress.
+      const isMastered = (tb ?? 0) >= 5;
       const hasProgress = songLogs.length > 0 || (tb ?? 0) > 0;
 
       let state: NodeState;
