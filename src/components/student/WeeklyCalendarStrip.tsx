@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, isoMonday, addWeeks, practiceDaysForWeek } from "@/hooks/useWeeklyPlan";
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
@@ -23,7 +22,6 @@ function fmtRange(weekStart: string) {
 }
 
 export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: boolean } = {}) {
-  const navigate = useNavigate();
   const { songs } = useSongs();
   const currentWeek = isoMonday();
   const [weekStart, setWeekStart] = useState(currentWeek);
@@ -84,13 +82,6 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
   const selected = days.find((d) => d.iso === selectedIso);
   const selectedSong = selected?.session ? songs.find((s) => s.id === selected.session!.focus_song_id) : null;
   const selectedTpl = selected?.session ? SESSION_TEMPLATES[selected.session.session_type] : null;
-
-  const openSession = (s: NonNullable<typeof selected>["session"]) => {
-    if (!s) return;
-    const song = songs.find((x) => x.id === s.focus_song_id);
-    if (!song) return;
-    navigate(`/student/song/${song.id}`, { state: { planSessionId: s.id } });
-  };
 
   const weekLabel =
     weekStart === currentWeek ? "This week" :
@@ -194,38 +185,27 @@ export default function WeeklyCalendarStrip({ embedded = false }: { embedded?: b
           className="mt-3 rounded-xl p-3"
           style={{ background: "var(--paper-cool)", border: "1px solid var(--border)" }}
         >
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-                {DAY_FULL[selected.offset]} {new Date(selected.iso).getDate()} {MONTHS[new Date(selected.iso).getMonth()]}
+          <div className="min-w-0">
+            <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
+              {DAY_FULL[selected.offset]} {new Date(selected.iso).getDate()} {MONTHS[new Date(selected.iso).getMonth()]}
               </div>
-              {selected.isClass ? (
-                <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
-                  In-person class day
-                </div>
-              ) : selected.session && selectedSong && selectedTpl ? (
+            {selected.isClass ? (
+              <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                In-person class day
+              </div>
+            ) : selected.session && selectedSong && selectedTpl ? (
                 <div className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
                   {selectedTpl.emoji} {selectedTpl.label} · {selectedSong.title}
                   <span className="ml-2 text-[11px] font-normal" style={{ color: "var(--ink-soft)" }}>
                     {selected.session.warmup_target_min + selected.session.focus_target_min + selected.session.bonus_target_min} min
                   </span>
                 </div>
-              ) : selected.isPractice ? (
+            ) : selected.isPractice ? (
                 <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
                   Generating your session… give it a sec.
                 </div>
-              ) : (
-                <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
-              )}
-            </div>
-            {selected.session && (
-              <button
-                onClick={() => openSession(selected.session)}
-                className="shrink-0 rounded-full px-4 py-2 text-xs font-bold"
-                style={{ background: "var(--navy)", color: "#fff" }}
-              >
-                {selected.sessionCompleted ? "Review" : selected.isPast ? "Catch up" : "Open"}
-              </button>
+            ) : (
+              <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
             )}
           </div>
 
