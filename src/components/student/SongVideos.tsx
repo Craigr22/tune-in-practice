@@ -13,7 +13,7 @@ export default function SongVideos({ songId, inset = true }: { songId: string; i
   if (!videos.length) return null;
 
   return (
-    <div style={{ padding: inset ? "12px 16px 0" : "12px 0 0", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ padding: inset ? "12px 16px 0" : "12px 0 0", display: "flex", flexDirection: "column", gap: 20 }}>
       <div
         style={{
           fontSize: 11,

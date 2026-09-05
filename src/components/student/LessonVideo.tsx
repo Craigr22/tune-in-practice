@@ -52,16 +52,25 @@ export default function LessonVideo({
   return (
     <div>
       {(title || caption) && (
-        <div className="mb-2">
+        <div className="mb-3 mt-1">
           {title && (
-            <div className="text-sm font-bold leading-snug" style={{ color: "var(--ink)" }}>
+            <div
+              className="text-base font-bold leading-snug tracking-tight"
+              style={{ color: "var(--blue-deep)" }}
+            >
               {title}
             </div>
           )}
           {caption && (
             <div
-              className="text-xs leading-relaxed mt-1 pl-2.5"
-              style={{ color: "var(--ink-soft)", borderLeft: "2px solid var(--gold-deep)" }}
+              className="text-sm leading-relaxed mt-2 rounded-xl px-4 py-3"
+              style={{
+                color: "var(--navy)",
+                background: "var(--paper-cool)",
+                borderLeft: "3px solid var(--blue-bright)",
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+              }}
             >
               {caption}
             </div>

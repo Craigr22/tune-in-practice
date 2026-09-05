@@ -207,7 +207,7 @@ const Home = () => {
                 ? `Lessons · ${dayLabel(peek.scheduled_date)}`
                 : `Watch ahead · ${dayLabel(viewingDay.scheduled_date).toLowerCase()}`}
             </div>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-7">
               {viewing.videos.map((v) => (
                 <div key={v.id}>
                   <LessonVideo
@@ -262,7 +262,7 @@ const Home = () => {
                 )}
 
                 {s.videos.length > 0 && (
-                  <div className="mt-3 flex flex-col gap-3">
+                  <div className="mt-4 flex flex-col gap-7">
                     {s.videos.map((v) => (
                       <div key={v.id}>
                         <LessonVideo
