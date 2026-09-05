@@ -37,6 +37,11 @@ export default function LessonVideo({
   maxHeight?: number;
 }) {
   const [ready, setReady] = useState(false);
+  // A clip that won't load has to say so. Clearing the placeholder on error
+  // left a black rectangle with no controls and no explanation — which reads
+  // as the app being broken rather than one file failing.
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const ref = useRef<HTMLVideoElement>(null);
   // An mp3 backing track has no picture: it needs a player, not a thumbnail.
   const isAudio = !!path && isAudioPath(path);
@@ -111,7 +116,7 @@ export default function LessonVideo({
             onLoadedMetadata={primeFirstFrame}
             onLoadedData={() => setReady(true)}
             onSeeked={() => setReady(true)}
-            onError={() => setReady(true)}
+            onError={() => { setFailed(true); setReady(true); }}
             style={{
               display: "block",
               width: "100%",
@@ -122,7 +127,30 @@ export default function LessonVideo({
           />
         )}
 
-        {showPlaceholder && (
+        {failed && (
+          <div
+            className="absolute inset-0 grid place-items-center rounded-xl px-4 text-center"
+            style={{ background: "var(--paper-cool)", borderRadius: radius }}
+          >
+            <div>
+              <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                This video wouldn't load
+              </div>
+              <div className="text-xs mt-1" style={{ color: "var(--ink-soft)" }}>
+                Often a slow connection — it's a large file.
+              </div>
+              <button
+                onClick={() => { setFailed(false); setReady(false); setAttempt((n) => n + 1); }}
+                className="mt-3 rounded-full px-4 py-1.5 text-xs font-bold"
+                style={{ background: "var(--navy)", color: "#fff" }}
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!failed && showPlaceholder && (
           <div
             className="video-skeleton"
             style={{

@@ -29,6 +29,13 @@ import { Film, Upload, Trash2, ExternalLink, Pencil, Check, X, ChevronUp, Chevro
 import { toast } from "sonner";
 
 const MAX_MB = 1024;
+/**
+ * Above this, a clip is a raw camera export rather than something a student
+ * on a phone can stream. The library reached 16 GB across 46 files — one
+ * 5-minute clip was 457 MB — which is why videos were slow to start and some
+ * never loaded at all on mobile data.
+ */
+const LARGE_MB = 150;
 
 export default function VideoManager({
   instrument,
@@ -118,6 +125,11 @@ export default function VideoManager({
     if (!title.trim()) return toast.error("Title is required");
     if (file.size > MAX_MB * 1024 * 1024)
       return toast.error(`That ${noun} is too large — keep it under ${MAX_MB} MB`);
+    if (file.size > LARGE_MB * 1024 * 1024)
+      toast.warning(
+        `That's ${Math.round(file.size / 1048576)} MB — students on phones will wait. ` +
+          `Compressing to 720p usually brings a lesson under ${LARGE_MB} MB.`,
+      );
     const controller = new AbortController();
     abortRef.current = controller;
     setProgress(0);
@@ -291,7 +303,10 @@ export default function VideoManager({
             </div>
             <div>
               <Label>
-                {isTracks ? "Audio or video file" : "Video file"} (max {MAX_MB >= 1024 ? `${MAX_MB / 1024} GB` : `${MAX_MB} MB`})
+                {isTracks ? "Audio or video file" : "Video file"}
+                <span className="font-normal text-muted-foreground">
+                  {" "}— 720p, under {LARGE_MB} MB plays best on a phone
+                </span>
               </Label>
               <Input
                 ref={fileRef}
