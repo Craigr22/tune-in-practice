@@ -13,6 +13,8 @@ export type CourseVideo = {
   description: string | null;
   storage_path: string;
   kind: MediaKind;
+  /** Position within its library, lowest first. */
+  sort_order: number;
   created_at: string;
 };
 
@@ -60,8 +62,43 @@ export function useCourseVideos(instrument: Instrument) {
         .eq("instrument", instrument)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as CourseVideo[];
+      // Sorted here rather than in the query: the admin's order is a column
+      // added by migration, and ordering by it in SQL would break the whole
+      // library until that migration lands. Newest-first is the tiebreak, so
+      // an unmigrated database still reads exactly as it did before.
+      return [...((data ?? []) as CourseVideo[])].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+      );
     },
+  });
+}
+
+/**
+ * Swap two clips' positions in their library.
+ *
+ * Ranks are per library, so a swap is enough — no need to renumber the rest.
+ * The two writes aren't a transaction; if the second fails the pair share a
+ * rank, which the created_at tiebreak still renders sensibly.
+ */
+export function useSwapVideoOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      instrument: Instrument;
+      a: { id: string; sort_order: number };
+      b: { id: string; sort_order: number };
+    }) => {
+      const { a, b } = args;
+      for (const [row, order] of [[a, b.sort_order], [b, a.sort_order]] as const) {
+        const { error } = await (supabase as any)
+          .from("course_videos")
+          .update({ sort_order: order })
+          .eq("id", row.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, args) =>
+      qc.invalidateQueries({ queryKey: ["course-videos", args.instrument] }),
   });
 }
 

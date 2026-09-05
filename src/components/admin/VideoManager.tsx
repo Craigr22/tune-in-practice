@@ -4,6 +4,7 @@ import {
   useUploadCourseVideo,
   useUpdateCourseVideo,
   useDeleteCourseVideo,
+  useSwapVideoOrder,
   useSignedVideoUrls,
   type CourseVideo,
 } from "@/hooks/useCourseVideos";
@@ -25,7 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Film, Upload, Trash2, ExternalLink, Pencil, Check, X } from "lucide-react";
+import { Film, Upload, Trash2, ExternalLink, Pencil, Check, X, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 const MAX_MB = 1024;
@@ -51,6 +52,26 @@ export default function VideoManager({
   const upload = useUploadCourseVideo();
   const update = useUpdateCourseVideo();
   const del = useDeleteCourseVideo();
+  const swapOrder = useSwapVideoOrder();
+  // Positions live in a column added by migration; until it lands there is
+  // nothing to swap, so don't offer a control that can't work.
+  const canReorder = videos.length > 1 && videos.every((v) => typeof v.sort_order === "number");
+
+  /** Move a clip within its library. Positions are stored, so this sticks. */
+  const move = async (index: number, delta: number) => {
+    const a = videos[index];
+    const b = videos[index + delta];
+    if (!a || !b) return;
+    try {
+      await swapOrder.mutateAsync({
+        instrument,
+        a: { id: a.id, sort_order: a.sort_order },
+        b: { id: b.id, sort_order: b.sort_order },
+      });
+    } catch (e: any) {
+      toast.error(e.message ?? "Couldn't reorder");
+    }
+  };
 
   const [formOpen, setFormOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -170,7 +191,7 @@ export default function VideoManager({
         </div>
       ) : (
         <div className="divide-y">
-          {videos.map((v) => (
+          {videos.map((v, i) => (
             <div key={v.id} className="flex items-center gap-3 px-4 py-2.5">
               <button
                 onClick={() => setPreview(v)}
@@ -243,6 +264,20 @@ export default function VideoManager({
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
+              <Button
+                variant="ghost" size="icon" title="Move up"
+                disabled={!canReorder || i === 0 || swapOrder.isPending}
+                onClick={() => move(i, -1)}
+              >
+                <ChevronUp className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost" size="icon" title="Move down"
+                disabled={!canReorder || i === videos.length - 1 || swapOrder.isPending}
+                onClick={() => move(i, 1)}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </Button>
               <Button variant="ghost" size="icon" title="Edit title and caption" onClick={() => startEdit(v)}>
                 <Pencil className="w-4 h-4" />
               </Button>
