@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, useMarkSessionComplete, isoMonday, addWeeks, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
-import { useLogPractice, usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
+import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, isoMonday, addWeeks, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
+import { toast } from "sonner";
+import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import { useDayLessons, type LessonDay } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
@@ -22,8 +23,6 @@ const Home = () => {
   const catalog = useStudentSongs();
   const { instrument, courseStartDate } = useStudentClassConfig();
   const completeSeg = useCompleteSegment();
-  const markComplete = useMarkSessionComplete();
-  const logPractice = useLogPractice();
   const { data: logs = [] } = usePracticeLogs();
   const streak = useMemo(() => computeStreak(logs), [logs]);
 
@@ -48,33 +47,17 @@ const Home = () => {
   const viewing = useDayLessons(viewingDay);
 
   /**
-   * Ticking off a segment. When the last one lands, the session is marked
-   * complete and a practice log is written — that log is what the teacher's
-   * roster draws its practice history and retention flags from, so without it
-   * finishing a session would leave no trace.
+   * Ticking off a segment. Completing the session and writing the practice
+   * log the teacher's roster reads happen server-side in the same transaction,
+   * so finishing can no longer leave practice that a student did with nothing
+   * to show for it.
    */
   const markSegmentDone = (segment: "warmup" | "focus" | "bonus") => {
     if (!session) return;
-    completeSeg.mutate({ id: session.id, segment });
-
-    const doneAfter = {
-      warmup: segment === "warmup" || session.warmup_completed,
-      focus: segment === "focus" || session.focus_completed,
-      bonus: segment === "bonus" || session.bonus_completed,
-    };
-    if (!(doneAfter.warmup && doneAfter.focus && doneAfter.bonus)) return;
-    if (session.completed_at) return; // already counted
-
-    markComplete.mutate(session.id);
-    logPractice.mutate({
-      songId: session.focus_song_id,
-      durationMin:
-        session.warmup_target_min + session.focus_target_min + session.bonus_target_min,
-      selfBadge: null,
-      tuningCheckCompleted: false,
-      checkIn: null,
-      sharedWithTeacher: true,
-    });
+    completeSeg.mutate(
+      { id: session.id, segment },
+      { onError: (e: any) => toast.error(e?.message ?? "Couldn't save that — try again") },
+    );
   };
 
   /**

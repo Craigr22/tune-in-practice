@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Navigate, useLocation } from "react-router-dom";
-import { useWeeklyPlan, useMarkSessionComplete, useCompleteSegment } from "@/hooks/useWeeklyPlan";
+import { useWeeklyPlan, useCompleteSegment } from "@/hooks/useWeeklyPlan";
 import SegmentedPracticeView from "@/components/student/SegmentedPracticeView";
 import { useSongs } from "@/hooks/useSongs";
 import { useLogPractice, CHECK_IN_LABEL, CHECK_IN_EMOJI, type CheckIn } from "@/hooks/useStudentProgress";
@@ -65,7 +65,6 @@ const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
   const planSessionId = (location.state as { planSessionId?: string } | null)?.planSessionId;
   const { data: weekPlan = [] } = useWeeklyPlan();
   const planSession = planSessionId ? weekPlan.find((s) => s.id === planSessionId) : undefined;
-  const markComplete = useMarkSessionComplete();
   const completeSeg = useCompleteSegment();
 
   const [prompt, setPrompt] = useState(false);
@@ -194,8 +193,8 @@ const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
                   session={planSession}
                   focusContent={<SongTab song={song} />}
                   onAllDone={() => {
+                    // Completion and the log ride along with the segment.
                     completeSeg.mutate({ id: planSession.id, segment: "focus" });
-                    markComplete.mutate(planSession.id);
                     handleLogPlay(song.id);
                   }}
                 />

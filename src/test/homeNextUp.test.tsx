@@ -54,7 +54,6 @@ vi.mock("@/hooks/useCourseVideos", async () => {
   };
 });
 vi.mock("@/hooks/useStudentProgress", () => ({
-  useLogPractice: () => ({ mutate: vi.fn() }),
   usePracticeLogs: () => ({ data: [] }),
   computeStreak: () => 0,
 }));
@@ -77,7 +76,6 @@ vi.mock("@/hooks/useWeeklyPlan", async () => {
     useNextSession: () => st.nextSession,
     useStudentBatchDay: () => ({ data: st.batch }),
     useCompleteSegment: () => ({ mutate: vi.fn(), isPending: false }),
-    useMarkSessionComplete: () => ({ mutate: vi.fn() }),
   };
 });
 

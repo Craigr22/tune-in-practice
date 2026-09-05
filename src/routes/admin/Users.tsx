@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Mail, KeyRound } from "lucide-react";
 import LoginDialog, { type LoginTarget } from "@/components/admin/LoginDialog";
 import { toast } from "sonner";
+import { rpcError } from "@/lib/rpc";
 
 type AppRole = "admin" | "teacher" | "student";
 
@@ -463,11 +464,15 @@ export default function AdminUsers() {
   const confirmRoleChange = async () => {
     if (!pending) return;
     setApplying(true);
-    const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", pending.userId);
-    if (delErr) { setApplying(false); return toast.error(delErr.message); }
-    const { error } = await supabase.from("user_roles").insert({ user_id: pending.userId, role: pending.next });
+    // Delete-then-insert in one transaction. Run separately, a failure between
+    // them stripped the old role and never added the new one, locking the
+    // person out of the app entirely.
+    const { error } = await (supabase as any).rpc("set_user_role", {
+      p_user_id: pending.userId,
+      p_role: pending.next,
+    });
     setApplying(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(rpcError(error, "Changing the role").message);
     toast.success(`${pending.name} is now ${pending.next}`);
     qc.invalidateQueries({ queryKey: ["admin-users"] });
     setPending(null);

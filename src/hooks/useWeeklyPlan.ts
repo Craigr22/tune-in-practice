@@ -19,6 +19,7 @@ import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
 import { isoMondayOf, addDaysIso, todayLocalIso } from "@/lib/date";
 import { rowsToWrite } from "@/lib/planSync";
+import { rpcError } from "@/lib/rpc";
 
 export interface WeeklyPlanSession {
   id: string;
@@ -345,32 +346,33 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   }, [student?.id, existing?.length, batch?.day_of_week, weekStart, weekOneStart, shiftWeeks, allPlanDays.length, planSignature]);
 }
 
+/**
+ * Tick off one part of a practice session.
+ *
+ * The whole thing is a single call: marking the segment, completing the
+ * session when it's the last one, and writing the practice log the teacher's
+ * roster reads all happen inside one transaction on the server. As three
+ * separate writes from the browser, a failure between them left a session
+ * completed with no log — practice a student had actually done, invisible.
+ *
+ * Idempotent, so a double tap completes once.
+ */
 export function useCompleteSegment() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; segment: "warmup" | "focus" | "bonus" }) => {
-      const col = `${args.segment}_completed` as const;
-      const { error } = await supabase
-        .from("weekly_plan_sessions")
-        .update({ [col]: true } as never)
-        .eq("id", args.id);
-      if (error) throw error;
+      const { error } = await (supabase as any).rpc("complete_practice_segment", {
+        p_session_id: args.id,
+        p_segment: args.segment,
+      });
+      if (error) throw rpcError(error, "Saving practice");
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["weekly-plan"] }),
-  });
-}
-
-export function useMarkSessionComplete() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("weekly_plan_sessions")
-        .update({ completed_at: new Date().toISOString() })
-        .eq("id", id);
-      if (error) throw error;
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["weekly-plan"] });
+      qc.invalidateQueries({ queryKey: ["next-session"] });
+      qc.invalidateQueries({ queryKey: ["practice-logs"] });
+      qc.invalidateQueries({ queryKey: ["song-progress"] });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["weekly-plan"] }),
   });
 }
 

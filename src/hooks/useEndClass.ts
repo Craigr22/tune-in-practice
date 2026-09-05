@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
+import { rpcError } from "@/lib/rpc";
 
 export interface AttendanceEntry {
   student_id: string;
@@ -22,66 +23,21 @@ export function useEndClass() {
       teacherNotes: string;
       attendance: AttendanceEntry[];
       badgeUpdates: BadgeUpdate[];
-    }) => {
-      let sessionId = args.sessionId;
-      if (!sessionId) {
-        const { data, error } = await supabase
-          .from("sessions")
-          .insert({
-            batch_id: args.batchId,
-            scheduled_date: args.scheduledDate,
-            status: "completed",
-            teacher_notes: args.teacherNotes,
-            completed_at: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        sessionId = data.id;
-      } else {
-        const { error } = await supabase
-          .from("sessions")
-          .update({
-            status: "completed",
-            teacher_notes: args.teacherNotes,
-            completed_at: new Date().toISOString(),
-          })
-          .eq("id", sessionId);
-        if (error) throw error;
-      }
-
-      if (args.attendance.length) {
-        const rows = args.attendance.map((a) => ({
-          session_id: sessionId!,
-          student_id: a.student_id,
-          status: a.status,
-        }));
-        const { error } = await supabase.from("attendance").upsert(rows, { onConflict: "session_id,student_id" });
-        if (error) {
-          // Fallback: insert without conflict target
-          const { error: e2 } = await supabase.from("attendance").insert(rows);
-          if (e2) throw e2;
-        }
-      }
-
-      for (const u of args.badgeUpdates) {
-        const { data: existing } = await supabase
-          .from("song_progress")
-          .select("id")
-          .eq("student_id", u.student_id)
-          .eq("song_id", u.song_id)
-          .maybeSingle();
-        if (existing) {
-          await supabase
-            .from("song_progress")
-            .update({ teacher_badge: u.teacher_badge, last_updated: new Date().toISOString() })
-            .eq("id", existing.id);
-        } else {
-          await supabase
-            .from("song_progress")
-            .insert({ student_id: u.student_id, song_id: u.song_id, teacher_badge: u.teacher_badge });
-        }
-      }
+    }): Promise<string> => {
+      // One call, one transaction. As separate writes this could complete the
+      // session and then fail part-way through attendance, leaving a class
+      // marked done with only some of the register filled in — and no way for
+      // the teacher to tell which.
+      const { data, error } = await (supabase as any).rpc("end_class", {
+        p_batch_id: args.batchId,
+        p_session_id: args.sessionId ?? null,
+        p_scheduled_date: args.scheduledDate,
+        p_teacher_notes: args.teacherNotes,
+        p_attendance: args.attendance,
+        p_badges: args.badgeUpdates,
+      });
+      if (error) throw rpcError(error, "Ending the class");
+      return data as string;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["teacher-today"] });
