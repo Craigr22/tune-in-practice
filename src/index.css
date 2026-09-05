@@ -35,6 +35,9 @@
   --terracotta-soft: #FBE5D2;
   --crimson: #9F2B2B;
 
+  /* Brand surfaces, used directly as var(--card) / var(--border). These are
+     hex on purpose; the shadcn equivalents below are the same colours written
+     as HSL channels, which is the only form Tailwind's hsl() wrapper accepts. */
   --card: #FFFFFF;
   --border: #E3E8EF;
   --border-strong: #CBD5E0;
@@ -48,7 +51,15 @@
   --font-body: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-script: 'Caveat', cursive;
 
-  /* shadcn HSL tokens — kept for any shadcn ui that mounts */
+  /* shadcn tokens. Tailwind wraps every one of these in hsl(), so they must be
+     bare "H S% L%" channels — a hex value here compiles to hsl(#FFFFFF), which
+     is invalid, and the browser drops the declaration. That is what made
+     bg-card and border-border render transparent. Namespaced --ui-* so they
+     can't collide with the brand tokens above, which share two of the names. */
+  --ui-card: 0 0% 100%;        /* #FFFFFF, matches --card   */
+  --ui-border: 215 27% 91%;    /* #E3E8EF, matches --border */
+  --ui-input: 215 27% 91%;
+
   --background: 0 0% 100%;
   --foreground: 215 39% 15%;
   --card-foreground: 215 39% 15%;
@@ -66,6 +77,17 @@
   --destructive-foreground: 0 0% 100%;
   --ring: 201 100% 39%;
   --radius: 0.5rem;
+
+  /* The shadcn sidebar. Undefined before, so every sidebar colour compiled to
+     hsl() and was dropped. Nothing mounts it today; these keep it usable. */
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 215 39% 15%;
+  --sidebar-primary: 201 100% 39%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 210 33% 96%;
+  --sidebar-accent-foreground: 215 39% 15%;
+  --sidebar-border: 215 27% 91%;
+  --sidebar-ring: 201 100% 39%;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1216,7 +1238,11 @@ a { color: inherit; text-decoration: none; }
   .song-page-content { grid-template-columns: 1fr; gap: 20px; }
 }
 @layer base {
-  * { border-color: hsl(var(--ring) / 0); }
+  /* shadcn's default border colour, which its components rely on: `border`
+     with no colour class should draw the hairline. This pointed at --ring at
+     zero alpha, so every such border — cards, panels, table rules — was
+     rendered invisible. */
+  * { border-color: hsl(var(--ui-border)); }
 }
 
 /* ============================================================
