@@ -62,55 +62,56 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("student home on a rest day", () => {
-  it("says what's next instead of only saying there's nothing today", () => {
-    nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1" };
-    batch = { day_of_week: new Date(`${addDaysIso(today, 1)}T00:00:00`).getDay(), start_time: "15:00:00", semester_start: "2026-09-06" };
+  const classTomorrow = () => ({
+    day_of_week: new Date(`${addDaysIso(today, 1)}T00:00:00`).getDay(),
+    start_time: "15:00:00",
+    semester_start: "2026-09-06",
+  });
 
-    render(<Home />);
+  it("says what's next in the header, not in a card of its own", () => {
+    nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1" };
+    batch = classTomorrow();
+
+    const { container } = render(<Home />);
 
     expect(screen.getByText(/no practice today/i)).toBeTruthy();
-    expect(screen.getByText(/next up/i)).toBeTruthy();
-    expect(screen.getByText("Practice")).toBeTruthy();
-    expect(screen.getByText("Class")).toBeTruthy();
+    // The week strip already shows practice and class days, so the header card
+    // is the whole page on a rest day — no second card, and nothing to press.
+    expect(container.querySelector(".home")!.children.length).toBe(1);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("names the song and the class time", () => {
-    nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1" };
-    batch = { day_of_week: new Date(`${addDaysIso(today, 1)}T00:00:00`).getDay(), start_time: "15:00:00", semester_start: "2026-09-06" };
-
-    render(<Home />);
-
-    expect(screen.getByText("You Are My Sunshine")).toBeTruthy();
-    expect(screen.getByText(/In person at .*3[:.]00/)).toBeTruthy();
-  });
-
-  it("puts the nearer thing first — class tomorrow before practice later", () => {
+  it("names the nearer of the two, with its time", () => {
     nextSession = { scheduled_date: addDaysIso(today, 3), focus_song_id: "song1" };
-    batch = { day_of_week: new Date(`${addDaysIso(today, 1)}T00:00:00`).getDay(), start_time: "15:00:00", semester_start: "2026-09-06" };
+    batch = classTomorrow();
 
     render(<Home />);
 
-    const labels = screen.getAllByText(/^(Practice|Class)$/).map((n) => n.textContent);
-    expect(labels).toEqual(["Class", "Practice"]);
-    expect(screen.getByText("Tomorrow")).toBeTruthy();
+    expect(screen.getByText(/class tomorrow at .*3[:.]00/i)).toBeTruthy();
+  });
+
+  it("names practice when practice comes first", () => {
+    nextSession = { scheduled_date: addDaysIso(today, 1), focus_song_id: "song1" };
+    batch = { ...classTomorrow(), day_of_week: new Date(`${addDaysIso(today, 4)}T00:00:00`).getDay() };
+
+    render(<Home />);
+
+    expect(screen.getByText(/practice tomorrow/i)).toBeTruthy();
   });
 
   it("falls back to a plain day off when there is nothing ahead at all", () => {
     render(<Home />);
 
-    expect(screen.getByText(/enjoy the day off\.$/i)).toBeTruthy();
-    expect(screen.queryByText("Practice")).toBeNull();
-    expect(screen.queryByText("Class")).toBeNull();
+    expect(screen.getByText(/enjoy the day off/i)).toBeTruthy();
   });
 
   it("does not offer a class before the course has started", () => {
-    // Class day is tomorrow, but the class doesn't begin for another month.
-    const farOff = addDaysIso(today, 30);
-    batch = { day_of_week: new Date(`${addDaysIso(today, 1)}T00:00:00`).getDay(), start_time: "15:00:00", semester_start: farOff };
+    // Class day is tomorrow, but the course does not begin for another month.
+    batch = { ...classTomorrow(), semester_start: addDaysIso(today, 30) };
 
     render(<Home />);
 
-    expect(screen.queryByText("Tomorrow")).toBeNull();
-    expect(screen.getByText("Class")).toBeTruthy();
+    expect(screen.queryByText(/tomorrow/i)).toBeNull();
+    expect(screen.getByText(/class/i)).toBeTruthy();
   });
 });
