@@ -8,10 +8,6 @@ import {
   useSongProgress,
   avgCourseBadge,
   tuningRate,
-  sentimentStrip,
-  CHECK_IN_COLOR,
-  CHECK_IN_EMOJI,
-  type CheckIn,
 } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
 import { getBadge, nextBadge } from "@/lib/badges";
@@ -118,9 +114,6 @@ const Journey = () => {
   const overallPct = Math.round((masteredCount / Math.max(1, totalCount)) * 100);
 
   const selectedNode = nodes.find((n) => n.songId === selected) || null;
-  const selectedLogs = selectedNode ? logs.filter((l) => l.song_id === selectedNode.songId).slice(0, 6) : [];
-  // The full catalog entry behind the map node — chords, strum, tempo, etc.
-  const selectedSong = selectedNode ? catalog.find((s) => s.id === selectedNode.songId) : null;
 
   return (
     <section className="view view-journey active">
@@ -368,92 +361,9 @@ const Journey = () => {
               <BadgeDisplay level={selectedNode.teacherBadge} size="md" />
             </div>
 
-            {/* What this song teaches — the course substance behind the map node */}
-            {selectedSong && (
-              <div className="mt-4 grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
-                {(selectedSong.chords ?? []).length > 0 && (
-                  <div className="rounded-xl p-3" style={{ background: "var(--paper-cool)" }}>
-                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-faint)" }}>Chords</div>
-                    <div className="flex flex-wrap gap-1">
-                      {(selectedSong.chords ?? []).map((c) => (
-                        <span
-                          key={c}
-                          className="text-xs font-bold px-2 py-0.5 rounded-md"
-                          style={
-                            c === selectedSong.newChord
-                              ? { background: "var(--gold-deep)", color: "#fff" }
-                              : { background: "var(--card)", color: "var(--ink)", border: "1px solid var(--border)" }
-                          }
-                          title={c === selectedSong.newChord ? "New chord in this song!" : undefined}
-                        >
-                          {c}{c === selectedSong.newChord ? " ✨" : ""}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {selectedSong.strum && (
-                  <div className="rounded-xl p-3" style={{ background: "var(--paper-cool)" }}>
-                    <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-faint)" }}>Strum</div>
-                    <div className="text-sm font-bold tracking-widest" style={{ color: "var(--ink)" }}>{selectedSong.strum}</div>
-                    {selectedSong.strumNote && (
-                      <div className="text-[10px] mt-0.5" style={{ color: "var(--ink-soft)" }}>{selectedSong.strumNote}</div>
-                    )}
-                  </div>
-                )}
-                <div className="rounded-xl p-3" style={{ background: "var(--paper-cool)" }}>
-                  <div className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--ink-faint)" }}>Level</div>
-                  <div className="text-sm font-bold" style={{ color: "var(--ink)" }}>{selectedSong.difficulty}</div>
-                  {selectedSong.bpm && (
-                    <div className="text-[10px] mt-0.5" style={{ color: "var(--ink-soft)" }}>{selectedSong.bpm} BPM</div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Teacher-uploaded clips for this song */}
+            {/* The song's clips: tutorial and backing tracks. Nothing opens
+                out of here — what a student needs is the video itself. */}
             <SongVideos songId={selectedNode.songId} inset={false} />
-
-            {selectedNode.sessions > 0 && (
-              <>
-                <div className="mt-3 flex items-center gap-1" title="Last 7 days check-ins">
-                  {sentimentStrip(logs.filter((l) => l.song_id === selectedNode.songId), 7).map((d) => (
-                    <span key={d.date} className={`w-2.5 h-2.5 rounded-full ${CHECK_IN_COLOR[d.checkIn ?? "none"]}`} />
-                  ))}
-                </div>
-                <ul className="mt-3 space-y-2">
-                  {selectedLogs.map((l) => (
-                    <li key={l.id} className="flex items-center justify-between text-xs rounded-lg px-3 py-2" style={{ background: "var(--paper-cool)" }}>
-                      <span style={{ color: "var(--ink)" }}>
-                        {l.tuning_check_completed && <span title="Tuned" style={{ marginRight: 6 }}>🎵</span>}
-                        {l.played_on}
-                      </span>
-                      <span style={{ color: "var(--ink-soft)" }}>{l.duration_min} min</span>
-                      <span>
-                        {l.check_in && <span className={`inline-block w-2 h-2 rounded-full mr-1 align-middle ${CHECK_IN_COLOR[l.check_in as CheckIn]}`} />}
-                        {l.check_in ? CHECK_IN_EMOJI[l.check_in as CheckIn] : "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-
-            <button
-              onClick={() => navigate(`/student/song/${selectedNode.songId}`)}
-              className="mt-4 w-full rounded-xl py-2.5 text-sm font-semibold transition-transform hover:scale-[1.01]"
-              style={{
-                background: selectedNode.state === "locked" ? "var(--paper-cool)" : "var(--navy)",
-                color: selectedNode.state === "locked" ? "var(--ink)" : "#fff",
-                border: selectedNode.state === "locked" ? "1px solid var(--border-strong)" : "none",
-              }}
-            >
-              {selectedNode.state === "locked"
-                ? "Take a peek →"
-                : selectedNode.sessions > 0
-                ? "Continue practicing →"
-                : "Start this song →"}
-            </button>
           </>
           )}
           </DialogContent>
