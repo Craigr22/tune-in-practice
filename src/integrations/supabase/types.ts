@@ -211,6 +211,7 @@ export type Database = {
           tier: string
           updated_at: string
           video_ids: string[]
+          video_notes: Json
           warmup_instruction: string
           week_number: number
         }
@@ -225,6 +226,7 @@ export type Database = {
           tier?: string
           updated_at?: string
           video_ids?: string[]
+          video_notes?: Json
           warmup_instruction?: string
           week_number: number
         }
@@ -239,6 +241,7 @@ export type Database = {
           tier?: string
           updated_at?: string
           video_ids?: string[]
+          video_notes?: Json
           warmup_instruction?: string
           week_number?: number
         }
