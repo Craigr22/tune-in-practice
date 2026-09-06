@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
-import { toLocalIso } from "@/lib/date";
+import { toLocalIso, addDaysIso } from "@/lib/date";
+import { practiceDatesUpTo, type PracticeSchedule } from "@/lib/practiceWeek";
+import type { Song } from "@/lib/types";
 
 export type CheckIn = "nailed" | "got_through" | "need_help";
 
@@ -126,17 +128,34 @@ export function tuningRate(logs: PracticeLog[]): { tuned: number; total: number;
 
 /* ----- helpers ----- */
 
-export function computeStreak(logs: PracticeLog[]): number {
+/**
+ * How many practice sessions in a row a student has done.
+ *
+ * This used to count consecutive calendar days, which a three-day-a-week plan
+ * can never satisfy: practice falls two days apart, so the day in between
+ * always broke the run and the streak could never read higher than 1. It now
+ * counts the days the student was actually asked to practise — the two that
+ * follow each lesson — so keeping to the plan keeps the streak.
+ *
+ * Today never breaks a run: an unfinished session is still ahead of them.
+ * Without a schedule (the class hasn't loaded yet) it falls back to counting
+ * calendar days, which is right for a student with no class at all.
+ */
+export function computeStreak(logs: PracticeLog[], schedule?: PracticeSchedule | null): number {
   if (!logs.length) return 0;
   const days = new Set(logs.map((l) => l.played_on));
+  const today = toLocalIso();
+
+  const expected = schedule
+    ? practiceDatesUpTo(today, schedule)
+    : // Every day back from today, in the same newest-first order.
+      Array.from({ length: 365 }, (_, i) => addDaysIso(today, -i));
+
   let streak = 0;
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  const todayIso = toLocalIso(d);
-  if (!days.has(todayIso)) d.setDate(d.getDate() - 1);
-  while (days.has(toLocalIso(d))) {
-    streak += 1;
-    d.setDate(d.getDate() - 1);
+  for (const date of expected) {
+    if (days.has(date)) streak += 1;
+    // A session still open today hasn't been missed yet.
+    else if (date !== today) break;
   }
   return streak;
 }
@@ -159,6 +178,45 @@ export function avgCourseBadge(progress: SongProgress[]): number | null {
   const levels = progress.map((p) => p.teacher_badge).filter((v): v is number => typeof v === "number" && v > 0);
   if (!levels.length) return null;
   return levels.reduce((a, b) => a + b, 0) / levels.length;
+}
+
+/**
+ * Overlay a catalog song with the signed-in student's persisted progress.
+ * Catalog fields describe teaching content only; they must never award a
+ * student mastery or fabricate a practice streak.
+ */
+export function songWithStudentProgress(
+  song: Song,
+  logs: PracticeLog[],
+  progress: SongProgress[],
+  today = new Date(),
+): Song {
+  const songLogs = logs.filter((log) => log.song_id === song.id);
+  const songProgress = progress.find((row) => row.song_id === song.id);
+  const target = song.dailyTarget || 4;
+  const countsByDay = new Map<string, number>();
+  for (const log of songLogs) {
+    countsByDay.set(log.played_on, (countsByDay.get(log.played_on) ?? 0) + 1);
+  }
+
+  const todayIso = toLocalIso(today);
+  const approvedDays = [...countsByDay.values()].filter((count) => count >= target).length;
+  const teacherBadge = songProgress?.teacher_badge ?? 0;
+  const hasProgress = songLogs.length > 0 || teacherBadge > 0 || (songProgress?.self_badge ?? 0) > 0;
+  const history = Array.from({ length: 14 }, (_, index) => {
+    const day = new Date(today);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - (13 - index));
+    return countsByDay.get(toLocalIso(day)) ?? 0;
+  });
+
+  return {
+    ...song,
+    state: teacherBadge >= 5 ? "mastered" : hasProgress ? "in-progress" : "next",
+    playsToday: countsByDay.get(todayIso) ?? 0,
+    approvedDays,
+    history,
+  };
 }
 
 /* ----- check-in sentiment ----- */
