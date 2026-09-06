@@ -8,10 +8,53 @@
 
 export const STUDENT_EMAIL_DOMAIN = "students.bam.invalid";
 
-/** What the user typed → the address to authenticate with. */
-export function toLoginEmail(input: string): string {
+/**
+ * A person's name → the username provisioning makes from it.
+ *
+ * Must match the rule in supabase/functions/provision-user: lower case,
+ * accents dropped, anything that isn't a letter or digit becomes a dot. Kept
+ * identical so that a student typing their own name — "Payal Malviya", which
+ * is what a child will try first — lands on the username they were given.
+ */
+export function toUsername(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "")
+    .slice(0, 40);
+}
+
+/**
+ * The addresses to try for what someone typed, in the order to try them.
+ *
+ * There is more than one, because a student is often handed the wrong thing.
+ * Their record carries an email column that has nothing to do with signing in,
+ * and it has been given out in place of the username — so an address that
+ * fails is worth one more attempt as a username before giving up. Both
+ * attempts use the password the same person just typed for their own account.
+ */
+export function loginCandidates(input: string): string[] {
   const v = input.trim();
-  return v.includes("@") ? v : `${v.toLowerCase()}@${STUDENT_EMAIL_DOMAIN}`;
+  if (!v) return [];
+  const at = v.indexOf("@");
+  if (at < 1) {
+    const username = toUsername(v);
+    return username ? [`${username}@${STUDENT_EMAIL_DOMAIN}`] : [];
+  }
+  const out = [v.toLowerCase()];
+  const asUsername = toUsername(v.slice(0, at));
+  if (asUsername) {
+    const fallback = `${asUsername}@${STUDENT_EMAIL_DOMAIN}`;
+    if (fallback !== out[0]) out.push(fallback);
+  }
+  return out;
+}
+
+/** What the user typed → the address to authenticate with first. */
+export function toLoginEmail(input: string): string {
+  return loginCandidates(input)[0] ?? input.trim();
 }
 
 /** True for the synthetic addresses, so the UI can show the username instead. */

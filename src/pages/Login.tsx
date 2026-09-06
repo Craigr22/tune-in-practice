@@ -1,6 +1,27 @@
 import { useState } from "react";
 import { supabase } from "@/lib/db";
-import { toLoginEmail } from "@/lib/studentLogin";
+import { loginCandidates } from "@/lib/studentLogin";
+
+/** Supabase's way of saying the identity or the password was wrong. */
+function isBadCredentials(error: unknown): boolean {
+  const e = error as { code?: string; status?: number; message?: string };
+  return e?.code === "invalid_credentials" || e?.status === 400;
+}
+
+/**
+ * "Invalid login credentials" tells a ten-year-old nothing, and it is the one
+ * message they are most likely to meet. It says what to check instead.
+ */
+function signInMessage(error: unknown): string {
+  if (isBadCredentials(error)) {
+    return "That doesn't match an account. Students sign in with a username — usually first.last, like payal.malviya — not an email. Ask your teacher if you're not sure.";
+  }
+  // Anything else — rate limited, network down, account disabled — says what
+  // it says; swallowing it into "Authentication failed" hides the one detail
+  // that would tell someone whether to wait or to ask for help.
+  const message = (error as { message?: string } | null)?.message;
+  return message || "Authentication failed";
+}
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -15,13 +36,25 @@ const Login = () => {
     try {
       // Accounts are provisioned by an admin. Students sign in with a username;
       // the account behind it uses a synthetic address that never receives mail.
-      const { error } = await supabase.auth.signInWithPassword({
-        email: toLoginEmail(email),
-        password,
-      });
-      if (error) throw error;
+      // What a student types is turned into a username the same way the
+      // provisioning function makes one, so typing their own name works, and a
+      // record email that no account answers to gets one more try as a
+      // username before they are told they got it wrong.
+      const candidates = loginCandidates(email);
+      if (!candidates.length) throw new Error("Enter your username or email.");
+
+      let lastError: unknown = null;
+      for (const address of candidates) {
+        const { error } = await supabase.auth.signInWithPassword({ email: address, password });
+        if (!error) return;
+        lastError = error;
+        // Only a rejected identity is worth another attempt — a rate limit or
+        // a network failure means stop, not try again immediately.
+        if (!isBadCredentials(error)) break;
+      }
+      throw lastError ?? new Error("Authentication failed");
     } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "Authentication failed");
+      setErr(signInMessage(e));
     } finally {
       setBusy(false);
     }
