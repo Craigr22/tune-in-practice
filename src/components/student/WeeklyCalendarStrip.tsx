@@ -3,7 +3,7 @@ import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, classWeekStart,
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useSongs } from "@/hooks/useSongs";
-import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
+import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { toLocalIso } from "@/lib/date";
 
 /** Indexed by JS day (0=Sun..6=Sat) — the week starts at the class, not Monday. */
@@ -230,27 +230,6 @@ export default function WeeklyCalendarStrip({
               <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
             )}
           </div>
-
-          {/* What the session contains — folded in from the old separate diary
-              card so the week is only described once on this page. */}
-          {selected.session && selected.iso <= todayIso && (
-            <ul className="mt-2.5 pt-2.5 border-t space-y-1 text-xs" style={{ borderColor: "var(--border)", color: "var(--ink-soft)" }}>
-              {([
-                ["♪", "Warm-up", selected.session.warmup_song_id, selected.session.warmup_completed],
-                ["🎯", "Focus", selected.session.focus_song_id, selected.session.focus_completed],
-                [BONUS_EMOJI[selected.session.bonus_type], "Bonus", selected.session.bonus_song_id, selected.session.bonus_completed],
-              ] as const).map(([emoji, label, songId, done], idx) => {
-                const title = songId ? songs.find((s) => s.id === songId)?.title : null;
-                return (
-                  <li key={idx} className="flex items-center gap-1.5">
-                    <span>{emoji}</span>
-                    <span>{label}{title ? `: ${title}` : ""}</span>
-                    {done && <span style={{ color: "#10b981" }}>✓</span>}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
         </div>
       )}
     </section>

@@ -416,12 +416,13 @@ export function useNextSession(): WeeklyPlanSession | undefined {
  * This used to fall back to the next unfinished session in the week when today
  * had none, which quietly put tomorrow's work on today's page — the very thing
  * the home page is meant not to do.
+ *
+ * A finished session still counts as today's. Dropping it the moment it was
+ * completed emptied the page, so the material a student had just worked
+ * through — and might want to play again — went with it.
  */
 export function useTodaysSession(): WeeklyPlanSession | undefined {
   const { data: plan } = useWeeklyPlan();
   const today = todayIso();
-  return useMemo(
-    () => plan?.find((s) => s.scheduled_date === today && !s.completed_at),
-    [plan, today]
-  );
+  return useMemo(() => plan?.find((s) => s.scheduled_date === today), [plan, today]);
 }

@@ -7,11 +7,8 @@ import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import { useDayLessons } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
-import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
-import type { CourseVideo } from "@/hooks/useCourseVideos";
+import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { todayLocalIso, addDaysIso, onOrAfterDayOfWeek, dayLabel, timeLabel } from "@/lib/date";
-
-const NO_VIDEOS: CourseVideo[] = [];
 
 /**
  * Today, on one page, in the order a student needs it: where they are in the
@@ -46,17 +43,22 @@ const Home = () => {
   const todayLessons = useDayLessons(session);
 
   /**
-   * Ticking off a segment. Completing the session and writing the practice
-   * log the teacher's roster reads happen server-side in the same transaction,
-   * so finishing can no longer leave practice that a student did with nothing
-   * to show for it.
+   * Finishing the day.
+   *
+   * The session is still stored in three parts, so this ticks all three. The
+   * server completes the session and writes the practice log the teacher's
+   * roster reads in the same breath as the last one, and every call is
+   * idempotent — a half-finished save is put right by tapping again.
    */
-  const markSegmentDone = (segment: "warmup" | "focus" | "bonus") => {
+  const markDayDone = async () => {
     if (!session) return;
-    completeSeg.mutate(
-      { id: session.id, segment },
-      { onError: (e: any) => toast.error(e?.message ?? "Couldn't save that — try again") },
-    );
+    try {
+      for (const segment of ["warmup", "focus", "bonus"] as const) {
+        await completeSeg.mutateAsync({ id: session.id, segment });
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't save that — try again");
+    }
   };
 
   /**
@@ -107,48 +109,15 @@ const Home = () => {
   }, [nextSession, batch]);
 
   const firstName = (student?.name || "").split(" ")[0] || "there";
-  const title = (id: string | null) => (id ? catalog.find((s) => s.id === id)?.title ?? null : null);
+  const focusSong = session
+    ? catalog.find((s) => s.id === session.focus_song_id)?.title ?? null
+    : null;
+  // The session is still three parts underneath; the page treats it as one day.
+  const dayDone = !!session && session.warmup_completed && session.focus_completed && session.bonus_completed;
   const tpl = session ? SESSION_TEMPLATES[session.session_type] : null;
   const totalMins = session
     ? session.warmup_target_min + session.focus_target_min + session.bonus_target_min
     : 0;
-
-  const sections = session
-    ? [
-        {
-          key: "warmup" as const,
-          emoji: "♪",
-          label: "Warm-up",
-          mins: session.warmup_target_min,
-          song: title(session.warmup_song_id),
-          text: session.warmup_instruction,
-          done: session.warmup_completed,
-          videos: NO_VIDEOS,
-        },
-        {
-          key: "focus" as const,
-          emoji: "🎯",
-          label: "Focus",
-          mins: session.focus_target_min,
-          song: title(session.focus_song_id),
-          text: session.focus_instruction,
-          done: session.focus_completed,
-          // The day's videos are planned per day, not per segment, so they
-          // belong to the step that actually works on the material.
-          videos: todayLessons.videos,
-        },
-        {
-          key: "bonus" as const,
-          emoji: BONUS_EMOJI[session.bonus_type],
-          label: "Bonus",
-          mins: session.bonus_target_min,
-          song: title(session.bonus_song_id),
-          text: session.bonus_instruction,
-          done: session.bonus_completed,
-          videos: NO_VIDEOS,
-        },
-      ]
-    : [];
 
   return (
     <section className="view view-home active">
@@ -206,73 +175,59 @@ const Home = () => {
         </section>
 
         {session && (
-          /* Today's three steps, in order. The lesson videos live inside the
-             step that refers to them rather than in a section of their own —
-             the focus instruction usually says to watch and then play, so
-             the two belong in the same place. */
-          <div className="flex flex-col gap-3">
-            {sections.map((s, i) => (
-              <div
-                key={s.key}
-                className="rounded-2xl p-5"
-                style={{
-                  background: s.done ? "rgba(16,185,129,0.07)" : "var(--card)",
-                  border: `1px solid ${s.done ? "rgba(16,185,129,0.35)" : "var(--border)"}`,
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="shrink-0 w-6 h-6 rounded-full grid place-items-center text-xs font-bold"
-                    style={{
-                      background: s.done ? "#10b981" : "var(--paper-cool)",
-                      color: s.done ? "#fff" : "var(--ink-soft)",
-                    }}
-                    aria-hidden
-                  >
-                    {s.done ? "✓" : i + 1}
-                  </span>
-                  <span className="text-lg" aria-hidden>{s.emoji}</span>
-                  <span className="font-bold" style={{ color: "var(--ink)" }}>{s.label}</span>
-                  <span className="text-xs tabular-nums" style={{ color: "var(--ink-faint)" }}>{s.mins} min</span>
-                  {s.done && <span className="ml-auto text-sm" style={{ color: "#10b981" }}>Done</span>}
-                </div>
+          /* The day itself: what the admin planned for it, in the order they
+             put it in. The warm-up / focus / bonus split has come off — a
+             student reads the page and plays, rather than working through
+             three labelled boxes. */
+          <div
+            className="rounded-2xl p-5"
+            style={{
+              background: dayDone ? "rgba(16,185,129,0.07)" : "var(--card)",
+              border: `1px solid ${dayDone ? "rgba(16,185,129,0.35)" : "var(--border)"}`,
+            }}
+          >
+            {focusSong && (
+              <div className="text-sm font-semibold" style={{ color: "var(--navy)" }}>{focusSong}</div>
+            )}
 
-                {s.song && (
-                  <div className="text-sm font-semibold mt-2" style={{ color: "var(--navy)" }}>{s.song}</div>
-                )}
-                {s.text && (
-                  <p className="text-sm mt-1.5 leading-relaxed" style={{ color: "var(--ink-soft)" }}>{s.text}</p>
-                )}
-
-                {s.videos.length > 0 && (
-                  <div className="mt-4 flex flex-col gap-7">
-                    {s.videos.map((v) => (
-                      <div key={v.id}>
-                        <LessonVideo
-                          src={todayLessons.urls[v.storage_path]}
-                          path={v.storage_path}
-                          title={v.title}
-                          above={todayLessons.notes[v.id]?.above}
-                          below={todayLessons.notes[v.id]?.below}
-                          maxHeight={220}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {!s.done && (
-                  <button
-                    onClick={() => markSegmentDone(s.key)}
-                    disabled={completeSeg.isPending}
-                    className="mt-3 rounded-xl px-4 py-2 text-sm font-bold transition-transform active:scale-95 disabled:opacity-60"
-                    style={{ background: "var(--navy)", color: "#fff" }}
-                  >
-                    Mark {s.label.toLowerCase()} done
-                  </button>
-                )}
+            {todayLessons.videos.length > 0 ? (
+              <div className="mt-3 flex flex-col gap-7">
+                {todayLessons.videos.map((v) => (
+                  <LessonVideo
+                    key={v.id}
+                    src={todayLessons.urls[v.storage_path]}
+                    path={v.storage_path}
+                    title={v.title}
+                    above={todayLessons.notes[v.id]?.above}
+                    below={todayLessons.notes[v.id]?.below}
+                    maxHeight={220}
+                  />
+                ))}
               </div>
-            ))}
+            ) : (
+              /* Nothing planned for this day yet — the generated instruction
+                 is all there is to go on, so it stands in. */
+              session.focus_instruction && (
+                <p className="text-sm mt-2 leading-relaxed" style={{ color: "var(--ink-soft)" }}>
+                  {session.focus_instruction}
+                </p>
+              )
+            )}
+
+            {dayDone ? (
+              <div className="mt-5 text-sm font-bold" style={{ color: "#10b981" }}>
+                ✓ Done for today
+              </div>
+            ) : (
+              <button
+                onClick={markDayDone}
+                disabled={completeSeg.isPending}
+                className="mt-5 rounded-xl px-4 py-2.5 text-sm font-bold transition-transform active:scale-95 disabled:opacity-60"
+                style={{ background: "var(--navy)", color: "#fff" }}
+              >
+                {completeSeg.isPending ? "Saving…" : "I've practised today"}
+              </button>
+            )}
           </div>
         )}
       </div>
