@@ -415,6 +415,14 @@ export default function AdminUsers() {
           email: t?.email ?? s?.email ?? profileByUser.get(r.user_id)?.email ?? null,
           phone: t?.phone ?? s?.phone ?? null,
           source: "auth",
+          // A provisioned student signs in with this, not with the address in
+          // their record. It was only carried on the fallback pass below —
+          // the one that runs for students who have no login — so for every
+          // student who does have one the screen showed no username at all,
+          // and the reset dialog fell back to naming students.email. That is
+          // an address no account answers to, handed over at exactly the
+          // moment someone is trying to get a student back in.
+          login_username: s?.login_username ?? null,
         });
       });
 
@@ -447,8 +455,6 @@ export default function AdminUsers() {
       return list.sort((a, b) => a.name.localeCompare(b.name));
     },
   });
-
-  if (role !== "admin") return <Navigate to="/" replace />;
 
   const adminCount = useMemo(() => rows.filter((r) => r.user_id && r.role === "admin").length, [rows]);
 
@@ -493,6 +499,8 @@ export default function AdminUsers() {
     teacher: rows.filter((r) => r.role === "teacher").length,
     student: rows.filter((r) => r.role === "student").length,
   }), [rows]);
+
+  if (role !== "admin") return <Navigate to="/" replace />;
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">

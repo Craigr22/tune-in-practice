@@ -78,7 +78,18 @@ Deno.serve(async (req) => {
       if (!existingUserId) return json({ error: "This person has no login yet" }, 400);
       const { error } = await admin.auth.admin.updateUserById(existingUserId, { password });
       if (error) return json({ error: error.message }, 400);
-      return json({ ok: true, action: "reset" });
+
+      // Hand back what this account actually signs in with. The admin screen
+      // used to guess from the person's record, which is a different thing:
+      // students.email holds whatever an admin typed there, while the login is
+      // the address the account was created with. Guessing wrong is silent —
+      // the student is given a name that no account answers to.
+      const { data: acct } = await admin.auth.admin.getUserById(existingUserId);
+      const loginEmail = acct?.user?.email ?? null;
+      const signInWith = loginEmail?.endsWith(`@${STUDENT_EMAIL_DOMAIN}`)
+        ? loginEmail.slice(0, -`@${STUDENT_EMAIL_DOMAIN}`.length) // they type the username
+        : loginEmail;
+      return json({ ok: true, action: "reset", signInWith });
     }
 
     /* ---------- create ---------- */
