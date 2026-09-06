@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, shiftedPlanWeek, courseOrder, withHorizon } from "@/hooks/useCoursePlan";
 import { BEGINNER_ORDER } from "@/data/courseOrder";
-import { isoMonday, useStudentBatchDay, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
+import { classWeekStart, useStudentBatchDay, planWeekOneStart } from "@/hooks/useWeeklyPlan";
 import {
   usePracticeLogs,
   useSongProgress,
@@ -54,8 +54,9 @@ const Journey = () => {
   const { instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
   const { days: planDays } = useStudentCoursePlan(instrument);
   const { data: batch } = useStudentBatchDay();
+  const classDow = batch?.day_of_week ?? 6;
   const currentPlanWeek = courseStartDate
-    ? shiftedPlanWeek(planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6), isoMonday(), shiftWeeks)
+    ? shiftedPlanWeek(planWeekOneStart(courseStartDate, classDow), classWeekStart(classDow), shiftWeeks)
     : null;
   const currentTier = useMemo(() => {
     if (!currentPlanWeek) return null;

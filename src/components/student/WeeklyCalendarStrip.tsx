@@ -1,13 +1,14 @@
-import { useMemo, useState } from "react";
-import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, isoMonday, addWeeks, practiceDaysForWeek } from "@/hooks/useWeeklyPlan";
+import { useEffect, useMemo, useState } from "react";
+import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, classWeekStart, addWeeks, sessionDatesForWeek } from "@/hooks/useWeeklyPlan";
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useSongs } from "@/hooks/useSongs";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 import { toLocalIso } from "@/lib/date";
 
-const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
-const DAY_FULL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Indexed by JS day (0=Sun..6=Sat) — the week starts at the class, not Monday. */
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function fmtRange(weekStart: string) {
@@ -30,10 +31,17 @@ export default function WeeklyCalendarStrip({
   onSelectDay?: (day: { scheduled_date: string; session_index: number } | null) => void;
 } = {}) {
   const { songs } = useSongs();
-  const currentWeek = isoMonday();
-  const [weekStart, setWeekStart] = useState(currentWeek);
-
   const { data: batch } = useStudentBatchDay();
+  const classDow = batch?.day_of_week ?? 6;
+  // A practice week runs lesson to lesson: it opens on the class day and the
+  // two practice days follow it, so the strip reads in the order it happens.
+  const currentWeek = classWeekStart(classDow);
+  const [weekStart, setWeekStart] = useState(currentWeek);
+  // The class day arrives with the batch, after the first render.
+  const [pinned, setPinned] = useState(false);
+  useEffect(() => {
+    if (!pinned && batch) { setWeekStart(currentWeek); setPinned(true); }
+  }, [batch, currentWeek, pinned]);
   // Ensure a plan exists for whatever week the user is viewing (generates future weeks on demand)
   useEnsureWeeklyPlan(weekStart);
   const { data: plan = [] } = useWeeklyPlan(weekStart);
@@ -44,12 +52,8 @@ export default function WeeklyCalendarStrip({
   const startsOn = courseStartDate ?? batch?.semester_start ?? null;
   const beforeStart = (iso: string) => !!startsOn && iso < startsOn;
 
-  const classDow = batch?.day_of_week ?? 6;
-  const classOffset = (classDow + 6) % 7;
-  const practiceDates = useMemo(
-    () => practiceDaysForWeek(weekStart, classDow),
-    [weekStart, classDow]
-  );
+  // Day 1 is the class itself; the practice days are the two that follow.
+  const practiceDates = useMemo(() => sessionDatesForWeek(weekStart).slice(1), [weekStart]);
 
   const todayIso = toLocalIso();
   const practicedDays = useMemo(() => new Set(logs.map((l) => l.played_on)), [logs]);
@@ -57,7 +61,8 @@ export default function WeeklyCalendarStrip({
   const days = useMemo(() => {
     const arr: {
       iso: string;
-      offset: number;
+      /** JS day, 0=Sun..6=Sat — used only to name the day. */
+      dow: number;
       isClass: boolean;
       isPractice: boolean;
       isToday: boolean;
@@ -73,8 +78,8 @@ export default function WeeklyCalendarStrip({
       const session = plan.find((p) => p.scheduled_date === iso);
       arr.push({
         iso,
-        offset: o,
-        isClass: o === classOffset && !beforeStart(iso),
+        dow: d.getDay(),
+        isClass: o === 0 && !beforeStart(iso),
         isPractice,
         isToday: iso === todayIso,
         isPast: iso < todayIso,
@@ -83,7 +88,7 @@ export default function WeeklyCalendarStrip({
       });
     }
     return arr;
-  }, [weekStart, classOffset, practiceDates, plan, todayIso, practicedDays, startsOn]);
+  }, [weekStart, practiceDates, plan, todayIso, practicedDays, startsOn]);
 
   const [selectedIso, setSelectedIso] = useState<string | null>(null);
 
@@ -171,10 +176,10 @@ export default function WeeklyCalendarStrip({
                 opacity: d.isPast && !d.sessionCompleted && !d.isToday ? 0.5 : 1,
                 cursor: clickable ? "pointer" : "default",
               }}
-              title={DAY_FULL[d.offset]}
+              title={DAY_FULL[d.dow]}
             >
               <div className="text-[10px] font-bold uppercase" style={{ color: "var(--ink-soft)" }}>
-                {DAY_LETTERS[d.offset]}
+                {DAY_LETTERS[d.dow]}
               </div>
               <div className="text-base font-bold" style={{ color: "var(--ink)" }}>
                 {new Date(d.iso).getDate()}
@@ -200,7 +205,7 @@ export default function WeeklyCalendarStrip({
         >
           <div className="min-w-0">
             <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--ink-soft)" }}>
-              {DAY_FULL[selected.offset]} {new Date(selected.iso).getDate()} {MONTHS[new Date(selected.iso).getMonth()]}
+              {DAY_FULL[selected.dow]} {new Date(selected.iso).getDate()} {MONTHS[new Date(selected.iso).getMonth()]}
               </div>
             {selected.isClass ? (
               <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>

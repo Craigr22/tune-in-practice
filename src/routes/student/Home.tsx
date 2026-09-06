@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, isoMonday, addWeeks, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
+import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
 import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
@@ -26,13 +26,14 @@ const Home = () => {
   const { data: logs = [] } = usePracticeLogs();
   const streak = useMemo(() => computeStreak(logs), [logs]);
 
+  const { data: batch } = useStudentBatchDay();
+
   useEnsureWeeklyPlan();
-  // Also build next week, so that on a rest day there is a "next practice"
-  // to point at rather than a gap until Monday.
-  useEnsureWeeklyPlan(addWeeks(isoMonday(), 1));
+  // Also build the week after this one, so that on a rest day there is a "next
+  // practice" to point at rather than a gap until the next lesson.
+  useEnsureWeeklyPlan(batch ? addWeeks(classWeekStart(batch.day_of_week), 1) : undefined);
   const session = useTodaysSession();
   const nextSession = useNextSession();
-  const { data: batch } = useStudentBatchDay();
 
   /**
    * Today's clips, and only today's.
@@ -170,13 +171,20 @@ const Home = () => {
               {/* One status line, whatever the day holds: today's session, or
                   — on a rest day — the next thing due. */}
               <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-                {session && tpl
-                  ? `${tpl.emoji} ${tpl.label} · ${totalMins} min`
-                  : classToday
-                  ? `🎓 Class today${classToday.at ? ` at ${classToday.at}` : ""}`
-                  : nextUp
-                  ? `No practice today · ${nextUp.emoji} ${nextUp.label.toLowerCase()} ${dayLabel(nextUp.date).toLowerCase()}${nextUp.at ? ` at ${nextUp.at}` : ""}`
-                  : "No practice today · enjoy the day off"}
+                {[
+                  // The lesson comes first: day 1 of the week is the class
+                  // itself, and its material sits underneath.
+                  classToday && `🎓 Class today${classToday.at ? ` at ${classToday.at}` : ""}`,
+                  session && tpl
+                    ? `${tpl.emoji} ${tpl.label} · ${totalMins} min`
+                    : classToday
+                    ? null
+                    : nextUp
+                    ? `No practice today · ${nextUp.emoji} ${nextUp.label.toLowerCase()} ${dayLabel(nextUp.date).toLowerCase()}${nextUp.at ? ` at ${nextUp.at}` : ""}`
+                    : "No practice today · enjoy the day off",
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
             </div>
             <div

@@ -47,6 +47,18 @@ export function onOrAfterDayOfWeek(iso: string, dayOfWeek: number): string {
   return addDaysIso(iso, (dayOfWeek - d.getDay() + 7) % 7);
 }
 
+/**
+ * The most recent `dayOfWeek` (0=Sun..6=Sat) falling on or before `iso`.
+ *
+ * The counterpart to onOrAfterDayOfWeek, and the anchor of a practice week:
+ * a student's week begins at their class, not on a Monday.
+ */
+export function onOrBeforeDayOfWeek(iso: string, dayOfWeek: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return addDaysIso(iso, -((d.getDay() - dayOfWeek + 7) % 7));
+}
+
 /** "Today" / "Tomorrow" / "Sunday 6 Sep" — how a student would say the date. */
 export function dayLabel(iso: string, today: string = todayLocalIso()): string {
   if (iso === today) return "Today";

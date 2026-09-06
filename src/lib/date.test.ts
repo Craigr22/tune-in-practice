@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { onOrAfterDayOfWeek, toLocalIso, isoMondayOf, addDaysIso, dayLabel, timeLabel } from "./date";
+import { onOrAfterDayOfWeek, onOrBeforeDayOfWeek, toLocalIso, isoMondayOf, addDaysIso, dayLabel, timeLabel } from "./date";
 
 describe("onOrAfterDayOfWeek", () => {
   // 2026-09-02 is a Wednesday; 2026-09-06 the Sunday after it.
@@ -80,5 +80,30 @@ describe("timeLabel", () => {
     expect(timeLabel(null)).toBeNull();
     expect(timeLabel("")).toBeNull();
     expect(timeLabel("not-a-time")).toBeNull();
+  });
+});
+
+describe("onOrBeforeDayOfWeek", () => {
+  it("stays put when the date is already that day", () => {
+    // 2026-09-06 is a Sunday.
+    expect(onOrBeforeDayOfWeek("2026-09-06", 0)).toBe("2026-09-06");
+  });
+
+  it("walks back to the most recent one", () => {
+    expect(onOrBeforeDayOfWeek("2026-09-10", 0)).toBe("2026-09-06"); // Thu -> Sun
+    expect(onOrBeforeDayOfWeek("2026-09-12", 0)).toBe("2026-09-06"); // Sat -> Sun
+    expect(onOrBeforeDayOfWeek("2026-09-07", 3)).toBe("2026-09-02"); // Mon -> prev Wed
+  });
+
+  it("never lands more than six days back", () => {
+    for (let dow = 0; dow < 7; dow++) {
+      for (let i = 1; i <= 14; i++) {
+        const iso = `2026-09-${String(i).padStart(2, "0")}`;
+        const back = onOrBeforeDayOfWeek(iso, dow);
+        expect(back <= iso).toBe(true);
+        expect(new Date(`${back}T00:00:00`).getDay()).toBe(dow);
+        expect(addDaysIso(back, 7) > iso).toBe(true);
+      }
+    }
   });
 });

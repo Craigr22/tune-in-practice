@@ -207,7 +207,7 @@ export function StudentDetail({ student, batch, onClose }: { student: any | null
             </TabsList>
 
             <TabsContent value="plan" className="pt-3">
-              <WeeklyPlanEditor studentId={student.id} />
+              <WeeklyPlanEditor studentId={student.id} classDayOfWeek={batch?.day_of_week ?? 0} />
             </TabsContent>
 
             <TabsContent value="songs" className="pt-3">

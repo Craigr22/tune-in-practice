@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
-import { isoMonday } from "@/hooks/useWeeklyPlan";
+import { classWeekStart } from "@/hooks/useWeeklyPlan";
 import { useSongs } from "@/hooks/useSongs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,10 +22,17 @@ const TYPE_LABELS = { build: "Build", flow: "Flow", stretch: "Stretch" } as cons
 /** Radix Select rejects an empty-string item value, so "no song" needs a sentinel. */
 const NO_SONG = "__none__";
 
-export default function WeeklyPlanEditor({ studentId }: { studentId: string }) {
+export default function WeeklyPlanEditor({
+  studentId,
+  classDayOfWeek = 0,
+}: {
+  studentId: string;
+  /** A practice week starts at the class, so paging through weeks follows it. */
+  classDayOfWeek?: number;
+}) {
   const qc = useQueryClient();
   const { songs } = useSongs();
-  const [weekStart, setWeekStart] = useState(isoMonday());
+  const [weekStart, setWeekStart] = useState(classWeekStart(classDayOfWeek));
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["wp-edit", studentId, weekStart],

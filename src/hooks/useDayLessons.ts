@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, shiftedPlanWeek, daysForWeek } from "@/hooks/useCoursePlan";
 import { useCourseVideos, useSignedVideoUrls } from "@/hooks/useCourseVideos";
-import { isoMonday, planWeekOneMonday, useStudentBatchDay } from "@/hooks/useWeeklyPlan";
+import { classWeekStart, planWeekOneStart, useStudentBatchDay } from "@/hooks/useWeeklyPlan";
 import type { VideoNote } from "@/hooks/useCoursePlan";
 
 const EMPTY_NOTES: Record<string, VideoNote> = {};
@@ -30,8 +30,8 @@ export function useDayLessons(day: LessonDay | null | undefined) {
 
   const planDay = useMemo(() => {
     if (!day || !courseStartDate) return null;
-    const weekOne = planWeekOneMonday(courseStartDate, classDow);
-    const wk = shiftedPlanWeek(weekOne, isoMonday(new Date(day.scheduled_date)), shiftWeeks);
+    const weekOne = planWeekOneStart(courseStartDate, classDow);
+    const wk = shiftedPlanWeek(weekOne, classWeekStart(classDow, day.scheduled_date), shiftWeeks);
     if (!wk) return null;
     return daysForWeek(planDays, wk)[day.session_index] ?? null;
   }, [day?.scheduled_date, day?.session_index, courseStartDate, classDow, shiftWeeks, planDays]);

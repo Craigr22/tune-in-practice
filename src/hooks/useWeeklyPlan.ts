@@ -17,7 +17,7 @@ import {
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
-import { isoMondayOf, addDaysIso, todayLocalIso } from "@/lib/date";
+import { addDaysIso, toLocalIso, todayLocalIso, onOrAfterDayOfWeek, onOrBeforeDayOfWeek } from "@/lib/date";
 import { rowsToWrite } from "@/lib/planSync";
 import { rpcError } from "@/lib/rpc";
 
@@ -46,40 +46,44 @@ export interface WeeklyPlanSession {
 }
 
 /* ----- date helpers (local dates — see src/lib/date.ts) ----- */
-export const isoMonday = (d: Date | string = new Date()) => isoMondayOf(d);
 const addDays = addDaysIso;
 const todayIso = todayLocalIso;
 
-/** Three practice days spaced ~1 rest day apart, avoiding the class weekday. */
-export function practiceDaysForWeek(weekStart: string, classDayOfWeek: number /* 0=Sun..6=Sat */): string[] {
-  // weekStart is Monday; offsets relative to Monday: Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6.
-  // Map JS day (0=Sun..6=Sat) to Monday-based offset (Mon=0..Sun=6).
-  const classOffset = (classDayOfWeek + 6) % 7;
-  // Candidate spread: 3 days with rest. Prefer Mon/Wed/Fri, then shift if class lands on one.
-  const presets: number[][] = [
-    [0, 2, 4], [1, 3, 5], [0, 3, 5], [1, 2, 4], [0, 2, 5], [1, 3, 4],
-  ];
-  for (const p of presets) {
-    if (!p.includes(classOffset)) return p.map((o) => addDays(weekStart, o));
-  }
-  return presets[0].map((o) => addDays(weekStart, o));
+/** How far after the class each of the week's three days falls. */
+export const SESSION_DAY_OFFSETS = [0, 2, 4] as const;
+
+/**
+ * The start of the practice week containing `d` — the class itself.
+ *
+ * A student's week runs from lesson to lesson, not Monday to Sunday. Anchoring
+ * it on the Monday meant a Sunday class sat at the far end of its own week,
+ * with the practice that follows it spilling into the next one; week numbers,
+ * plan content and videos all had to be patched around that. From the class
+ * day, day 1 is the lesson and the practice that follows it is simply +2 and
+ * +4, whichever weekday the class happens to run on.
+ */
+export function classWeekStart(classDayOfWeek: number, d: Date | string = new Date()): string {
+  const iso = typeof d === "string" ? d : toLocalIso(d);
+  return onOrBeforeDayOfWeek(iso, classDayOfWeek);
 }
 
 /**
- * The Monday of course week 1.
+ * The week's three dates: the class, then practice two and four days later.
  *
- * Week numbers used to be counted from the calendar week containing the class's
- * start date. But practice never runs before that date, so a class starting on
- * a Sunday — the last day of its week — had no practice days left in it: course
- * week 1 passed without a single session, and the student's first real week of
- * practice was served week 2's material and week 2's videos.
- *
- * Week 1 is therefore the first week that actually holds a practice day.
+ * `weekStart` is the class date, so the offsets need no knowledge of weekdays.
  */
-export function planWeekOneMonday(courseStart: string, classDayOfWeek: number): string {
-  const monday = isoMondayOf(courseStart);
-  const hasPractice = practiceDaysForWeek(monday, classDayOfWeek).some((d) => d >= courseStart);
-  return hasPractice ? monday : addDays(monday, 7);
+export function sessionDatesForWeek(weekStart: string): string[] {
+  return SESSION_DAY_OFFSETS.map((o) => addDays(weekStart, o));
+}
+
+/**
+ * The start of course week 1 — the class's first lesson.
+ *
+ * A start date can be set to any day; the course begins when the class first
+ * meets, so it snaps forward to that lesson.
+ */
+export function planWeekOneStart(courseStart: string, classDayOfWeek: number): string {
+  return onOrAfterDayOfWeek(courseStart, classDayOfWeek);
 }
 
 /* ----- focus song pick ----- */
@@ -112,7 +116,6 @@ function pickFocusSong(progress: SongProgress[], pool?: FocusPoolSong[]): FocusP
 interface GenInput {
   studentId: string;
   weekStart: string;
-  classDayOfWeek: number;
   weekNumber: number;
   progress: SongProgress[];
   logs: PracticeLog[];
@@ -130,8 +133,8 @@ interface GenInput {
 }
 
 export function buildWeekRows(input: GenInput) {
-  const { studentId, weekStart, classDayOfWeek, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay, planDays, notBefore } = input;
-  const dates = practiceDaysForWeek(weekStart, classDayOfWeek);
+  const { studentId, weekStart, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay, planDays, notBefore } = input;
+  const dates = sessionDatesForWeek(weekStart);
 
   // While a week is covered by the admin's course plan, use those days
   // verbatim — a human planned this week, so nothing is generated.
@@ -255,16 +258,19 @@ export function addWeeks(iso: string, n: number): string {
 
 export function useWeeklyPlan(weekStartArg?: string) {
   const { data: student } = useStudentMe();
-  const weekStart = weekStartArg ?? isoMonday();
+  const { data: batch } = useStudentBatchDay();
+  // Without an explicit week, "this week" is the one that began at the last
+  // class — so it can't be worked out until the class day is known.
+  const weekStart = weekStartArg ?? (batch ? classWeekStart(batch.day_of_week) : null);
   return useQuery({
     queryKey: ["weekly-plan", student?.id, weekStart],
-    enabled: !!student?.id,
+    enabled: !!student?.id && !!weekStart,
     queryFn: async (): Promise<WeeklyPlanSession[]> => {
       const { data, error } = await supabase
         .from("weekly_plan_sessions")
         .select("*")
         .eq("student_id", student!.id)
-        .eq("week_start", weekStart)
+        .eq("week_start", weekStart!)
         .order("session_index");
       if (error) throw error;
       return (data ?? []) as unknown as WeeklyPlanSession[];
@@ -281,15 +287,14 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const classSongs = useStudentSongs();
   const { songsPerSession, songsPerDay, instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
   const { days: allPlanDays } = useStudentCoursePlan(instrument);
-  const weekStart = weekStartArg ?? isoMonday();
-  const { data: existing } = useWeeklyPlan(weekStart);
+  const weekStart = weekStartArg ?? (batch ? classWeekStart(batch.day_of_week) : null);
+  const { data: existing } = useWeeklyPlan(weekStart ?? undefined);
 
   // The plan is a pure template with no dates of its own: a student follows it
   // from their class's first practice week.
-  const weekOneStart = courseStartDate
-    ? planWeekOneMonday(courseStartDate, batch?.day_of_week ?? 6)
-    : null;
-  const planWeek = shiftedPlanWeek(weekOneStart, weekStart, shiftWeeks);
+  const weekOneStart =
+    courseStartDate && batch ? planWeekOneStart(courseStartDate, batch.day_of_week) : null;
+  const planWeek = weekStart ? shiftedPlanWeek(weekOneStart, weekStart, shiftWeeks) : null;
   const planDays = planWeek ? daysForWeek(allPlanDays, planWeek) : [];
   // A student's practice can't begin before their class does.
   const notBefore = courseStartDate ?? batch?.semester_start ?? null;
@@ -304,7 +309,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
     .join("~");
 
   useEffect(() => {
-    if (!student?.id) return;
+    if (!student?.id || !weekStart) return;
     if (existing === undefined) return; // still loading
     // Wait for the course plan before generating, so a planned week isn't
     // filled with generated content just because the query hadn't landed.
@@ -318,7 +323,6 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
     const rows = buildWeekRows({
       studentId: student.id,
       weekStart,
-      classDayOfWeek: batch?.day_of_week ?? 6,
       weekNumber,
       progress,
       logs,
@@ -406,11 +410,18 @@ export function useNextSession(): WeeklyPlanSession | undefined {
   return data ?? undefined;
 }
 
+/**
+ * Today's session, if today is a practice day.
+ *
+ * This used to fall back to the next unfinished session in the week when today
+ * had none, which quietly put tomorrow's work on today's page — the very thing
+ * the home page is meant not to do.
+ */
 export function useTodaysSession(): WeeklyPlanSession | undefined {
   const { data: plan } = useWeeklyPlan();
   const today = todayIso();
   return useMemo(
-    () => plan?.find((s) => s.scheduled_date === today && !s.completed_at) ?? plan?.find((s) => s.scheduled_date >= today && !s.completed_at),
+    () => plan?.find((s) => s.scheduled_date === today && !s.completed_at),
     [plan, today]
   );
 }

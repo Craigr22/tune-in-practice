@@ -1,47 +1,67 @@
 import { describe, it, expect } from "vitest";
-import { planWeekOneMonday, practiceDaysForWeek } from "@/hooks/useWeeklyPlan";
+import { planWeekOneStart, sessionDatesForWeek, classWeekStart } from "@/hooks/useWeeklyPlan";
 import { planWeekNumberFor } from "@/hooks/useCoursePlan";
 
 /**
- * Which calendar week is course week 1.
+ * Where a practice week starts, and what falls in it.
  *
- * Practice never runs before the class's start date, so anchoring on the
- * calendar week that merely *contains* the start date can burn week 1 with no
- * sessions in it — the student then gets week 2's material (and week 2's
- * videos) in their first real week of practice.
+ * A week runs lesson to lesson: it opens on the class day, and the two
+ * practice sessions follow two and four days later. Anchoring on the Monday
+ * instead used to split a Sunday class from the practice that follows it —
+ * the lesson sat at the end of one calendar week and its practice at the
+ * start of the next.
  */
-describe("planWeekOneMonday", () => {
-  // Sunday class: practice falls Mon/Wed/Fri, all before a Sunday start.
-  it("skips a week that has no practice left in it", () => {
-    // 2026-09-06 is a Sunday; its week begins Mon 2026-08-31.
-    expect(planWeekOneMonday("2026-09-06", 0)).toBe("2026-09-07");
+describe("planWeekOneStart", () => {
+  it("starts the course at the first lesson, not the date typed in", () => {
+    // Wednesday start date, Sunday class → the course begins Sun 6 Sep.
+    expect(planWeekOneStart("2026-09-02", 0)).toBe("2026-09-06");
   });
 
-  it("keeps the start's own week when practice still falls in it", () => {
-    // Monday start, Sunday class: Mon 7th is itself a practice day.
-    expect(planWeekOneMonday("2026-09-07", 0)).toBe("2026-09-07");
+  it("keeps a start date that is already a class day", () => {
+    expect(planWeekOneStart("2026-09-06", 0)).toBe("2026-09-06");
   });
 
-  it("makes the first practice day land in week 1, for every class day", () => {
+  it("numbers week one 1 and the next week 2, for every class day", () => {
     for (let classDow = 0; classDow < 7; classDow++) {
-      for (let i = 0; i < 14; i++) {
-        const start = new Date(2026, 8, 1 + i);
-        const iso = `${start.getFullYear()}-09-${String(start.getDate()).padStart(2, "0")}`;
-        if (start.getMonth() !== 8) continue;
+      for (let i = 1; i <= 14; i++) {
+        const iso = `2026-09-${String(i).padStart(2, "0")}`;
+        const weekOne = planWeekOneStart(iso, classDow);
 
-        const weekOne = planWeekOneMonday(iso, classDow);
-        const inWeekOne = practiceDaysForWeek(weekOne, classDow).filter((d) => d >= iso);
+        // The course starts on a class day, on or after the date given.
+        expect(new Date(`${weekOne}T00:00:00`).getDay()).toBe(classDow);
+        expect(weekOne >= iso).toBe(true);
 
-        // Week 1 always contains at least one real practice day...
-        expect(inWeekOne.length).toBeGreaterThan(0);
-        // ...and it is numbered 1, not 2.
         expect(planWeekNumberFor(weekOne, weekOne)).toBe(1);
+        expect(planWeekNumberFor(weekOne, sessionDatesForWeek(weekOne)[0])).toBe(1);
+        expect(planWeekNumberFor(weekOne, classWeekStart(classDow, `${weekOne}T00:00:00`.slice(0, 10)))).toBe(1);
       }
     }
   });
+});
 
-  it("numbers the following week 2", () => {
-    const weekOne = planWeekOneMonday("2026-09-06", 0);
-    expect(planWeekNumberFor(weekOne, "2026-09-14")).toBe(2);
+describe("sessionDatesForWeek", () => {
+  it("is the class day, then two days later, then four", () => {
+    expect(sessionDatesForWeek("2026-09-06")).toEqual(["2026-09-06", "2026-09-08", "2026-09-10"]);
+  });
+
+  it("keeps every day of the week inside the week it belongs to", () => {
+    for (let classDow = 0; classDow < 7; classDow++) {
+      const weekOne = planWeekOneStart("2026-09-01", classDow);
+      for (const d of sessionDatesForWeek(weekOne)) {
+        // Two and four days on is always still this week — which is what the
+        // Monday anchor could not promise.
+        expect(classWeekStart(classDow, d)).toBe(weekOne);
+      }
+    }
+  });
+});
+
+describe("classWeekStart", () => {
+  it("holds the week open until the next lesson", () => {
+    // Sunday class: everything from Sun 6th to Sat 12th is that week.
+    expect(classWeekStart(0, "2026-09-06")).toBe("2026-09-06");
+    expect(classWeekStart(0, "2026-09-10")).toBe("2026-09-06");
+    expect(classWeekStart(0, "2026-09-12")).toBe("2026-09-06");
+    expect(classWeekStart(0, "2026-09-13")).toBe("2026-09-13");
   });
 });

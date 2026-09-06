@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import type { Instrument } from "@/hooks/useSongCatalog";
 import type { TierKey } from "@/lib/tiers";
-import { isoMondayOf } from "@/lib/date";
 
 /** Practice days in a week — matches the three weekly-plan sessions. */
 export const PLAN_DAYS_PER_WEEK = 3;
@@ -160,10 +159,15 @@ export function useDeletePlanWeek(instrument: Instrument) {
 
 /* ---------------- student side ---------------- */
 
-/** Which curriculum week (1-based) a given ISO Monday falls on, or null. */
+/**
+ * Which curriculum week (1-based) a given week start falls on, or null.
+ *
+ * Both dates are class days — the start of a practice week — so the gap
+ * between them is a whole number of weeks.
+ */
 export function planWeekNumberFor(weekOneStart: string | null, weekStart: string): number | null {
   if (!weekOneStart) return null;
-  const start = new Date(isoMondayOf(weekOneStart)).getTime();
+  const start = new Date(weekOneStart).getTime();
   const week = new Date(weekStart).getTime();
   if (Number.isNaN(start) || Number.isNaN(week) || week < start) return null;
   return Math.round((week - start) / (7 * 86_400_000)) + 1;

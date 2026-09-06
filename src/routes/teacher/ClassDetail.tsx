@@ -9,7 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { useStudentCoursePlan, shiftedPlanWeek, daysForWeek } from "@/hooks/useCoursePlan";
 import { useBatchPlanShifts, totalShiftWeeks } from "@/hooks/useBatchPlanShift";
 import PausePlanCard from "@/components/teacher/PausePlanCard";
-import { isoMonday, planWeekOneMonday } from "@/hooks/useWeeklyPlan";
+import { classWeekStart, planWeekOneStart } from "@/hooks/useWeeklyPlan";
 
 /**
  * What this class is working through — read-only.
@@ -38,8 +38,9 @@ function CoursePanel({
   const { data: shifts = [] } = useBatchPlanShifts(batchId);
   const behind = totalShiftWeeks(shifts);
   const totalWeeks = new Set(planDays.map((d) => d.week_number)).size;
+  const classDow = dayOfWeek ?? 6;
   const currentWeek = start
-    ? shiftedPlanWeek(planWeekOneMonday(start, dayOfWeek ?? 6), isoMonday(), behind)
+    ? shiftedPlanWeek(planWeekOneStart(start, classDow), classWeekStart(classDow), behind)
     : null;
   const thisWeek = currentWeek ? daysForWeek(planDays, currentWeek) : [];
   const songTitle = (id: string | null) => (id ? catalog.find((c) => c.id === id)?.title ?? id : null);
