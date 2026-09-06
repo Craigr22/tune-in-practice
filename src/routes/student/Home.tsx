@@ -5,7 +5,7 @@ import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchD
 import { toast } from "sonner";
 import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
-import { useDayLessons, type LessonDay } from "@/hooks/useDayLessons";
+import { useDayLessons } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
 import { SESSION_TEMPLATES, BONUS_EMOJI } from "@/lib/sessionTemplates";
 import type { CourseVideo } from "@/hooks/useCourseVideos";
@@ -32,19 +32,17 @@ const Home = () => {
   useEnsureWeeklyPlan(addWeeks(isoMonday(), 1));
   const session = useTodaysSession();
   const nextSession = useNextSession();
-  const [peek, setPeek] = useState<LessonDay | null>(null);
   const { data: batch } = useStudentBatchDay();
 
-  // Today's clips belong to today's Focus step and stay there.
-  const todayLessons = useDayLessons(session);
-
   /**
-   * The day the student is looking at away from today's work: one they tapped
-   * in the week strip, or — on a rest day — the next session, since the clips
-   * are worth watching ahead of a session rather than only during it.
+   * Today's clips, and only today's.
+   *
+   * The page used to show the next session's material on a rest day, and let
+   * a student tap any day in the week strip to read its lessons. That put the
+   * course in front of them before it was taught; the day's work is the day's
+   * work.
    */
-  const viewingDay = peek ?? (session ? null : nextSession);
-  const viewing = useDayLessons(viewingDay);
+  const todayLessons = useDayLessons(session);
 
   /**
    * Ticking off a segment. Completing the session and writing the practice
@@ -177,35 +175,9 @@ const Home = () => {
           </div>
 
           <div className="px-4 pb-4 pt-3 md:px-5">
-            <WeeklyCalendarStrip embedded onSelectDay={setPeek} />
+            <WeeklyCalendarStrip embedded />
           </div>
         </section>
-
-        {/* Clips for the day being looked at: one tapped in the week strip, or
-            the next session on a rest day. Same page, no card of its own. */}
-        {viewingDay && viewing.videos.length > 0 && (
-          <div className={session ? "mb-4" : ""}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2" style={{ color: "var(--ink-soft)" }}>
-              {peek
-                ? `Lessons · ${dayLabel(peek.scheduled_date)}`
-                : `Watch ahead · ${dayLabel(viewingDay.scheduled_date).toLowerCase()}`}
-            </div>
-            <div className="flex flex-col gap-7">
-              {viewing.videos.map((v) => (
-                <div key={v.id}>
-                  <LessonVideo
-                    src={viewing.urls[v.storage_path]}
-                    path={v.storage_path}
-                    title={v.title}
-                    above={viewing.notes[v.id]?.above}
-                    below={viewing.notes[v.id]?.below}
-                    maxHeight={220}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {session && (
           /* Today's three steps, in order. The lesson videos live inside the

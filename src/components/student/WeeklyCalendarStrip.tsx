@@ -206,6 +206,10 @@ export default function WeeklyCalendarStrip({
               <div className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
                 In-person class day
               </div>
+            ) : selected.iso > todayIso ? (
+                <div className="text-sm" style={{ color: "var(--ink-soft)" }}>
+                  Practice day — you'll see it on the day.
+                </div>
             ) : selected.session && selectedSong && selectedTpl ? (
                 <div className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
                   {selectedTpl.emoji} {selectedTpl.label} · {selectedSong.title}
@@ -224,7 +228,7 @@ export default function WeeklyCalendarStrip({
 
           {/* What the session contains — folded in from the old separate diary
               card so the week is only described once on this page. */}
-          {selected.session && (
+          {selected.session && selected.iso <= todayIso && (
             <ul className="mt-2.5 pt-2.5 border-t space-y-1 text-xs" style={{ borderColor: "var(--border)", color: "var(--ink-soft)" }}>
               {([
                 ["♪", "Warm-up", selected.session.warmup_song_id, selected.session.warmup_completed],

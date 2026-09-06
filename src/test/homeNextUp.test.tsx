@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import { todayLocalIso, addDaysIso } from "@/lib/date";
 
 /**
@@ -58,14 +58,7 @@ vi.mock("@/hooks/useStudentProgress", () => ({
   computeStreak: () => 0,
 }));
 
-/** Stands in for the week strip, exposing the day-picking it reports upward. */
-vi.mock("@/components/student/WeeklyCalendarStrip", () => ({
-  default: ({ onSelectDay }: { onSelectDay?: (d: any) => void }) => (
-    <button onClick={() => onSelectDay?.({ scheduled_date: "2026-09-16", session_index: 1 })}>
-      pick a later day
-    </button>
-  ),
-}));
+vi.mock("@/components/student/WeeklyCalendarStrip", () => ({ default: () => null }));
 
 vi.mock("@/hooks/useWeeklyPlan", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/useWeeklyPlan")>("@/hooks/useWeeklyPlan");
@@ -108,32 +101,29 @@ describe("student home on a rest day", () => {
     ];
   };
 
-  it("shows the next session's clips on a rest day", () => {
+  it("shows no lesson material at all on a rest day", () => {
     st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
     st.batch = classTomorrow();
     withLessons();
 
     const { container } = render(<Home />);
 
-    expect(container.querySelector("video")).toBeTruthy();
-    expect(screen.getByText("Piyu Bole Tutorial")).toBeTruthy();
-    expect(screen.getByText(/watch ahead/i)).toBeTruthy();
+    // The next session has clips, and the student sees none of them: a day's
+    // work belongs to its day.
+    expect(container.querySelector("video")).toBeNull();
+    expect(screen.queryByText("Piyu Bole Tutorial")).toBeNull();
+    expect(screen.queryByText(/watch ahead/i)).toBeNull();
   });
 
-  it("follows the day picked in the week strip", () => {
+  it("still says when the next thing is, without showing what it is", () => {
     st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
     st.batch = classTomorrow();
     withLessons();
 
     render(<Home />);
-    expect(screen.getByText("Piyu Bole Tutorial")).toBeTruthy();
 
-    fireEvent.click(screen.getByText("pick a later day"));
-
-    // Day 2's clip replaces day 1's, and the heading names the day.
-    expect(screen.getByText("Photograph Tutorial")).toBeTruthy();
+    expect(screen.getByText(/no practice today/i)).toBeTruthy();
     expect(screen.queryByText("Piyu Bole Tutorial")).toBeNull();
-    expect(screen.getByText(/lessons ·/i)).toBeTruthy();
   });
 
   it("says what's next in the header, not in a card of its own", () => {
