@@ -59,6 +59,22 @@ const Home = () => {
   };
 
   /**
+   * The class that is today, if there is one.
+   *
+   * "What's next" deliberately starts from tomorrow, so on the class day
+   * itself the header skipped straight past it to next week's — the one day
+   * a student actually has to turn up was the one day the page didn't say so.
+   */
+  const classToday = useMemo(() => {
+    if (batch?.day_of_week == null) return null;
+    const today = todayLocalIso();
+    if (new Date(`${today}T00:00:00`).getDay() !== batch.day_of_week) return null;
+    // Not before the course begins.
+    if (batch.semester_start && today < batch.semester_start) return null;
+    return { at: timeLabel(batch.start_time) };
+  }, [batch]);
+
+  /**
    * On a rest day, the single next thing due — the nearer of the next planned
    * practice and the next class. It goes in the header's status line rather
    * than a card of its own: the week strip below already shows both, so a
@@ -156,6 +172,8 @@ const Home = () => {
               <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
                 {session && tpl
                   ? `${tpl.emoji} ${tpl.label} · ${totalMins} min`
+                  : classToday
+                  ? `🎓 Class today${classToday.at ? ` at ${classToday.at}` : ""}`
                   : nextUp
                   ? `No practice today · ${nextUp.emoji} ${nextUp.label.toLowerCase()} ${dayLabel(nextUp.date).toLowerCase()}${nextUp.at ? ` at ${nextUp.at}` : ""}`
                   : "No practice today · enjoy the day off"}

@@ -138,6 +138,21 @@ describe("student home on a rest day", () => {
     expect(container.querySelector(".home")!.children.length).toBe(1);
   });
 
+  it("says the class is today, on the day of the class", () => {
+    // The class day is a rest day — practice never lands on it — so this is
+    // the whole of what the header has to say, and it used to skip past it.
+    st.batch = {
+      day_of_week: new Date(`${today}T00:00:00`).getDay(),
+      start_time: "15:00:00",
+      semester_start: "2026-09-06",
+    };
+    st.nextSession = { scheduled_date: addDaysIso(today, 1), focus_song_id: "song1" };
+
+    render(<Home />);
+
+    expect(screen.getByText(/class today at .*3[:.]00/i)).toBeTruthy();
+  });
+
   it("names the nearer of the two, with its time", () => {
     st.nextSession = { scheduled_date: addDaysIso(today, 3), focus_song_id: "song1" };
     st.batch = classTomorrow();
