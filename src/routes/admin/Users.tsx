@@ -408,7 +408,10 @@ export default function AdminUsers() {
         const t = tByUser.get(r.user_id) as any;
         const s = sByUser.get(r.user_id) as any;
         list.push({
-          key: `auth:${r.user_id}`,
+          // One row per role: an account carrying two of them (a leftover
+          // from the old self-signup trigger) gave two rows the same key,
+          // and React drops or duplicates rows that collide.
+          key: `auth:${r.user_id}:${r.role}`,
           user_id: r.user_id,
           role: r.role,
           name: t?.name ?? s?.name ?? profileByUser.get(r.user_id)?.name ?? "—",
@@ -537,7 +540,7 @@ export default function AdminUsers() {
           <thead className="bg-muted">
             <tr>
               <th className="text-left p-3">Name</th>
-              <th className="text-left p-3">Email</th>
+              <th className="text-left p-3">Signs in with</th>
               <th className="text-left p-3">Phone</th>
               <th className="text-left p-3 w-32">Role</th>
               <th className="text-left p-3 w-40">Account</th>
@@ -550,7 +553,18 @@ export default function AdminUsers() {
                   <EditableCell {...cellProps(r, "name", r.name === "—" ? null : r.name)} placeholder="add name" />
                 </td>
                 <td className="p-3 text-muted-foreground">
-                  <EditableCell {...cellProps(r, "email", r.email)} placeholder="add email" />
+                  {/* A student has no email — they sign in with a username
+                      made from their name. Showing the address off their
+                      record here is what got the wrong thing handed out. */}
+                  {r.login_username ? (
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted" title="Their username">
+                      {r.login_username}
+                    </span>
+                  ) : r.role === "student" && r.user_id ? (
+                    <span className="text-xs opacity-60">no username yet</span>
+                  ) : (
+                    <EditableCell {...cellProps(r, "email", r.email)} placeholder="add email" />
+                  )}
                 </td>
                 <td className="p-3 text-muted-foreground">
                   {r.source === "auth"
@@ -577,11 +591,6 @@ export default function AdminUsers() {
                   {/* Everyone can be given a password directly. Teachers and
                       admins can also be sent an invite link instead. */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    {r.login_username && (
-                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-muted" title="Username">
-                        {r.login_username}
-                      </span>
-                    )}
                     {r.user_id && !r.login_username && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">
                         Linked

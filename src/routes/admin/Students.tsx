@@ -98,8 +98,12 @@ function StudentFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Email</Label>
-              <Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <Label>Contact email</Label>
+              <Input
+                value={form.email ?? ""}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="a parent's, if any"
+              />
             </div>
             <div className="space-y-1">
               <Label>Phone</Label>
@@ -192,7 +196,15 @@ function StudentDetail({ student, onClose, onEdit }: { student: any | null; onCl
         </SheetHeader>
         <div className="mt-3 space-y-5 text-sm">
           <section className="space-y-1 text-muted-foreground">
-            {student.email && <div>Email: {student.email}</div>}
+            {/* Students have no email — they sign in with a username made
+                from their name. Any address on the record is contact detail
+                for a parent, and was being mistaken for the login. */}
+            {student.login_username && (
+              <div>
+                Signs in as: <span className="font-mono text-foreground">{student.login_username}</span>
+              </div>
+            )}
+            {student.email && <div>Contact email: {student.email}</div>}
             {student.phone && <div>Phone: <a className="text-primary underline" href={`tel:${student.phone}`}>{student.phone}</a></div>}
             {student.parent_name && <div>Parent: {student.parent_name}</div>}
             <div>Joined: {student.joined_on}</div>
@@ -300,12 +312,12 @@ type SortKey = "name" | "recent";
 const PAGE_SIZE = 50;
 
 function exportStudentsCsv(rows: any[]) {
-  const headers = ["Name", "Email", "Phone", "Parent", "Status", "Joined"];
+  const headers = ["Name", "Signs in as", "Contact email", "Phone", "Parent", "Status", "Joined"];
   const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const lines = [
     headers.join(","),
     ...rows.map((s) =>
-      [s.name, s.email, s.phone, s.parent_name, s.is_active ? "Active" : "Inactive", s.joined_on]
+      [s.name, s.login_username, s.email, s.phone, s.parent_name, s.is_active ? "Active" : "Inactive", s.joined_on]
         .map(esc)
         .join(","),
     ),
@@ -345,6 +357,9 @@ export default function AdminStudents() {
       if (!q) return true;
       return (
         s.name.toLowerCase().includes(q) ||
+        // Findable by the thing they sign in with, which is what an admin
+        // has in front of them when a student can't get in.
+        (s.login_username ?? "").toLowerCase().includes(q) ||
         (s.email ?? "").toLowerCase().includes(q) ||
         (s.phone ?? "").toLowerCase().includes(q) ||
         (s.parent_name ?? "").toLowerCase().includes(q)
@@ -368,7 +383,8 @@ export default function AdminStudents() {
   const toggleSelect = (id: string) =>
     setSelected((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   const allVisibleSelected = visible.length > 0 && visible.every((s: any) => selected.has(s.id));
@@ -477,7 +493,11 @@ export default function AdminStudents() {
                 look inconsistent once some rows had a number and others didn't. */}
             <div className="text-sm text-muted-foreground min-w-0 cursor-pointer" onClick={() => setOpen(s)}>
               <div className="truncate">{s.phone || <span className="opacity-50">no phone</span>}</div>
-              {s.email && <div className="text-xs truncate opacity-80">{s.email}</div>}
+              {s.login_username ? (
+                <div className="text-xs truncate opacity-80 font-mono" title="Signs in as">{s.login_username}</div>
+              ) : s.email ? (
+                <div className="text-xs truncate opacity-80">{s.email}</div>
+              ) : null}
             </div>
             <div className="text-sm text-muted-foreground truncate cursor-pointer" onClick={() => setOpen(s)}>{s.parent_name || "—"}</div>
             <div>
