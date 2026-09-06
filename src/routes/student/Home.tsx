@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useStudentMe } from "@/hooks/useStudentMe";
-import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
+import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
 import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
@@ -17,7 +17,6 @@ import { todayLocalIso, addDaysIso, onOrAfterDayOfWeek, dayLabel, timeLabel } fr
  */
 const Home = () => {
   const { data: student } = useStudentMe();
-  const catalog = useStudentSongs();
   const { instrument, courseStartDate } = useStudentClassConfig();
   const completeSeg = useCompleteSegment();
   const { data: logs = [] } = usePracticeLogs();
@@ -109,9 +108,6 @@ const Home = () => {
   }, [nextSession, batch]);
 
   const firstName = (student?.name || "").split(" ")[0] || "there";
-  const focusSong = session
-    ? catalog.find((s) => s.id === session.focus_song_id)?.title ?? null
-    : null;
   // The session is still three parts underneath; the page treats it as one day.
   const dayDone = !!session && session.warmup_completed && session.focus_completed && session.bonus_completed;
   const tpl = session ? SESSION_TEMPLATES[session.session_type] : null;
@@ -140,20 +136,15 @@ const Home = () => {
               {/* One status line, whatever the day holds: today's session, or
                   — on a rest day — the next thing due. */}
               <p className="mt-1 text-sm" style={{ color: "var(--ink-soft)" }}>
-                {[
-                  // The lesson comes first: day 1 of the week is the class
-                  // itself, and its material sits underneath.
-                  classToday && `🎓 Class today${classToday.at ? ` at ${classToday.at}` : ""}`,
-                  session && tpl
-                    ? `${tpl.emoji} ${tpl.label} · ${totalMins} min`
-                    : classToday
-                    ? null
-                    : nextUp
-                    ? `No practice today · ${nextUp.emoji} ${nextUp.label.toLowerCase()} ${dayLabel(nextUp.date).toLowerCase()}${nextUp.at ? ` at ${nextUp.at}` : ""}`
-                    : "No practice today · enjoy the day off",
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {/* Day 1 of the week is the lesson itself. What sits below is
+                    what the class covers, so it isn't billed as practice. */}
+                {classToday
+                  ? `🎓 Class today${classToday.at ? ` at ${classToday.at}` : ""}`
+                  : session && tpl
+                  ? `${tpl.emoji} ${tpl.label} · ${totalMins} min`
+                  : nextUp
+                  ? `No practice today · ${nextUp.emoji} ${nextUp.label.toLowerCase()} ${dayLabel(nextUp.date).toLowerCase()}${nextUp.at ? ` at ${nextUp.at}` : ""}`
+                  : "No practice today · enjoy the day off"}
               </p>
             </div>
             <div
@@ -186,10 +177,6 @@ const Home = () => {
               border: `1px solid ${dayDone ? "rgba(16,185,129,0.35)" : "var(--border)"}`,
             }}
           >
-            {focusSong && (
-              <div className="text-sm font-semibold" style={{ color: "var(--navy)" }}>{focusSong}</div>
-            )}
-
             {todayLessons.videos.length > 0 ? (
               <div className="mt-3 flex flex-col gap-7">
                 {todayLessons.videos.map((v) => (
@@ -214,7 +201,8 @@ const Home = () => {
               )
             )}
 
-            {dayDone ? (
+            {/* You were in the lesson — there is no practice to claim for it. */}
+            {classToday ? null : dayDone ? (
               <div className="mt-5 text-sm font-bold" style={{ color: "#10b981" }}>
                 ✓ Done for today
               </div>

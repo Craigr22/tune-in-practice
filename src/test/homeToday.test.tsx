@@ -14,6 +14,7 @@ const today = todayLocalIso();
 
 const st = vi.hoisted(() => ({
   session: null as any,
+  batch: null as any,
   complete: vi.fn(),
 }));
 
@@ -52,7 +53,7 @@ vi.mock("@/hooks/useWeeklyPlan", async () => {
     useEnsureWeeklyPlan: () => {},
     useTodaysSession: () => st.session,
     useNextSession: () => undefined,
-    useStudentBatchDay: () => ({ data: null }),
+    useStudentBatchDay: () => ({ data: st.batch }),
     useCompleteSegment: () => ({ mutateAsync: st.complete, isPending: false }),
   };
 });
@@ -75,8 +76,16 @@ const session = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+/** A class that meets today, and started a while ago. */
+const classToday = () => ({
+  day_of_week: new Date(`${today}T00:00:00`).getDay(),
+  start_time: "15:00:00",
+  semester_start: "2026-09-06",
+});
+
 beforeEach(() => {
   st.session = session();
+  st.batch = null;
   st.complete = vi.fn().mockResolvedValue(undefined);
 });
 afterEach(cleanup);
@@ -88,8 +97,9 @@ describe("student home on a practice day", () => {
     expect(screen.queryByText(/warm-up/i)).toBeNull();
     expect(screen.queryByText(/^bonus$/i)).toBeNull();
     expect(screen.queryByText(/mark focus done/i)).toBeNull();
-    // What the day is about is still named.
-    expect(screen.getByText("You Are My Sunshine")).toBeTruthy();
+    // The clips carry their own titles, so the day isn't headed by a song name.
+    expect(screen.queryByText("You Are My Sunshine")).toBeNull();
+    expect(screen.getByText(/slow c to f changes/i)).toBeTruthy();
   });
 
   it("finishes the whole day in one tap", async () => {
@@ -114,7 +124,21 @@ describe("student home on a practice day", () => {
 
     expect(screen.getByText(/done for today/i)).toBeTruthy();
     expect(screen.queryByText(/i've practised today/i)).toBeNull();
-    // The material is still there to play again.
-    expect(screen.getByText("You Are My Sunshine")).toBeTruthy();
+    // The material is still there to go over again.
+    expect(screen.getByText(/slow c to f changes/i)).toBeTruthy();
+  });
+
+  it("asks for no practice on the day of the lesson", () => {
+    st.batch = classToday();
+
+    render(<Home />);
+
+    // The student was in the class; there is nothing to claim as practice.
+    expect(screen.queryByText(/i've practised today/i)).toBeNull();
+    expect(screen.getByText(/class today at .*3[:.]00/i)).toBeTruthy();
+    // And the day is not billed as a practice session either.
+    expect(screen.queryByText(/30 min/i)).toBeNull();
+    // What the class covers is still on the page.
+    expect(screen.getByText(/slow c to f changes/i)).toBeTruthy();
   });
 });
