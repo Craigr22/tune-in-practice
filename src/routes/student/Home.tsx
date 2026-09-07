@@ -3,6 +3,7 @@ import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useFinishDay, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
+import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import { useDayLessons } from "@/hooks/useDayLessons";
@@ -19,8 +20,18 @@ const Home = () => {
   const { data: student } = useStudentMe();
   const { instrument, courseStartDate } = useStudentClassConfig();
   const { finish: finishDay, isPending: saving } = useFinishDay();
+  const { data: logs = [] } = usePracticeLogs();
   const { data: batch } = useStudentBatchDay();
-
+  // Counted over the days a student was asked to practise, not calendar days:
+  // the plan leaves a rest day between sessions, so a run of them is the streak.
+  const streak = useMemo(
+    () =>
+      computeStreak(
+        logs,
+        batch ? { classDayOfWeek: batch.day_of_week, courseStart: courseStartDate } : null,
+      ),
+    [logs, batch, courseStartDate],
+  );
 
   useEnsureWeeklyPlan();
   // Also build the week after this one, so that on a rest day there is a "next
@@ -134,6 +145,21 @@ const Home = () => {
                   ? `No practice today · ${nextUp.emoji} ${nextUp.label.toLowerCase()} ${dayLabel(nextUp.date).toLowerCase()}${nextUp.at ? ` at ${nextUp.at}` : ""}`
                   : "No practice today · enjoy the day off"}
               </p>
+            </div>
+            <div
+              className="shrink-0 text-center"
+              title={
+                streak === 0
+                  ? "Practise on your next practice day to start a streak"
+                  : `${streak} practice ${streak === 1 ? "session" : "sessions"} in a row`
+              }
+            >
+              <div className="text-2xl font-bold leading-none" style={{ color: "var(--ink)" }}>
+                <span className="bounce-soft">🔥</span> {streak}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider mt-1" style={{ color: "var(--ink-faint)" }}>
+                {streak === 1 ? "session" : "sessions"}
+              </div>
             </div>
           </div>
 
