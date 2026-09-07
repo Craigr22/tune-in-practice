@@ -15,7 +15,7 @@ const today = todayLocalIso();
 const st = vi.hoisted(() => ({
   session: null as any,
   batch: null as any,
-  complete: vi.fn(),
+  finish: vi.fn(),
 }));
 
 vi.mock("@/hooks/useStudentMe", () => ({
@@ -54,7 +54,7 @@ vi.mock("@/hooks/useWeeklyPlan", async () => {
     useTodaysSession: () => st.session,
     useNextSession: () => undefined,
     useStudentBatchDay: () => ({ data: st.batch }),
-    useCompleteSegment: () => ({ mutateAsync: st.complete, isPending: false }),
+    useFinishDay: () => ({ finish: st.finish, isPending: false }),
   };
 });
 
@@ -86,7 +86,7 @@ const classToday = () => ({
 beforeEach(() => {
   st.session = session();
   st.batch = null;
-  st.complete = vi.fn().mockResolvedValue(undefined);
+  st.finish = vi.fn().mockResolvedValue(undefined);
 });
 afterEach(cleanup);
 
@@ -107,14 +107,7 @@ describe("student home on a practice day", () => {
 
     fireEvent.click(screen.getByText(/i've practised today/i));
 
-    // Three parts underneath, so all three are ticked — the last one is what
-    // writes the practice log the teacher's roster reads.
-    await waitFor(() => expect(st.complete).toHaveBeenCalledTimes(3));
-    expect(st.complete.mock.calls.map((c: any[]) => c[0].segment)).toEqual([
-      "warmup",
-      "focus",
-      "bonus",
-    ]);
+    await waitFor(() => expect(st.finish).toHaveBeenCalledWith("sess1"));
   });
 
   it("stays on the page once it is done, and says so", () => {

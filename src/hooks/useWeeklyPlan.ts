@@ -359,6 +359,25 @@ export function useCompleteSegment() {
 }
 
 /**
+ * Finish a day's practice in one action.
+ *
+ * A session is still stored in three parts, so all three are ticked. The
+ * server completes the session and writes the practice log — the thing the
+ * streak and the teacher's roster read — in the same breath as the last one,
+ * and every call is idempotent, so a half-saved tap is put right by tapping
+ * again. Shared so the home page and the week strip finish a day the same way.
+ */
+export function useFinishDay() {
+  const complete = useCompleteSegment();
+  const finish = async (sessionId: string) => {
+    for (const segment of ["warmup", "focus", "bonus"] as const) {
+      await complete.mutateAsync({ id: sessionId, segment });
+    }
+  };
+  return { finish, isPending: complete.isPending };
+}
+
+/**
  * The next practice session after today, whichever week it falls in.
  *
  * `useTodaysSession` only sees the current week, so from the last practice day

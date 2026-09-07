@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useCompleteSegment, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
+import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useFinishDay, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
 import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
@@ -18,7 +18,7 @@ import { todayLocalIso, addDaysIso, onOrAfterDayOfWeek, dayLabel, timeLabel } fr
 const Home = () => {
   const { data: student } = useStudentMe();
   const { instrument, courseStartDate } = useStudentClassConfig();
-  const completeSeg = useCompleteSegment();
+  const { finish: finishDay, isPending: saving } = useFinishDay();
   const { data: logs = [] } = usePracticeLogs();
 
   const { data: batch } = useStudentBatchDay();
@@ -50,20 +50,10 @@ const Home = () => {
    */
   const todayLessons = useDayLessons(session);
 
-  /**
-   * Finishing the day.
-   *
-   * The session is still stored in three parts, so this ticks all three. The
-   * server completes the session and writes the practice log the teacher's
-   * roster reads in the same breath as the last one, and every call is
-   * idempotent — a half-finished save is put right by tapping again.
-   */
   const markDayDone = async () => {
     if (!session) return;
     try {
-      for (const segment of ["warmup", "focus", "bonus"] as const) {
-        await completeSeg.mutateAsync({ id: session.id, segment });
-      }
+      await finishDay(session.id);
     } catch (e: any) {
       toast.error(e?.message ?? "Couldn't save that — try again");
     }
@@ -222,11 +212,11 @@ const Home = () => {
             ) : (
               <button
                 onClick={markDayDone}
-                disabled={completeSeg.isPending}
+                disabled={saving}
                 className="mt-5 rounded-xl px-4 py-2.5 text-sm font-bold transition-transform active:scale-95 disabled:opacity-60"
                 style={{ background: "var(--navy)", color: "#fff" }}
               >
-                {completeSeg.isPending ? "Saving…" : "I've practised today"}
+                {saving ? "Saving…" : "I've practised today"}
               </button>
             )}
           </div>

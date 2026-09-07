@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, classWeekStart, addWeeks, sessionDatesForWeek, planWeekOneStart } from "@/hooks/useWeeklyPlan";
+import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, useFinishDay, classWeekStart, addWeeks, sessionDatesForWeek, planWeekOneStart } from "@/hooks/useWeeklyPlan";
+import { toast } from "sonner";
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useSongs } from "@/hooks/useSongs";
@@ -129,6 +130,16 @@ export default function WeeklyCalendarStrip({
    * what was covered had a red dot and one line of text.
    */
   const lookingBack = selected && selected.session && selected.iso < todayIso ? selected.session : null;
+  const { finish, isPending: saving } = useFinishDay();
+  const markDone = async (id: string) => {
+    try {
+      await finish(id);
+      toast.success("Counted — nice one");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't save that — try again");
+    }
+  };
+
   const past = useDayLessons(
     lookingBack
       ? { scheduled_date: lookingBack.scheduled_date, session_index: lookingBack.session_index }
@@ -280,6 +291,27 @@ export default function WeeklyCalendarStrip({
                   maxHeight={200}
                 />
               ))}
+            </div>
+          )}
+
+          {/* A day they did but never ticked. The streak counts practice
+              sessions, so a missed tick breaks a run the student actually
+              kept — this is how they put it right. The class day has no
+              tick: it asks for no practice. */}
+          {lookingBack && !selected.isClass && (
+            <div className="mt-3">
+              {lookingBack.completed_at ? (
+                <span className="text-xs font-bold" style={{ color: "#10b981" }}>✓ Marked done</span>
+              ) : (
+                <button
+                  onClick={() => markDone(lookingBack.id)}
+                  disabled={saving}
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold transition-transform active:scale-95 disabled:opacity-60"
+                  style={{ background: "var(--navy)", color: "#fff" }}
+                >
+                  {saving ? "Saving…" : "I practised on this day"}
+                </button>
+              )}
             </div>
           )}
         </div>

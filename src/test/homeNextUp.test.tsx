@@ -68,7 +68,7 @@ vi.mock("@/hooks/useWeeklyPlan", async () => {
     useTodaysSession: () => undefined, // a rest day
     useNextSession: () => st.nextSession,
     useStudentBatchDay: () => ({ data: st.batch }),
-    useCompleteSegment: () => ({ mutate: vi.fn(), isPending: false }),
+    useFinishDay: () => ({ finish: vi.fn(), isPending: false }),
   };
 });
 
