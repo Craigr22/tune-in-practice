@@ -19,19 +19,8 @@ const Home = () => {
   const { data: student } = useStudentMe();
   const { instrument, courseStartDate } = useStudentClassConfig();
   const { finish: finishDay, isPending: saving } = useFinishDay();
-  const { data: logs = [] } = usePracticeLogs();
-
   const { data: batch } = useStudentBatchDay();
-  // Counted over the days a student was asked to practise, not calendar days:
-  // the plan leaves a rest day between sessions, so a run of them is the streak.
-  const streak = useMemo(
-    () =>
-      computeStreak(
-        logs,
-        batch ? { classDayOfWeek: batch.day_of_week, courseStart: courseStartDate } : null,
-      ),
-    [logs, batch, courseStartDate],
-  );
+
 
   useEnsureWeeklyPlan();
   // Also build the week after this one, so that on a rest day there is a "next
