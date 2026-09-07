@@ -29,7 +29,24 @@ import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "./pages/NotFound.tsx";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 
-const queryClient = new QueryClient();
+/**
+ * One client, with defaults that don't hammer the server.
+ *
+ * Out of the box every query is stale the moment it lands and refetches on
+ * every window focus. The student home alone runs a dozen or so, so switching
+ * back to the tab fired a dozen requests — enough, often enough, to be rate
+ * limited. A 429 that lands on the token refresh ends the session, and the
+ * student is looking at the sign-in page wondering what they did.
+ */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 /** Reachable signed out — a password reset link may arrive with no session. */
 const PUBLIC_PATHS = ["/reset-password"];

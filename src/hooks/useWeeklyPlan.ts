@@ -21,6 +21,7 @@ import { addDaysIso, todayLocalIso } from "@/lib/date";
 import { classWeekStart, planWeekOneStart, sessionDatesForWeek } from "@/lib/practiceWeek";
 import { rowsToWrite } from "@/lib/planSync";
 import { rpcError } from "@/lib/rpc";
+import { useViewAs } from "@/hooks/useViewAs";
 
 export interface WeeklyPlanSession {
   id: string;
@@ -253,6 +254,7 @@ export function useWeeklyPlan(weekStartArg?: string) {
 
 export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const qc = useQueryClient();
+  const viewAs = useViewAs();
   const { data: student } = useStudentMe();
   const { data: batch } = useStudentBatchDay();
   const { data: progress = [] } = useSongProgress();
@@ -284,6 +286,10 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
 
   useEffect(() => {
     if (!student?.id || !weekStart) return;
+    // "View as" is a lens, not a login: the database still sees the admin, so
+    // writing a student's plan through it is refused by row-level security.
+    // It was refused on every page view, and every refusal cost a request.
+    if (viewAs) return;
     if (existing === undefined) return; // still loading
     // Nothing exists before the first lesson. Without this, paging the week
     // strip back through the run-up to the course generated practice into
@@ -321,11 +327,15 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       const { error } = await supabase
         .from("weekly_plan_sessions")
         .upsert(toWrite, { onConflict: "student_id,week_start,session_index" });
-      if (error) console.error("[weekly-plan] upsert failed", error);
+      if (error) {
+        // Refetching what was not written only spends another request.
+        console.error("[weekly-plan] upsert failed", error);
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["weekly-plan", student.id, weekStart] });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id, existing?.length, batch?.day_of_week, weekStart, weekOneStart, shiftWeeks, allPlanDays.length, planSignature]);
+  }, [student?.id, viewAs, existing?.length, batch?.day_of_week, weekStart, weekOneStart, shiftWeeks, allPlanDays.length, planSignature]);
 }
 
 /**

@@ -54,13 +54,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session?.user) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .order("role", { ascending: true });
+      /**
+       * A failed lookup is not "you have no role".
+       *
+       * The error was thrown away, so a blip — a rate limit, a dropped
+       * connection — read as an account with no role at all: bounced off
+       * whatever page they were on and told their account isn't set up,
+       * which is indistinguishable from being logged out. It is worth a
+       * couple of retries before believing it.
+       */
+      let data: { role: string }[] | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .order("role", { ascending: true });
+        if (cancelled) return;
+        if (!res.error) { data = res.data; break; }
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
       if (cancelled) return;
-      const roles = (data || []).map((r) => r.role as AppRole);
+      if (!data) {
+        // Still no answer: leave whatever role is already known rather than
+        // clearing it, and let the next session change try again.
+        setLoading(false);
+        return;
+      }
+      const roles = data.map((r) => r.role as AppRole);
       const resolved: AppRole | null =
         roles.includes("admin") ? "admin" :
         roles.includes("teacher") ? "teacher" :
