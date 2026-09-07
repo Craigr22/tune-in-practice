@@ -121,17 +121,29 @@ describe("student home on a practice day", () => {
     expect(screen.getByText(/slow c to f changes/i)).toBeTruthy();
   });
 
-  it("asks for no practice on the day of the lesson", () => {
+  it("asks about the class, not practice, on the day of the lesson", () => {
     st.batch = classToday();
 
     render(<Home />);
 
-    // The student was in the class; there is nothing to claim as practice.
+    // The student was in the class, so they are not asked to claim practice —
+    // but being there is the week's first session and counts, so there is
+    // still something to tick.
     expect(screen.queryByText(/i've practised today/i)).toBeNull();
+    expect(screen.getByText(/i was at class today/i)).toBeTruthy();
     expect(screen.getByText(/class today at .*3[:.]00/i)).toBeTruthy();
-    // And the day is not billed as a practice session either.
+    // And the day is not billed as a practice session.
     expect(screen.queryByText(/30 min/i)).toBeNull();
     // What the class covers is still on the page.
     expect(screen.getByText(/slow c to f changes/i)).toBeTruthy();
+  });
+
+  it("ticks the lesson off the same way, so the streak counts it", async () => {
+    st.batch = classToday();
+
+    render(<Home />);
+    fireEvent.click(screen.getByText(/i was at class today/i));
+
+    await waitFor(() => expect(st.finish).toHaveBeenCalledWith("sess1"));
   });
 });

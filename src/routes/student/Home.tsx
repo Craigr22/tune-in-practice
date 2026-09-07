@@ -204,10 +204,12 @@ const Home = () => {
               )
             )}
 
-            {/* You were in the lesson — there is no practice to claim for it. */}
-            {classToday ? null : dayDone ? (
+            {/* The lesson is the week's first session and counts towards the
+                streak, so it is ticked off like any other day — just not as
+                practice, which is not what was asked of them. */}
+            {dayDone ? (
               <div className="mt-5 text-sm font-bold" style={{ color: "#10b981" }}>
-                ✓ Done for today
+                {classToday ? "✓ Class marked done" : "✓ Done for today"}
               </div>
             ) : (
               <button
@@ -216,7 +218,7 @@ const Home = () => {
                 className="mt-5 rounded-xl px-4 py-2.5 text-sm font-bold transition-transform active:scale-95 disabled:opacity-60"
                 style={{ background: "var(--navy)", color: "#fff" }}
               >
-                {saving ? "Saving…" : "I've practised today"}
+                {saving ? "Saving…" : classToday ? "I was at class today" : "I've practised today"}
               </button>
             )}
           </div>

@@ -294,11 +294,11 @@ export default function WeeklyCalendarStrip({
             </div>
           )}
 
-          {/* A day they did but never ticked. The streak counts practice
-              sessions, so a missed tick breaks a run the student actually
-              kept — this is how they put it right. The class day has no
-              tick: it asks for no practice. */}
-          {lookingBack && !selected.isClass && (
+          {/* A day they kept but never ticked. The streak counts sessions, so
+              a missed tick breaks a run the student actually kept — this is
+              how they put it right. The lesson counts too: being there is the
+              week's first session. */}
+          {lookingBack && (
             <div className="mt-3">
               {lookingBack.completed_at ? (
                 <span className="text-xs font-bold" style={{ color: "#10b981" }}>✓ Marked done</span>
@@ -309,7 +309,7 @@ export default function WeeklyCalendarStrip({
                   className="rounded-xl px-3.5 py-2 text-xs font-bold transition-transform active:scale-95 disabled:opacity-60"
                   style={{ background: "var(--navy)", color: "#fff" }}
                 >
-                  {saving ? "Saving…" : "I practised on this day"}
+                  {saving ? "Saving…" : selected.isClass ? "I was at this class" : "I practised on this day"}
                 </button>
               )}
             </div>

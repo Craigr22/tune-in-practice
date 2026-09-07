@@ -45,7 +45,7 @@ export function planWeekOneStart(courseStart: string, classDayOfWeek: number): s
   return onOrAfterDayOfWeek(courseStart, classDayOfWeek);
 }
 
-/** When a student is expected to practise. Day 1 is the lesson, not practice. */
+/** When a student is expected to turn up: the lesson, then the two days after. */
 export interface PracticeSchedule {
   classDayOfWeek: number;
   /** Nothing is expected before the course begins. */
@@ -56,11 +56,14 @@ export interface PracticeSchedule {
 const MAX_WEEKS_BACK = 105;
 
 /**
- * The days a student was meant to practise, on or before `iso`, newest first.
+ * The days a student was meant to turn up, on or before `iso`, newest first.
  *
- * The two practice days of each week, walked backwards to the first lesson.
+ * All three days of each week — the lesson and the two practice sessions that
+ * follow it — walked backwards to the first lesson. The lesson counts: being
+ * there is the week's first session, and a student who attends and practises
+ * twice has kept the week.
  */
-export function practiceDatesUpTo(iso: string, schedule: PracticeSchedule): string[] {
+export function sessionDatesUpTo(iso: string, schedule: PracticeSchedule): string[] {
   const first = schedule.courseStart
     ? planWeekOneStart(schedule.courseStart, schedule.classDayOfWeek)
     : null;
@@ -70,7 +73,7 @@ export function practiceDatesUpTo(iso: string, schedule: PracticeSchedule): stri
   for (let i = 0; i < MAX_WEEKS_BACK; i++) {
     if (first && week < first) break;
     // Latest first, and only days that have actually come round.
-    for (const date of sessionDatesForWeek(week).slice(1).reverse()) {
+    for (const date of sessionDatesForWeek(week).slice().reverse()) {
       if (date <= iso) out.push(date);
     }
     week = addDaysIso(week, -7);

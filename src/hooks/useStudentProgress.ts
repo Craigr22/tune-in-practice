@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { toLocalIso, addDaysIso } from "@/lib/date";
-import { practiceDatesUpTo, type PracticeSchedule } from "@/lib/practiceWeek";
+import { sessionDatesUpTo, type PracticeSchedule } from "@/lib/practiceWeek";
 import type { Song } from "@/lib/types";
 
 export type CheckIn = "nailed" | "got_through" | "need_help";
@@ -129,13 +129,13 @@ export function tuningRate(logs: PracticeLog[]): { tuned: number; total: number;
 /* ----- helpers ----- */
 
 /**
- * How many practice sessions in a row a student has done.
+ * How many sessions in a row a student has kept.
  *
  * This used to count consecutive calendar days, which a three-day-a-week plan
- * can never satisfy: practice falls two days apart, so the day in between
+ * can never satisfy: sessions fall two days apart, so the day in between
  * always broke the run and the streak could never read higher than 1. It now
- * counts the days the student was actually asked to practise — the two that
- * follow each lesson — so keeping to the plan keeps the streak.
+ * counts the days the student was asked to turn up — the lesson, and the two
+ * practice days after it — so keeping to the plan keeps the streak.
  *
  * Today never breaks a run: an unfinished session is still ahead of them.
  * Without a schedule (the class hasn't loaded yet) it falls back to counting
@@ -147,7 +147,7 @@ export function computeStreak(logs: PracticeLog[], schedule?: PracticeSchedule |
   const today = toLocalIso();
 
   const expected = schedule
-    ? practiceDatesUpTo(today, schedule)
+    ? sessionDatesUpTo(today, schedule)
     : // Every day back from today, in the same newest-first order.
       Array.from({ length: 365 }, (_, i) => addDaysIso(today, -i));
 
