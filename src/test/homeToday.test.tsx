@@ -119,11 +119,10 @@ describe("student home on a practice day", () => {
 
     render(<Home />);
 
-    // The student was in the class, so they are not asked to claim practice —
-    // but being there is the week's first session and counts, so there is
-    // still something to tick.
+    // This action confirms that the student reviewed the recap; it does not
+    // make an attendance claim or ask them to log a separate practice.
     expect(screen.queryByText(/i've practised today/i)).toBeNull();
-    expect(screen.getByText(/i was at class today/i)).toBeTruthy();
+    expect(screen.getByText(/i've completed the class recap/i)).toBeTruthy();
     expect(screen.getByText(/class today at .*3[:.]00/i)).toBeTruthy();
     // And the day is not billed as a practice session.
     expect(screen.queryByText(/30 min/i)).toBeNull();
@@ -131,11 +130,11 @@ describe("student home on a practice day", () => {
     expect(screen.getByText(/slow c to f changes/i)).toBeTruthy();
   });
 
-  it("ticks the lesson off the same way, so the streak counts it", async () => {
+  it("completes the recap through the same session workflow", async () => {
     st.batch = classToday();
 
     render(<Home />);
-    fireEvent.click(screen.getByText(/i was at class today/i));
+    fireEvent.click(screen.getByText(/i've completed the class recap/i));
 
     await waitFor(() => expect(st.finish).toHaveBeenCalledWith("sess1"));
   });
