@@ -204,9 +204,7 @@ export default function WeeklyCalendarStrip({
           const ring = isSelected
             ? "0 0 0 2px var(--gold-deep)"
             : d.isToday ? "0 0 0 2px var(--navy)" : undefined;
-          const bg = d.isPast && !d.sessionCompleted
-            ? "var(--paper-cool)"
-            : d.sessionCompleted
+          const bg = d.sessionCompleted
             ? "rgba(16,185,129,0.10)"
             : "var(--paper-warm)";
           const clickable = !!d.session || d.isClass || d.isPractice;
@@ -220,7 +218,6 @@ export default function WeeklyCalendarStrip({
                 background: bg,
                 border: "1px solid var(--border)",
                 boxShadow: ring,
-                opacity: d.isPast && !d.sessionCompleted && !d.isToday ? 0.5 : 1,
                 cursor: clickable ? "pointer" : "default",
               }}
               title={DAY_FULL[d.dow]}
