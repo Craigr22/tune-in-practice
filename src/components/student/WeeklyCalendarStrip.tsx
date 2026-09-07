@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, classWeekStart, addWeeks, sessionDatesForWeek } from "@/hooks/useWeeklyPlan";
+import { useMemo, useState } from "react";
+import { useStudentBatchDay, useWeeklyPlan, useEnsureWeeklyPlan, classWeekStart, addWeeks, sessionDatesForWeek, planWeekOneStart } from "@/hooks/useWeeklyPlan";
 import { usePracticeLogs } from "@/hooks/useStudentProgress";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useSongs } from "@/hooks/useSongs";
@@ -33,24 +33,41 @@ export default function WeeklyCalendarStrip({
   const { songs } = useSongs();
   const { data: batch } = useStudentBatchDay();
   const classDow = batch?.day_of_week ?? 6;
-  // A practice week runs lesson to lesson: it opens on the class day and the
-  // two practice days follow it, so the strip reads in the order it happens.
+  /**
+   * A practice week runs lesson to lesson: it opens on the class day and the
+   * two practice days follow it, so the strip reads in the order it happens.
+   *
+   * Which weekday that is arrives with the batch, a moment after the first
+   * render. Holding the week in state meant the first render's guess — a
+   * Saturday — could stick: the strip stayed anchored a day early, so the
+   * class cell sat on the wrong date and the real one was an inert square
+   * that opened nothing. Paging moves an offset instead, so the anchor
+   * follows the class day as soon as it is known, whatever the student is
+   * looking at.
+   */
   const currentWeek = classWeekStart(classDow);
-  const [weekStart, setWeekStart] = useState(currentWeek);
-  // The class day arrives with the batch, after the first render.
-  const [pinned, setPinned] = useState(false);
-  useEffect(() => {
-    if (!pinned && batch) { setWeekStart(currentWeek); setPinned(true); }
-  }, [batch, currentWeek, pinned]);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const weekStart = addWeeks(currentWeek, weekOffset);
   // Ensure a plan exists for whatever week the user is viewing (generates future weeks on demand)
   useEnsureWeeklyPlan(weekStart);
   const { data: plan = [] } = useWeeklyPlan(weekStart);
   const { data: logs = [] } = usePracticeLogs();
 
   const { courseStartDate } = useStudentClassConfig();
-  // Before the class starts there are no practice days — and no class days.
-  const startsOn = courseStartDate ?? batch?.semester_start ?? null;
-  const beforeStart = (iso: string) => !!startsOn && iso < startsOn;
+  /**
+   * The course begins at its first lesson, not at the date typed into the
+   * settings. Marking practice from the raw start date put blue dots on days
+   * in the run-up to week one — days no session can ever exist for, because
+   * the plan starts at the first class. They opened on "generating your
+   * session…" and stayed there.
+   */
+  const startsOn = useMemo(() => {
+    const raw = courseStartDate ?? batch?.semester_start ?? null;
+    return raw ? planWeekOneStart(raw, classDow) : null;
+  }, [courseStartDate, batch?.semester_start, classDow]);
+  // Nothing is marked until the class day is known, so no day is labelled from
+  // a guess and then relabelled.
+  const beforeStart = (iso: string) => !batch || !startsOn || iso < startsOn;
 
   // Day 1 is the class itself; the practice days are the two that follow.
   const practiceDates = useMemo(() => sessionDatesForWeek(weekStart).slice(1), [weekStart]);
@@ -75,7 +92,9 @@ export default function WeeklyCalendarStrip({
       d.setDate(d.getDate() + o);
       const iso = toLocalIso(d);
       const isPractice = practiceDates.includes(iso) && !beforeStart(iso);
-      const session = plan.find((p) => p.scheduled_date === iso);
+      // A session left over from before the course began isn't a day to open:
+      // it has no dot, so a cell that responded to a tap looked like a bug.
+      const session = beforeStart(iso) ? undefined : plan.find((p) => p.scheduled_date === iso);
       arr.push({
         iso,
         dow: d.getDay(),
@@ -102,9 +121,9 @@ export default function WeeklyCalendarStrip({
   const selectedTpl = selected?.session ? SESSION_TEMPLATES[selected.session.session_type] : null;
 
   const weekLabel =
-    weekStart === currentWeek ? "This week" :
-    weekStart === addWeeks(currentWeek, 1) ? "Next week" :
-    weekStart === addWeeks(currentWeek, -1) ? "Last week" :
+    weekOffset === 0 ? "This week" :
+    weekOffset === 1 ? "Next week" :
+    weekOffset === -1 ? "Last week" :
     fmtRange(weekStart);
 
   return (
@@ -120,7 +139,7 @@ export default function WeeklyCalendarStrip({
       <div className="flex items-center justify-between mb-3 gap-2">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setWeekStart(addWeeks(weekStart, -1)); select(null); }}
+            onClick={() => { setWeekOffset((n) => n - 1); select(null); }}
             className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold hover:opacity-80"
             style={{ background: "var(--paper-cool)", color: "var(--ink)" }}
             aria-label="Previous week"
@@ -132,14 +151,14 @@ export default function WeeklyCalendarStrip({
             <div className="text-[10px]" style={{ color: "var(--ink-faint)" }}>{fmtRange(weekStart)}</div>
           </div>
           <button
-            onClick={() => { setWeekStart(addWeeks(weekStart, 1)); select(null); }}
+            onClick={() => { setWeekOffset((n) => n + 1); select(null); }}
             className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold hover:opacity-80"
             style={{ background: "var(--paper-cool)", color: "var(--ink)" }}
             aria-label="Next week"
           >›</button>
-          {weekStart !== currentWeek && (
+          {weekOffset !== 0 && (
             <button
-              onClick={() => { setWeekStart(currentWeek); select(null); }}
+              onClick={() => { setWeekOffset(0); select(null); }}
               className="ml-1 text-[11px] font-semibold underline"
               style={{ color: "var(--navy)" }}
             >Today</button>

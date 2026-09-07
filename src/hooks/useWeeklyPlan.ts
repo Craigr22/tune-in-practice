@@ -269,8 +269,9 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
     courseStartDate && batch ? planWeekOneStart(courseStartDate, batch.day_of_week) : null;
   const planWeek = weekStart ? shiftedPlanWeek(weekOneStart, weekStart, shiftWeeks) : null;
   const planDays = planWeek ? daysForWeek(allPlanDays, planWeek) : [];
-  // A student's practice can't begin before their class does.
-  const notBefore = courseStartDate ?? batch?.semester_start ?? null;
+  // A student's practice can't begin before their class does — and the class
+  // begins at its first lesson, not at the date typed into the settings.
+  const notBefore = weekOneStart;
 
   /**
    * What a planned week currently says. When an admin edits the plan — or when
@@ -284,6 +285,10 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   useEffect(() => {
     if (!student?.id || !weekStart) return;
     if (existing === undefined) return; // still loading
+    // Nothing exists before the first lesson. Without this, paging the week
+    // strip back through the run-up to the course generated practice into
+    // those weeks — sessions in the past, for a course that had not started.
+    if (weekOneStart && weekStart < weekOneStart) return;
     // Wait for the course plan before generating, so a planned week isn't
     // filled with generated content just because the query hadn't landed.
     if (weekOneStart && !allPlanDays.length) return;

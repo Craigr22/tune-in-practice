@@ -65,3 +65,19 @@ describe("classWeekStart", () => {
     expect(classWeekStart(0, "2026-09-13")).toBe("2026-09-13");
   });
 });
+
+describe("the run-up to the first lesson", () => {
+  it("holds no practice, however early the start date is set", () => {
+    // BAMUK01: settings say the course starts 1 Sep, the class meets Sundays,
+    // and the first lesson is therefore Sun 6 Sep. The days between are not
+    // practice days — no session can exist for them, because week one has not
+    // begun — and marking them left blue dots that opened on nothing.
+    const firstLesson = planWeekOneStart("2026-09-01", 0);
+    expect(firstLesson).toBe("2026-09-06");
+
+    const weekBefore = classWeekStart(0, "2026-09-05"); // Sun 30 Aug
+    for (const d of sessionDatesForWeek(weekBefore)) {
+      expect(d < firstLesson).toBe(true);
+    }
+  });
+});
