@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
 
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
+import PracticeReminderCard from "@/components/student/PracticeReminderCard";
 import { useDayLessons } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
@@ -107,12 +108,10 @@ const Home = () => {
   }, [nextSession, batch]);
 
   const firstName = (student?.name || "").split(" ")[0] || "there";
-  // The session is still three parts underneath; the page treats it as one day.
-  const dayDone = !!session && session.warmup_completed && session.focus_completed && session.bonus_completed;
+  // Stored completion flags are combined into one day-level result here.
+  const dayDone = !!session?.completed;
   const tpl = session ? SESSION_TEMPLATES[session.session_type] : null;
-  const totalMins = session
-    ? session.warmup_target_min + session.focus_target_min + session.bonus_target_min
-    : 0;
+  const totalMins = session?.target_min ?? 0;
 
   return (
     <section className="view view-home active">
@@ -168,11 +167,12 @@ const Home = () => {
           </div>
         </section>
 
+        <PracticeReminderCard />
+
         {session && (
           /* The day itself: what the admin planned for it, in the order they
-             put it in. The warm-up / focus / bonus split has come off — a
-             student reads the page and plays, rather than working through
-             three labelled boxes. */
+             put it in. A student reads the page and plays in one continuous
+             session rather than working through separate labelled boxes. */
           <div
             className="rounded-2xl p-5"
             style={{
@@ -197,9 +197,9 @@ const Home = () => {
             ) : (
               /* Nothing planned for this day yet — the generated instruction
                  is all there is to go on, so it stands in. */
-              session.focus_instruction && (
+              session.instruction && (
                 <p className="text-sm mt-2 leading-relaxed" style={{ color: "var(--ink-soft)" }}>
-                  {session.focus_instruction}
+                  {session.instruction}
                 </p>
               )
             )}

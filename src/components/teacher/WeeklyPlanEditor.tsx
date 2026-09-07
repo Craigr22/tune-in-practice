@@ -51,7 +51,11 @@ export default function WeeklyPlanEditor({
   const [draft, setDraft] = useState<Record<string, any>>({});
   useEffect(() => {
     const d: Record<string, any> = {};
-    for (const r of rows) d[r.id] = { ...r };
+    for (const r of rows) d[r.id] = {
+      ...r,
+      song_id: r.focus_song_id,
+      instruction: r.focus_instruction,
+    };
     setDraft(d);
   }, [rows]);
 
@@ -62,15 +66,8 @@ export default function WeeklyPlanEditor({
     const { error } = await supabase
       .from("weekly_plan_sessions")
       .update({
-        focus_song_id: r.focus_song_id,
-        focus_instruction: r.focus_instruction,
-        focus_target_min: Number(r.focus_target_min) || 0,
-        warmup_song_id: r.warmup_song_id || null,
-        warmup_instruction: r.warmup_instruction,
-        warmup_target_min: Number(r.warmup_target_min) || 0,
-        bonus_song_id: r.bonus_song_id || null,
-        bonus_instruction: r.bonus_instruction,
-        bonus_target_min: Number(r.bonus_target_min) || 0,
+        focus_song_id: r.song_id,
+        focus_instruction: r.instruction,
       })
       .eq("id", id);
     if (error) return toast.error(error.message);
@@ -113,38 +110,30 @@ export default function WeeklyPlanEditor({
                 <Button size="sm" variant="outline" onClick={() => save(r.id)}>Save</Button>
               </div>
 
-              {(["warmup", "focus", "bonus"] as const).map((seg) => (
-                <div key={seg} className="grid grid-cols-[80px_1fr_70px] gap-2 items-end">
-                  <div>
-                    <Label className="text-[10px] uppercase">{seg}</Label>
-                    <Select
-                      value={d[`${seg}_song_id`] || (seg === "focus" ? "" : NO_SONG)}
-                      onValueChange={(v) =>
-                        update(r.id, { [`${seg}_song_id`]: v === NO_SONG ? null : v })
-                      }
-                    >
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Song" /></SelectTrigger>
-                      <SelectContent>
-                        {seg !== "focus" && <SelectItem value={NO_SONG}>—</SelectItem>}
-                        {songs.filter((s) => s.id).map((s) => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              <div className="grid grid-cols-[minmax(120px,0.8fr)_minmax(180px,1fr)] gap-2 items-end">
+                <div>
+                  <Label className="text-[10px] uppercase">Song</Label>
+                  <Select
+                    value={d.song_id || NO_SONG}
+                    onValueChange={(v) => update(r.id, { song_id: v === NO_SONG ? null : v })}
+                  >
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Song" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_SONG}>—</SelectItem>
+                      {songs.filter((s) => s.id).map((s) => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[10px] uppercase">Instructions</Label>
                   <Input
                     className="h-8 text-xs"
-                    placeholder="Instruction"
-                    value={d[`${seg}_instruction`] ?? ""}
-                    onChange={(e) => update(r.id, { [`${seg}_instruction`]: e.target.value })}
-                  />
-                  <Input
-                    className="h-8 text-xs"
-                    type="number"
-                    placeholder="min"
-                    value={d[`${seg}_target_min`] ?? 0}
-                    onChange={(e) => update(r.id, { [`${seg}_target_min`]: e.target.value })}
+                    placeholder="What to practise"
+                    value={d.instruction ?? ""}
+                    onChange={(e) => update(r.id, { instruction: e.target.value })}
                   />
                 </div>
-              ))}
+              </div>
             </div>
           );
         })}

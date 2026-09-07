@@ -145,7 +145,7 @@ export default function WeeklyCalendarStrip({
       ? { scheduled_date: lookingBack.scheduled_date, session_index: lookingBack.session_index }
       : null,
   );
-  const selectedSong = selected?.session ? songs.find((s) => s.id === selected.session!.focus_song_id) : null;
+  const selectedSong = selected?.session ? songs.find((s) => s.id === selected.session!.song_id) : null;
   const selectedTpl = selected?.session ? SESSION_TEMPLATES[selected.session.session_type] : null;
 
   const weekLabel =
@@ -266,7 +266,7 @@ export default function WeeklyCalendarStrip({
                 <div className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
                   {selectedTpl.emoji} {selectedTpl.label} · {selectedSong.title}
                   <span className="ml-2 text-[11px] font-normal" style={{ color: "var(--ink-soft)" }}>
-                    {selected.session.warmup_target_min + selected.session.focus_target_min + selected.session.bonus_target_min} min
+                    {selected.session.target_min} min
                   </span>
                 </div>
             ) : selected.isPractice ? (

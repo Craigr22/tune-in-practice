@@ -19,6 +19,7 @@ import { Plus, Pencil, Users, Archive, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import BatchDetailDialog from "@/components/admin/BatchDetailDialog";
 import BatchFormDialog from "@/components/admin/BatchFormDialog";
+import { calendarQueryRange, sessionDateTimes } from "@/lib/calendar";
 
 const locales = { "en-US": enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -42,6 +43,8 @@ type Row = {
   batch_id: string;
   scheduled_date: string;
   status: string;
+  start_time: string | null;
+  duration_min: number | null;
   batches: {
     id: string;
     code: string | null;
@@ -77,15 +80,28 @@ export default function AdminSchedule() {
   const [view, setView] = useState<"calendar" | "classes">("calendar");
   const [formBatch, setFormBatch] = useState<any | null | undefined>(undefined); // undefined = closed
   const [selectedSession, setSelectedSession] = useState<Row | null>(null);
+  const [sessionEdit, setSessionEdit] = useState({ date: "", time: "", duration: 60 });
   const [openBatch, setOpenBatch] = useState<string | null>(null);
+  const [queryRange, setQueryRange] = useState(() => calendarQueryRange(null));
   const setActive = useSetBatchActive();
 
+  const openSession = (session: Row) => {
+    setSelectedSession(session);
+    setSessionEdit({
+      date: session.scheduled_date,
+      time: (session.start_time ?? session.batches?.start_time ?? "00:00").slice(0, 5),
+      duration: session.duration_min ?? session.batches?.duration_min ?? 60,
+    });
+  };
+
   const { data: sessions = [] } = useQuery({
-    queryKey: ["admin-sessions"],
+    queryKey: ["admin-sessions", queryRange.start, queryRange.end],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sessions")
         .select("id, batch_id, scheduled_date, status, start_time, duration_min, batches!inner(id, code, start_time, duration_min, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name))")
+        .gte("scheduled_date", queryRange.start)
+        .lte("scheduled_date", queryRange.end)
         .order("scheduled_date");
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
@@ -108,11 +124,11 @@ export default function AdminSchedule() {
   const events: Event[] = useMemo(() => sessions.map((s) => {
     const b = s.batches!;
     // A session may override its class's usual time and length (from dragging).
-    const [h, m] = ((s as any).start_time || b.start_time || "00:00:00").split(":").map(Number);
-    const start = new Date(s.scheduled_date);
-    start.setHours(h, m, 0, 0);
-    const mins = (s as any).duration_min ?? b.duration_min ?? 60;
-    const end = new Date(start.getTime() + mins * 60000);
+    const { start, end } = sessionDateTimes(
+      s.scheduled_date,
+      s.start_time ?? b.start_time,
+      s.duration_min ?? b.duration_min,
+    );
     const room = b.locations?.name;
     const code = (b as any).code ? `${(b as any).code} · ` : "";
     const title = `${code}${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}${room ? ` · ${room}` : ""}`;
@@ -135,6 +151,11 @@ export default function AdminSchedule() {
     const start_time = `${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
     const duration_min = Math.max(15, Math.round((new Date(end).getTime() - d.getTime()) / 60000));
 
+    const previous = {
+      scheduled_date: s.scheduled_date,
+      start_time: s.start_time,
+      duration_min: s.duration_min,
+    };
     const { error } = await supabase
       .from("sessions")
       .update({ scheduled_date, start_time, duration_min } as never)
@@ -148,9 +169,22 @@ export default function AdminSchedule() {
       );
       return;
     }
-    toast.success(
-      `Moved to ${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} · ${start_time.slice(0, 5)}`,
-    );
+    toast.success(`Moved to ${d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })} · ${start_time.slice(0, 5)}`, {
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          const { error: undoError } = await supabase
+            .from("sessions")
+            .update(previous as never)
+            .eq("id", s.id);
+          if (undoError) toast.error(undoError.message);
+          else {
+            toast.success("Session restored");
+            qc.invalidateQueries({ queryKey: ["admin-sessions"] });
+          }
+        },
+      },
+    });
     qc.invalidateQueries({ queryKey: ["admin-sessions"] });
   };
 
@@ -160,6 +194,23 @@ export default function AdminSchedule() {
     const { error } = await supabase.from("sessions").update({ status: "cancelled" }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Session cancelled");
+    qc.invalidateQueries({ queryKey: ["admin-sessions"] });
+    setSelectedSession(null);
+  };
+
+  /** Keyboard-accessible alternative to calendar drag and resize. */
+  const saveSessionTime = async () => {
+    if (!selectedSession) return;
+    const { error } = await supabase
+      .from("sessions")
+      .update({
+        scheduled_date: sessionEdit.date,
+        start_time: `${sessionEdit.time}:00`,
+        duration_min: Math.max(15, sessionEdit.duration),
+      } as never)
+      .eq("id", selectedSession.id);
+    if (error) return toast.error(error.message);
+    toast.success("Session rescheduled");
     qc.invalidateQueries({ queryKey: ["admin-sessions"] });
     setSelectedSession(null);
   };
@@ -178,12 +229,14 @@ export default function AdminSchedule() {
         <div className="flex items-center gap-2">
           <div className="flex rounded-md border overflow-hidden">
             <button
+              aria-pressed={view === "calendar"}
               onClick={() => setView("calendar")}
               className={`px-3 py-1.5 text-sm ${view === "calendar" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             >
               Calendar
             </button>
             <button
+              aria-pressed={view === "classes"}
               onClick={() => setView("classes")}
               className={`px-3 py-1.5 text-sm ${view === "classes" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
             >
@@ -217,6 +270,7 @@ export default function AdminSchedule() {
             events={events}
             view={calView}
             onView={(v: any) => setCalView(v)}
+            onRangeChange={(range: any) => setQueryRange(calendarQueryRange(range))}
             views={isPhone ? [Views.AGENDA, Views.DAY, Views.MONTH] : [Views.WEEK, Views.MONTH, Views.DAY]}
             length={30}
             formats={calendarFormats}
@@ -227,7 +281,7 @@ export default function AdminSchedule() {
             timeslots={2}
             dayLayoutAlgorithm="no-overlap"
             popup
-            onSelectEvent={(ev) => setSelectedSession((ev as any).resource)}
+            onSelectEvent={(ev) => openSession((ev as any).resource)}
             eventPropGetter={(ev) => {
               const s = (ev as any).resource as Row;
               if (s.status === "cancelled") {
@@ -299,16 +353,17 @@ export default function AdminSchedule() {
                     </td>
                     <td className="p-3">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" title="Manage students" onClick={() => setOpenBatch(b.id)}>
+                        <Button variant="ghost" size="icon" title="Manage students" aria-label={`Manage students in ${b.code ?? "class"}`} onClick={() => setOpenBatch(b.id)}>
                           <Users className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" title="Edit class" onClick={() => setFormBatch(b)}>
+                        <Button variant="ghost" size="icon" title="Edit class" aria-label={`Edit ${b.code ?? "class"}`} onClick={() => setFormBatch(b)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           title={b.is_active ? "Archive class" : "Restore class"}
+                          aria-label={`${b.is_active ? "Archive" : "Restore"} ${b.code ?? "class"}`}
                           onClick={() => toggleArchive(b)}
                         >
                           {b.is_active ? <Archive className="w-4 h-4" /> : <RotateCcw className="w-4 h-4" />}
@@ -335,9 +390,44 @@ export default function AdminSchedule() {
             <div className="space-y-3 text-sm">
               <div>{(selectedSession.batches as any)?.code ? `${(selectedSession.batches as any).code} · ` : ""}{selectedSession.batches?.instruments?.name} · {selectedSession.batches?.teachers?.name}</div>
               <div className="text-muted-foreground">
-                {selectedSession.scheduled_date} · {selectedSession.batches?.start_time?.slice(0,5)}
+                {selectedSession.scheduled_date} · {(selectedSession.start_time ?? selectedSession.batches?.start_time)?.slice(0,5)} · {selectedSession.duration_min ?? selectedSession.batches?.duration_min}min
               </div>
               <div>Status: <span className="font-medium">{selectedSession.status}</span></div>
+              <fieldset className="grid grid-cols-1 sm:grid-cols-3 gap-3 border rounded-md p-3">
+                <legend className="px-1 text-xs font-semibold">Reschedule session</legend>
+                <label className="text-xs font-medium">
+                  Date
+                  <input
+                    className="mt-1 block w-full rounded-md border bg-background px-2 py-1.5"
+                    type="date"
+                    value={sessionEdit.date}
+                    onChange={(event) => setSessionEdit((current) => ({ ...current, date: event.target.value }))}
+                  />
+                </label>
+                <label className="text-xs font-medium">
+                  Start time
+                  <input
+                    className="mt-1 block w-full rounded-md border bg-background px-2 py-1.5"
+                    type="time"
+                    value={sessionEdit.time}
+                    onChange={(event) => setSessionEdit((current) => ({ ...current, time: event.target.value }))}
+                  />
+                </label>
+                <label className="text-xs font-medium">
+                  Duration (minutes)
+                  <input
+                    className="mt-1 block w-full rounded-md border bg-background px-2 py-1.5"
+                    type="number"
+                    min={15}
+                    step={15}
+                    value={sessionEdit.duration}
+                    onChange={(event) => setSessionEdit((current) => ({ ...current, duration: Number(event.target.value) }))}
+                  />
+                </label>
+                <Button className="sm:col-span-3" onClick={saveSessionTime} disabled={!sessionEdit.date || !sessionEdit.time}>
+                  Save new time
+                </Button>
+              </fieldset>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => { setOpenBatch(selectedSession.batch_id); setSelectedSession(null); }}>
                   Manage batch

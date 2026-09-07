@@ -1,12 +1,10 @@
-// Weekly plan orchestration. Builds 3 sessions per ISO week per student,
-// stored in `weekly_plan_sessions`. Calls deterministic warmup/bonus generators.
+// Weekly plan orchestration. Builds three continuous sessions per week.
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
-import { usePracticeLogs, useSongProgress } from "@/hooks/useStudentProgress";
+import { useSongProgress } from "@/hooks/useStudentProgress";
 import { SESSION_ORDER, SESSION_TEMPLATES } from "@/lib/sessionTemplates";
-import { generateWarmup, generateBonus } from "@/lib/sessionSegments";
 import { SONGS } from "@/data/songs";
 import {
   shiftedPlanWeek,
@@ -15,7 +13,7 @@ import {
   type CoursePlanDay,
 } from "@/hooks/useCoursePlan";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
-import type { SongProgress, PracticeLog } from "@/hooks/useStudentProgress";
+import type { SongProgress } from "@/hooks/useStudentProgress";
 import { useEffect, useMemo } from "react";
 import { addDaysIso, todayLocalIso } from "@/lib/date";
 import { classWeekStart, planWeekOneStart, sessionDatesForWeek } from "@/lib/practiceWeek";
@@ -29,22 +27,41 @@ export interface WeeklyPlanSession {
   session_index: number;
   scheduled_date: string;
   session_type: "build" | "flow" | "stretch";
-  focus_song_id: string;
-  focus_instruction: string;
-  focus_target_min: number;
-  warmup_target_min: number;
-  warmup_song_id: string | null;
-  warmup_instruction: string;
-  bonus_target_min: number;
-  bonus_type: "callback_song" | "mini_challenge" | "jam" | "foundation_refresh";
-  bonus_song_id: string | null;
-  bonus_instruction: string;
-  warmup_completed: boolean;
-  focus_completed: boolean;
-  bonus_completed: boolean;
+  song_id: string;
+  instruction: string;
+  target_min: number;
+  completed: boolean;
   generated_at: string;
   completed_at: string | null;
 }
+
+/** Convert the legacy storage shape at the database boundary only. */
+const sessionFromStorage = (row: any): WeeklyPlanSession => ({
+  id: row.id,
+  student_id: row.student_id,
+  week_start: row.week_start,
+  session_index: row.session_index,
+  scheduled_date: row.scheduled_date,
+  session_type: row.session_type,
+  song_id: row.focus_song_id,
+  instruction: row.focus_instruction,
+  target_min: Number(row.warmup_target_min || 0) + Number(row.focus_target_min || 0) + Number(row.bonus_target_min || 0),
+  completed: !!row.completed_at || (!!row.warmup_completed && !!row.focus_completed && !!row.bonus_completed),
+  generated_at: row.generated_at,
+  completed_at: row.completed_at,
+});
+
+const sessionToStorage = (row: any) => ({
+  student_id: row.student_id,
+  week_start: row.week_start,
+  session_index: row.session_index,
+  scheduled_date: row.scheduled_date,
+  session_type: row.session_type,
+  focus_song_id: row.song_id,
+  focus_instruction: row.instruction,
+  focus_target_min: row.target_min,
+  generated_at: row.generated_at,
+});
 
 /* ----- date helpers (local dates — see src/lib/date.ts) ----- */
 const addDays = addDaysIso;
@@ -59,9 +76,8 @@ export {
   planWeekOneStart,
 } from "@/lib/practiceWeek";
 
-/* ----- focus song pick ----- */
 /** Minimal shape both the static catalog and a class's effective song list satisfy. */
-export type FocusPoolSong = {
+export type PracticePoolSong = {
   id: string;
   title?: string;
   fingerstyle?: boolean;
@@ -70,7 +86,7 @@ export type FocusPoolSong = {
   order: number;
 };
 
-function pickFocusSong(progress: SongProgress[], pool?: FocusPoolSong[]): FocusPoolSong | undefined {
+function pickPracticeSong(progress: SongProgress[], pool?: PracticePoolSong[]): PracticePoolSong | undefined {
   // A class pool arrives pre-filtered (unlocked only) and in the teacher's order — keep it.
   // The static catalog needs sorting by track/order.
   const ordered = (pool && pool.length ? pool : [...SONGS])
@@ -91,14 +107,8 @@ interface GenInput {
   weekStart: string;
   weekNumber: number;
   progress: SongProgress[];
-  logs: PracticeLog[];
-  existing?: WeeklyPlanSession[];
   /** Class-effective song list (unlocked, teacher-ordered). Falls back to the static catalog. */
-  pool?: FocusPoolSong[];
-  /** Distinct songs to fit into a single 30-min session (1–3). 3 = warmup/focus/bonus all distinct. */
-  songsPerSession?: number;
-  /** Per-practice-day counts, in session order. Overrides songsPerSession per day. */
-  songsPerDay?: number[];
+  pool?: PracticePoolSong[];
   /** The admin's planned days for this week (day 1..3). Used verbatim when present. */
   planDays?: CoursePlanDay[];
   /** Nothing is planned before this date — the class hasn't started yet. */
@@ -106,7 +116,7 @@ interface GenInput {
 }
 
 export function buildWeekRows(input: GenInput) {
-  const { studentId, weekStart, weekNumber, progress, logs, existing = [], pool, songsPerSession = 3, songsPerDay, planDays, notBefore } = input;
+  const { studentId, weekStart, progress, pool, planDays, notBefore } = input;
   const dates = sessionDatesForWeek(weekStart);
 
   // While a week is covered by the admin's course plan, use those days
@@ -118,83 +128,34 @@ export function buildWeekRows(input: GenInput) {
     return SESSION_ORDER.map((kind, i) => {
       const day = planDays[i];
       const tpl = SESSION_TEMPLATES[kind];
-      const songId = day?.focus_song_id ?? pool?.[0]?.id ?? SONGS[0].id;
+      const songId = day?.song_id ?? pool?.[0]?.id ?? SONGS[0].id;
       return {
         student_id: studentId,
         week_start: weekStart,
         session_index: i,
         scheduled_date: dates[i],
         session_type: kind,
-        focus_song_id: songId,
-        focus_instruction: day?.focus_instruction || tpl.focus_instruction,
-        focus_target_min: tpl.focus_target_min,
-        warmup_target_min: tpl.warmup_target_min,
-        warmup_song_id: null as string | null,
-        warmup_instruction: day?.warmup_instruction || "Tune up and loosen your hands.",
-        bonus_target_min: tpl.bonus_target_min,
-        bonus_type: "callback_song" as const,
-        bonus_song_id: songId,
-        bonus_instruction: day?.bonus_instruction || "Finish with a song you enjoy.",
+        song_id: songId,
+        instruction: day?.instruction || tpl.instruction,
+        target_min: tpl.targetMin,
         generated_at: new Date().toISOString(),
       };
     }).filter((r) => onOrAfterStart(r.scheduled_date));
   }
 
-  const focus = pickFocusSong(progress, pool);
-  const focusId = focus?.id ?? SONGS[0].id;
-  const focusTitle = focus?.title ?? "your focus song";
-
-  const recentWarmupIds: string[] = existing
-    .slice()
-    .sort((a, b) => b.session_index - a.session_index)
-    .map((r) => r.warmup_song_id || "")
-    .filter(Boolean)
-    .slice(0, 2);
-
-  let previousBonusType: GenInput["existing"][number]["bonus_type"] | null = null;
+  const chosen = pickPracticeSong(progress, pool);
+  const songId = chosen?.id ?? SONGS[0].id;
   const rows = SESSION_ORDER.map((kind, i) => {
     const tpl = SESSION_TEMPLATES[kind];
-    const warm = generateWarmup({
-      progress, logs, currentSongId: focusId,
-      recentWarmupIds, weekNumber,
-    });
-    const bonus = generateBonus({
-      progress, logs, currentSongId: focusId,
-      previousBonusType, weekNumber,
-    });
-    // Collapse distinct songs to honor the teacher's plan for THIS day.
-    // 3 → warmup/focus/bonus all distinct. 2 → bonus folds into the focus song.
-    // 1 → warmup + bonus both fold into the focus song (one song for the whole 30 min).
-    const dayCount = songsPerDay?.[i] ?? songsPerSession;
-    if (dayCount <= 2) {
-      bonus.song_id = focusId;
-      bonus.bonus_type = "callback_song";
-      bonus.instruction = `Extra reps on ${focusTitle} to finish strong.`;
-    }
-    if (dayCount <= 1 && warm.song_id) {
-      warm.song_id = focusId;
-      warm.instruction = `Ease in with ${focusTitle} — slow and clean.`;
-    }
-
-    if (warm.song_id) recentWarmupIds.unshift(warm.song_id);
-    previousBonusType = bonus.bonus_type;
-
     return {
       student_id: studentId,
       week_start: weekStart,
       session_index: i,
       scheduled_date: dates[i],
       session_type: kind,
-      focus_song_id: focusId,
-      focus_instruction: tpl.focus_instruction,
-      focus_target_min: tpl.focus_target_min,
-      warmup_target_min: tpl.warmup_target_min,
-      warmup_song_id: warm.song_id,
-      warmup_instruction: warm.instruction,
-      bonus_target_min: tpl.bonus_target_min,
-      bonus_type: bonus.bonus_type,
-      bonus_song_id: bonus.song_id,
-      bonus_instruction: bonus.instruction,
+      song_id: songId,
+      instruction: tpl.instruction,
+      target_min: tpl.targetMin,
       generated_at: new Date().toISOString(),
     };
   });
@@ -246,7 +207,7 @@ export function useWeeklyPlan(weekStartArg?: string) {
         .eq("week_start", weekStart!)
         .order("session_index");
       if (error) throw error;
-      return (data ?? []) as unknown as WeeklyPlanSession[];
+      return (data ?? []).map(sessionFromStorage);
     },
   });
 }
@@ -256,9 +217,8 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
   const { data: student } = useStudentMe();
   const { data: batch } = useStudentBatchDay();
   const { data: progress = [] } = useSongProgress();
-  const { data: logs = [] } = usePracticeLogs();
   const classSongs = useStudentSongs();
-  const { songsPerSession, songsPerDay, instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
+  const { instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
   const { days: allPlanDays } = useStudentCoursePlan(instrument);
   const weekStart = weekStartArg ?? (batch ? classWeekStart(batch.day_of_week) : null);
   const { data: existing } = useWeeklyPlan(weekStart ?? undefined);
@@ -279,7 +239,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
    * that were generated earlier are stale, so this drives a re-sync.
    */
   const planSignature = planDays
-    .map((d) => `${d.focus_song_id}|${d.focus_instruction}|${d.warmup_instruction}|${d.bonus_instruction}`)
+    .map((d) => `${d.song_id}|${d.instruction}`)
     .join("~");
 
   useEffect(() => {
@@ -303,11 +263,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
       weekStart,
       weekNumber,
       progress,
-      logs,
-      existing: [],
       pool: classSongs,
-      songsPerSession,
-      songsPerDay,
       planDays,
       notBefore,
     });
@@ -320,7 +276,7 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
     (async () => {
       const { error } = await supabase
         .from("weekly_plan_sessions")
-        .upsert(toWrite, { onConflict: "student_id,week_start,session_index" });
+        .upsert(toWrite.map(sessionToStorage), { onConflict: "student_id,week_start,session_index" });
       if (error) {
         // Refetching what was not written only spends another request.
         console.error("[weekly-plan] upsert failed", error);
@@ -333,17 +289,14 @@ export function useEnsureWeeklyPlan(weekStartArg?: string) {
 }
 
 /**
- * Tick off one part of a practice session.
+ * Persist completion through the existing database contract.
  *
- * The whole thing is a single call: marking the segment, completing the
- * session when it's the last one, and writing the practice log the teacher's
- * roster reads all happen inside one transaction on the server. As three
- * separate writes from the browser, a failure between them left a session
- * completed with no log — practice a student had actually done, invisible.
+ * Each compatibility call and the resulting practice log update happen in a
+ * server transaction, keeping previously stored plans valid.
  *
  * Idempotent, so a double tap completes once.
  */
-export function useCompleteSegment() {
+function usePersistCompletion() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; segment: "warmup" | "focus" | "bonus" }) => {
@@ -365,14 +318,13 @@ export function useCompleteSegment() {
 /**
  * Finish a day's practice in one action.
  *
- * A session is still stored in three parts, so all three are ticked. The
- * server completes the session and writes the practice log — the thing the
- * streak and the teacher's roster read — in the same breath as the last one,
- * and every call is idempotent, so a half-saved tap is put right by tapping
- * again. Shared so the home page and the week strip finish a day the same way.
+ * The storage adapter fulfills the existing database contract, then the
+ * server completes the session and writes the practice log. Every call is
+ * idempotent, so retrying a partially saved action is safe. Shared so the home
+ * page and week strip finish a day the same way.
  */
 export function useFinishDay() {
-  const complete = useCompleteSegment();
+  const complete = usePersistCompletion();
   const finish = async (sessionId: string) => {
     for (const segment of ["warmup", "focus", "bonus"] as const) {
       await complete.mutateAsync({ id: sessionId, segment });
@@ -405,7 +357,7 @@ export function useNextSession(): WeeklyPlanSession | undefined {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return (data ?? null) as unknown as WeeklyPlanSession | null;
+      return data ? sessionFromStorage(data) : null;
     },
   });
   return data ?? undefined;

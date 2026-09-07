@@ -3,7 +3,7 @@ import { SONG_REASONING } from "@/data/songs";
 
 export const SidePanel = ({ song }: { song: Song }) => (
   <div className="song-side-panel">
-    <div className="side-eyebrow">{song.fingerstyle ? "Fingerstyle bonus" : `Track ${song.track} · #${song.order}`}</div>
+    <div className="side-eyebrow">{song.fingerstyle ? "Fingerstyle piece" : `Track ${song.track} · #${song.order}`}</div>
     <div className="side-title">{song.title}</div>
     <div className="side-artist">{song.artist}</div>
 

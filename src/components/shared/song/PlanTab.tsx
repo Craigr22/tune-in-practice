@@ -62,7 +62,7 @@ export const PlanTab = ({ song, logPlay }: { song: Song; logPlay: (id: string) =
         {song.state === "mastered" ? (
           <button className="log-play-btn" disabled><span className="plus">✓</span>Mastered — practice anytime</button>
         ) : isApprovedToday ? (
-          <button className="log-play-btn" onClick={() => logPlay(song.id)}><span className="plus">+</span>Log a bonus play</button>
+          <button className="log-play-btn" onClick={() => logPlay(song.id)}><span className="plus">+</span>Log extra practice</button>
         ) : (
           <button className="log-play-btn" onClick={() => logPlay(song.id)}><span className="plus">+</span>Log a play</button>
         )}

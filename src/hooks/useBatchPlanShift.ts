@@ -42,6 +42,29 @@ export function useBatchPlanShifts(batchId?: string | null) {
   return { ...q, data: q.data?.rows ?? EMPTY };
 }
 
+/**
+ * Student-safe plan shift lookup. The RPC returns only the summed week offset;
+ * pause reasons and creator ids remain visible to staff through the row query.
+ */
+export function useBatchShiftWeeks(batchId?: string | null) {
+  return useQuery({
+    queryKey: ["batch-plan-shift-weeks", batchId],
+    enabled: !!batchId,
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await (supabase as any).rpc("get_batch_shift_weeks", {
+        _batch_id: batchId,
+      });
+      // Preserve the pre-migration behaviour while deployments roll forward,
+      // but surface real permission/network failures instead of hiding them.
+      if (error) {
+        if (error.code === "PGRST202" || /get_batch_shift_weeks|schema cache/i.test(error.message)) return 0;
+        throw error;
+      }
+      return Number(data ?? 0);
+    },
+  });
+}
+
 /** False only when the pause feature hasn't been migrated in yet. */
 export function usePlanShiftsAvailable(batchId?: string | null): boolean {
   return usePlanShiftQuery(batchId).data?.available ?? true;
@@ -67,6 +90,7 @@ export function useAddPlanShift(batchId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["batch-plan-shifts", batchId] });
+      qc.invalidateQueries({ queryKey: ["batch-plan-shift-weeks", batchId] });
       // Students' generated weeks follow the plan, so they need rebuilding.
       qc.invalidateQueries({ queryKey: ["weekly-plan"] });
     },
@@ -82,6 +106,7 @@ export function useUndoPlanShift(batchId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["batch-plan-shifts", batchId] });
+      qc.invalidateQueries({ queryKey: ["batch-plan-shift-weeks", batchId] });
       qc.invalidateQueries({ queryKey: ["weekly-plan"] });
     },
   });

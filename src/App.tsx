@@ -1,3 +1,4 @@
+import { lazy, Suspense, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -5,29 +6,29 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import AppShell from "@/components/layout/AppShell";
-import Home from "@/routes/student/Home";
-import Journey from "@/routes/student/Journey";
-
-import TunerRoute from "@/routes/student/Tuner";
-import SongDetail from "@/routes/student/SongDetail";
-import MyClasses from "@/routes/teacher/MyClasses";
-import ClassDetail from "@/routes/teacher/ClassDetail";
-import Schedule from "@/routes/teacher/Schedule";
-
-
-import AdminPeople from "@/routes/admin/People";
-import AdminSchedule from "@/routes/admin/Schedule";
-import AdminCoursework from "@/routes/admin/Coursework";
-import FinanceLayout from "@/routes/admin/Finance/Layout";
-import FinanceOverview from "@/routes/admin/Finance/Overview";
-import FinancePayments from "@/routes/admin/Finance/Payments";
-import FinancePayouts from "@/routes/admin/Finance/Payouts";
-import FinanceExpenses from "@/routes/admin/Finance/Expenses";
-import FinancePnL from "@/routes/admin/Finance/PnL";
 import Login from "@/pages/Login";
-import ResetPassword from "@/pages/ResetPassword";
-import NotFound from "./pages/NotFound.tsx";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
+
+// Each role downloads only the pages it visits. Calendar and finance
+// dependencies no longer inflate the student entry bundle.
+const Home = lazy(() => import("@/routes/student/Home"));
+const Journey = lazy(() => import("@/routes/student/Journey"));
+const TunerRoute = lazy(() => import("@/routes/student/Tuner"));
+const SongDetail = lazy(() => import("@/routes/student/SongDetail"));
+const MyClasses = lazy(() => import("@/routes/teacher/MyClasses"));
+const ClassDetail = lazy(() => import("@/routes/teacher/ClassDetail"));
+const Schedule = lazy(() => import("@/routes/teacher/Schedule"));
+const AdminPeople = lazy(() => import("@/routes/admin/People"));
+const AdminSchedule = lazy(() => import("@/routes/admin/Schedule"));
+const AdminCoursework = lazy(() => import("@/routes/admin/Coursework"));
+const FinanceLayout = lazy(() => import("@/routes/admin/Finance/Layout"));
+const FinanceOverview = lazy(() => import("@/routes/admin/Finance/Overview"));
+const FinancePayments = lazy(() => import("@/routes/admin/Finance/Payments"));
+const FinancePayouts = lazy(() => import("@/routes/admin/Finance/Payouts"));
+const FinanceExpenses = lazy(() => import("@/routes/admin/Finance/Expenses"));
+const FinancePnL = lazy(() => import("@/routes/admin/Finance/PnL"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 /**
  * One client, with defaults that don't hammer the server.
@@ -51,7 +52,7 @@ const queryClient = new QueryClient({
 /** Reachable signed out — a password reset link may arrive with no session. */
 const PUBLIC_PATHS = ["/reset-password"];
 
-const Gate = ({ children }: { children: React.ReactNode }) => {
+const Gate = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (PUBLIC_PATHS.includes(location.pathname)) return <>{children}</>;
@@ -79,7 +80,7 @@ const RoleHome = () => {
 };
 
 /** Keep each role inside its own area. Admins may go anywhere. */
-export const RequireRole = ({ role: need, children }: { role: "teacher" | "admin"; children: React.ReactNode }) => {
+export const RequireRole = ({ role: need, children }: { role: "student" | "teacher" | "admin"; children: ReactNode }) => {
   const { role } = useAuth();
   if (role === "admin" || role === need) return <>{children}</>;
   return <Navigate to="/" replace />;
@@ -94,16 +95,17 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Gate>
+            <Suspense fallback={<div className="min-h-[40vh] grid place-items-center text-muted-foreground">Loading page…</div>}>
             <Routes>
               {/* Outside the shell: no nav, and it works signed out. */}
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route element={<AppShell />}>
                 <Route path="/" element={<RoleHome />} />
-                <Route path="/student" element={<Home />} />
-                <Route path="/student/journey" element={<Journey />} />
+                <Route path="/student" element={<RequireRole role="student"><Home /></RequireRole>} />
+                <Route path="/student/journey" element={<RequireRole role="student"><Journey /></RequireRole>} />
                 
-                <Route path="/student/tuner" element={<TunerRoute />} />
-                <Route path="/student/song/:id" element={<SongDetail />} />
+                <Route path="/student/tuner" element={<RequireRole role="student"><TunerRoute /></RequireRole>} />
+                <Route path="/student/song/:id" element={<RequireRole role="student"><SongDetail /></RequireRole>} />
                 <Route path="/teacher" element={<Navigate to="/teacher/classes" replace />} />
                 <Route path="/teacher/classes" element={<RequireRole role="teacher"><MyClasses /></RequireRole>} />
                 <Route path="/teacher/class/:batchId" element={<RequireRole role="teacher"><ClassDetail /></RequireRole>} />
@@ -132,6 +134,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
+            </Suspense>
           </Gate>
         </AuthProvider>
       </BrowserRouter>

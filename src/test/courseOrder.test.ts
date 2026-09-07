@@ -5,8 +5,7 @@ import { BEGINNER_ORDER } from "@/data/courseOrder";
 const day = (week: number, dayNo: number, songId: string | null, tier = "beginner"): CoursePlanDay =>
   ({
     id: `${week}-${dayNo}`, instrument: "ukulele", week_number: week, day_number: dayNo,
-    class_topic: null, focus_song_id: songId, warmup_instruction: "", focus_instruction: "",
-    bonus_instruction: "", video_ids: [], video_notes: {}, tier,
+    class_topic: null, song_id: songId, instruction: "", video_ids: [], video_notes: {}, tier,
   } as CoursePlanDay);
 
 // The plan as it stands: three weeks, one song each.

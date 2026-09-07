@@ -21,4 +21,10 @@ describe("login page branding", () => {
     expect(container.querySelector(".brand")!.textContent!.trim()).toBe("bam");
     expect(screen.getByRole("heading", { name: /sign in/i })).toBeTruthy();
   });
+
+  it("is invite-only and does not offer public account creation", () => {
+    render(<Login />);
+    expect(screen.queryByText(/create account/i)).toBeNull();
+    expect(screen.getByText(/ask your bam administrator/i)).toBeTruthy();
+  });
 });

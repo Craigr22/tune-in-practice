@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck } from "lucide-react";
 import StartClassDialog from "@/components/teacher/StartClassDialog";
+import { calendarQueryRange, sessionDateTimes } from "@/lib/calendar";
 
 const calendarFormats = {
   timeGutterFormat: (date: Date, _c: any, loc: any) => loc.format(date, "h a", _c),
@@ -27,6 +28,8 @@ type Row = {
   batch_id: string;
   scheduled_date: string;
   status: string;
+  start_time: string | null;
+  duration_min: number | null;
   batches: {
     id: string;
     start_time: string;
@@ -51,9 +54,10 @@ export default function TeacherSchedule() {
   const teacherId = teacher?.id;
   const [selected, setSelected] = useState<Row | null>(null);
   const [wrapSession, setWrapSession] = useState<Row | null>(null);
+  const [queryRange, setQueryRange] = useState(() => calendarQueryRange(null));
 
   const { data: sessions = [], isLoading } = useQuery({
-    queryKey: ["teacher-sessions", teacherId],
+    queryKey: ["teacher-sessions", teacherId, queryRange.start, queryRange.end],
     enabled: !!teacherId,
     queryFn: async () => {
       const { data: batches } = await supabase
@@ -65,8 +69,10 @@ export default function TeacherSchedule() {
       if (!ids.length) return [] as Row[];
       const { data, error } = await supabase
         .from("sessions")
-        .select("id, batch_id, scheduled_date, status, batches!inner(id, start_time, duration_min, semester_start, semester_end, teacher_id, instruments(name), locations(name))")
+        .select("id, batch_id, scheduled_date, status, start_time, duration_min, batches!inner(id, start_time, duration_min, semester_start, semester_end, teacher_id, instruments(name), locations(name))")
         .in("batch_id", ids)
+        .gte("scheduled_date", queryRange.start)
+        .lte("scheduled_date", queryRange.end)
         .order("scheduled_date");
       if (error) throw error;
       return (data ?? []) as unknown as Row[];
@@ -75,10 +81,11 @@ export default function TeacherSchedule() {
 
   const events: Event[] = useMemo(() => sessions.map((s) => {
     const b = s.batches!;
-    const [h, m] = (b.start_time || "00:00:00").split(":").map(Number);
-    const start = new Date(s.scheduled_date);
-    start.setHours(h, m, 0, 0);
-    const end = new Date(start.getTime() + (b.duration_min || 60) * 60000);
+    const { start, end } = sessionDateTimes(
+      s.scheduled_date,
+      s.start_time ?? b.start_time,
+      s.duration_min ?? b.duration_min,
+    );
     const title = `${b.instruments?.name ?? "Class"} · ${b.locations?.name ?? ""}`;
     return { title, start, end, resource: s };
   }), [sessions]);
@@ -99,6 +106,7 @@ export default function TeacherSchedule() {
             events={events}
             view={calView}
             onView={(v: any) => setCalView(v)}
+            onRangeChange={(range: any) => setQueryRange(calendarQueryRange(range))}
             views={isPhone ? [Views.AGENDA, Views.DAY, Views.MONTH] : [Views.WEEK, Views.MONTH, Views.DAY]}
             length={30}
             formats={calendarFormats}
@@ -131,7 +139,7 @@ export default function TeacherSchedule() {
               <div className="space-y-2 text-sm">
                 <div className="font-medium">{selected.batches?.instruments?.name} · {selected.batches?.locations?.name}</div>
                 <div className="text-muted-foreground">
-                  {selected.scheduled_date} · {selected.batches?.start_time?.slice(0, 5)} · {selected.batches?.duration_min}min
+                  {selected.scheduled_date} · {(selected.start_time ?? selected.batches?.start_time)?.slice(0, 5)} · {selected.duration_min ?? selected.batches?.duration_min}min
                 </div>
                 <div>Status: <span className="font-medium">{selected.status}</span></div>
                 <div className="text-xs text-muted-foreground pt-2">

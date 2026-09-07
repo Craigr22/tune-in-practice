@@ -64,7 +64,7 @@ const ResetPassword = () => {
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "var(--paper)", padding: 24 }}>
       <div className="bam-card" style={{ width: "100%", maxWidth: 380, padding: 28 }}>
         <div className="brand text-center" style={{ marginBottom: 18 }}>
-          <span className="dot"></span>bam <span className="uku">​</span>
+          <span className="dot"></span>bam <span className="uku"></span>
         </div>
 
         {!ready ? (

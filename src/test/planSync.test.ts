@@ -4,18 +4,14 @@ import { rowsToWrite, type ExistingRow } from "@/lib/planSync";
 const row = (over: Partial<ExistingRow> = {}) => ({
   session_index: 0,
   scheduled_date: "2026-09-09",
-  focus_song_id: "song1",
-  focus_instruction: "Watch the Piyu Bole summary.",
-  warmup_instruction: "Tune up.",
-  bonus_instruction: "Loop the tricky change.",
+  song_id: "song1",
+  instruction: "Watch the Piyu Bole summary.",
   ...over,
 });
 
 const existing = (over: Partial<ExistingRow> = {}): ExistingRow => ({
   ...row(),
-  warmup_completed: false,
-  focus_completed: false,
-  bonus_completed: false,
+  completed: false,
   completed_at: null,
   ...over,
 });
@@ -32,21 +28,19 @@ describe("rowsToWrite", () => {
   });
 
   it("re-syncs a future session when the plan's wording changes", () => {
-    const changed = row({ focus_instruction: "Watch the Piyu Bole summary, then learn the shapes." });
+    const changed = row({ instruction: "Watch the Piyu Bole summary, then learn the shapes." });
     expect(rowsToWrite([changed], [existing()], opts)).toHaveLength(1);
   });
 
   it("re-syncs when the week now maps to different plan content", () => {
-    const changed = row({ focus_song_id: "song2", focus_instruction: "Watch the first lesson." });
+    const changed = row({ song_id: "song2", instruction: "Watch the first lesson." });
     expect(rowsToWrite([changed], [existing()], opts)).toHaveLength(1);
   });
 
   it("never rewrites practice the student has started", () => {
-    const changed = row({ focus_instruction: "something else" });
+    const changed = row({ instruction: "something else" });
     for (const touch of [
-      { warmup_completed: true },
-      { focus_completed: true },
-      { bonus_completed: true },
+      { completed: true },
       { completed_at: "2026-09-09T10:00:00Z" },
     ]) {
       expect(rowsToWrite([changed], [existing(touch)], opts)).toHaveLength(0);
@@ -54,20 +48,20 @@ describe("rowsToWrite", () => {
   });
 
   it("never rewrites a session in the past", () => {
-    const changed = row({ scheduled_date: "2026-09-02", focus_instruction: "something else" });
+    const changed = row({ scheduled_date: "2026-09-02", instruction: "something else" });
     const cur = existing({ scheduled_date: "2026-09-02" });
     expect(rowsToWrite([changed], [cur], opts)).toHaveLength(0);
   });
 
   it("leaves generated weeks alone, since their content is picked fresh each time", () => {
-    const changed = row({ focus_instruction: "a different generated warm-up" });
+    const changed = row({ instruction: "different generated content" });
     expect(rowsToWrite([changed], [existing()], { ...opts, planned: false })).toHaveLength(0);
   });
 
   it("settles — a written row is not written again", () => {
-    const changed = row({ focus_instruction: "new wording" });
+    const changed = row({ instruction: "new wording" });
     const [written] = rowsToWrite([changed], [existing()], opts);
     expect(written).toBeTruthy();
-    expect(rowsToWrite([changed], [existing({ focus_instruction: "new wording" })], opts)).toHaveLength(0);
+    expect(rowsToWrite([changed], [existing({ instruction: "new wording" })], opts)).toHaveLength(0);
   });
 });

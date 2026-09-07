@@ -26,9 +26,9 @@ export const SongHeader = ({ song, close }: { song: Song; close: () => void }) =
       </div>
       <div className="bam-progress-bar"><div className="bam-progress-fill" style={{ width: `${progressPct}%` }}></div></div>
       <div className="bam-progress-label">
-        {song.state === "mastered" ? <><span>Mastered</span><span>🔥 12-day streak</span></> :
-         song.state === "in-progress" ? <><span>{song.approvedDays} of {song.targetApprovals} approved days</span><span>🔥 12-day streak</span></> :
-         <><span>Not started</span><span>🔥 12-day streak</span></>}
+        {song.state === "mastered" ? <span>Mastered</span> :
+         song.state === "in-progress" ? <span>{song.approvedDays} of {song.targetApprovals} approved days</span> :
+         <span>Not started</span>}
       </div>
     </div>
   );

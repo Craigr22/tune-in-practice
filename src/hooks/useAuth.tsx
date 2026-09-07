@@ -54,6 +54,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session?.user) return;
     let cancelled = false;
     (async () => {
+      // This is intentionally best-effort: auth must still work while a new
+      // migration is rolling out or if activity tracking is temporarily down.
+      void (supabase as any).rpc("mark_app_open");
+
       /**
        * A failed lookup is not "you have no role".
        *

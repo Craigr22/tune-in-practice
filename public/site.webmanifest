@@ -1,0 +1,21 @@
+{
+  "name": "BAM Music Portal",
+  "short_name": "BAM",
+  "description": "Lessons, practice sessions, and progress with BAM.",
+  "start_url": "/student",
+  "display": "standalone",
+  "background_color": "#f7f4ec",
+  "theme_color": "#12324a",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    }
+  ]
+}

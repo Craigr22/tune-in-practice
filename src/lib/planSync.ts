@@ -9,16 +9,12 @@
 export interface SyncableRow {
   session_index: number;
   scheduled_date: string;
-  focus_song_id: string;
-  focus_instruction: string;
-  warmup_instruction: string;
-  bonus_instruction: string;
+  song_id: string;
+  instruction: string;
 }
 
 export interface ExistingRow extends SyncableRow {
-  warmup_completed: boolean;
-  focus_completed: boolean;
-  bonus_completed: boolean;
+  completed: boolean;
   completed_at: string | null;
 }
 
@@ -30,18 +26,15 @@ export function rowsToWrite<T extends SyncableRow>(
   return rows.filter((row) => {
     const cur = existing.find((e) => e.session_index === row.session_index);
     if (!cur) return true;
-    // Generated weeks pick a fresh warm-up and bonus each time, so re-syncing
-    // them would never settle.
+    // Generated weeks pick fresh content each time, so re-syncing them would
+    // never settle.
     if (!opts.planned) return false;
-    const touched =
-      cur.warmup_completed || cur.focus_completed || cur.bonus_completed || !!cur.completed_at;
+    const touched = cur.completed || !!cur.completed_at;
     if (touched || cur.scheduled_date < opts.today) return false;
     return (
       cur.scheduled_date !== row.scheduled_date ||
-      cur.focus_song_id !== row.focus_song_id ||
-      cur.focus_instruction !== row.focus_instruction ||
-      cur.warmup_instruction !== row.warmup_instruction ||
-      cur.bonus_instruction !== row.bonus_instruction
+      cur.song_id !== row.song_id ||
+      cur.instruction !== row.instruction
     );
   });
 }

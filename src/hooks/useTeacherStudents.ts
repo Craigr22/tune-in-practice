@@ -44,7 +44,7 @@ export function useStudentDetail(studentId: string | undefined) {
     queryKey: ["student-detail", studentId],
     enabled: !!studentId,
     queryFn: async () => {
-      const [{ data: practice }, { data: attendance }, { data: progress }] = await Promise.all([
+      const [practiceResult, attendanceResult, progressResult, lastSeenResult] = await Promise.all([
         supabase
           .from("practice_logs")
           .select("*")
@@ -56,11 +56,23 @@ export function useStudentDetail(studentId: string | undefined) {
           .select("*, sessions(scheduled_date)")
           .eq("student_id", studentId!),
         supabase.from("song_progress").select("*").eq("student_id", studentId!),
+        (supabase as any).rpc("get_student_last_seen", { _student_id: studentId! }),
       ]);
+      const firstError =
+        practiceResult.error ??
+        attendanceResult.error ??
+        progressResult.error ??
+        lastSeenResult.error;
+      if (firstError) throw firstError;
+
+      const practice = practiceResult.data;
+      const attendance = attendanceResult.data;
+      const progress = progressResult.data;
       return {
         practice: practice ?? [],
         attendance: (attendance ?? []).map((a: any) => ({ ...a, session_date: a.sessions?.scheduled_date })),
         progress: progress ?? [],
+        lastSeenAt: (lastSeenResult.data as string | null) ?? null,
       };
     },
   });

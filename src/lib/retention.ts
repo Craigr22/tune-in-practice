@@ -52,7 +52,9 @@ export function computeRetention(
 
   // Signal 3: days since last app open
   const daysSinceLastOpen = lastOpen ? daysAgo(lastOpen) : null;
-  const staleApp = daysSinceLastOpen === null || daysSinceLastOpen > 7;
+  // Missing data is unknown, not negative. This matters during rollout and
+  // for students who have not linked an account yet.
+  const staleApp = daysSinceLastOpen !== null && daysSinceLastOpen > 7;
 
   const badCount = [practiceDrop, attendanceTrend, staleApp].filter(Boolean).length;
   const flag: RetentionFlag = badCount === 0 ? "green" : badCount === 1 ? "amber" : "red";

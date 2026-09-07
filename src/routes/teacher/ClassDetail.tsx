@@ -82,12 +82,12 @@ function CoursePanel({
               <div key={d.id} className="px-4 py-3">
                 <div className="text-sm font-medium">
                   Day {d.day_number}
-                  {songTitle(d.focus_song_id) && (
-                    <span className="text-muted-foreground font-normal"> · {songTitle(d.focus_song_id)}</span>
+                  {songTitle(d.song_id) && (
+                    <span className="text-muted-foreground font-normal"> · {songTitle(d.song_id)}</span>
                   )}
                 </div>
-                {d.focus_instruction && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{d.focus_instruction}</p>
+                {d.instruction && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{d.instruction}</p>
                 )}
                 {(d.video_ids?.length ?? 0) > 0 && (
                   <p className="text-[11px] text-muted-foreground mt-1">

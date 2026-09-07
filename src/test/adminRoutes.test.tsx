@@ -68,4 +68,30 @@ describe("admin-only areas", () => {
     );
     expect(screen.getByText("roster")).toBeTruthy();
   });
+
+  it("keeps teachers out of student-only areas", () => {
+    st.role = "teacher";
+    render(
+      <MemoryRouter initialEntries={["/student"]}>
+        <Routes>
+          <Route path="/" element={<div>sent home</div>} />
+          <Route path="/student" element={<RequireRole role="student"><div>practice</div></RequireRole>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("practice")).toBeNull();
+    expect(screen.getByText("sent home")).toBeTruthy();
+  });
+
+  it("lets an admin use the student view", () => {
+    st.role = "admin";
+    render(
+      <MemoryRouter initialEntries={["/student"]}>
+        <Routes>
+          <Route path="/student" element={<RequireRole role="student"><div>practice</div></RequireRole>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("practice")).toBeTruthy();
+  });
 });

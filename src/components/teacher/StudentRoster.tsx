@@ -44,10 +44,10 @@ function MiniBars({ values }: { values: number[] }) {
 
 /* ---------- row ---------- */
 export function StudentRow({ student, onOpen }: { student: any; onOpen: () => void }) {
-  const { data } = useStudentDetail(student.id);
+  const { data, isError } = useStudentDetail(student.id);
   const bars = useMemo(() => (data ? dailyMinutes(data.practice, 14) : []), [data]);
   const retention = useMemo(
-    () => (data ? computeRetention(data.practice, data.attendance as any, null) : null),
+    () => (data ? computeRetention(data.practice, data.attendance as any, data.lastSeenAt) : null),
     [data]
   );
   const totalAtt = data?.attendance.length ?? 0;
@@ -57,8 +57,11 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
     .slice()
     .sort((a: any, b: any) => new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime())[0];
   const badge = getBadge(activeProgress?.teacher_badge);
-  const flag = retention?.flag ?? "amber";
-  const flagClass = flag === "green" ? "bg-emerald-500" : flag === "amber" ? "bg-amber-500" : "bg-red-500";
+  const flag = retention?.flag ?? null;
+  const flagClass = isError || !flag
+    ? "bg-muted-foreground/40"
+    : flag === "green" ? "bg-emerald-500" : flag === "amber" ? "bg-amber-500" : "bg-red-500";
+  const flagLabel = isError ? "Retention unavailable" : flag ? `Retention: ${flag}` : "Retention loading";
 
   return (
     <div
@@ -74,7 +77,7 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
       <MiniBars values={bars} />
       <div className="text-sm tabular-nums">{attPct}%</div>
       <div className="text-sm">{badge ? <span title={badge.name}>{badge.emoji}</span> : <span className="text-muted-foreground">—</span>}</div>
-      <span className={`w-2.5 h-2.5 rounded-full ${flagClass}`} title={`Retention: ${flag}`} />
+      <span className={`w-2.5 h-2.5 rounded-full ${flagClass}`} title={flagLabel} />
     </div>
   );
 }
@@ -96,7 +99,7 @@ function SongsEditor({ studentId, progress }: { studentId: string; progress: any
     [...planDays]
       .sort((a, b) => a.week_number - b.week_number || a.day_number - b.day_number)
       .forEach((d) => {
-        if (d.focus_song_id && !planned.includes(d.focus_song_id)) planned.push(d.focus_song_id);
+        if (d.song_id && !planned.includes(d.song_id)) planned.push(d.song_id);
       });
     progress.forEach((p) => { if (p.song_id && !planned.includes(p.song_id)) planned.push(p.song_id); });
 

@@ -1,14 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Navigate, useLocation } from "react-router-dom";
-import { useWeeklyPlan, useCompleteSegment } from "@/hooks/useWeeklyPlan";
-import SegmentedPracticeView from "@/components/student/SegmentedPracticeView";
+import { useWeeklyPlan, useFinishDay } from "@/hooks/useWeeklyPlan";
+import PracticeSessionView from "@/components/student/PracticeSessionView";
 import { useSongs } from "@/hooks/useSongs";
-import { useLogPractice, CHECK_IN_LABEL, CHECK_IN_EMOJI, type CheckIn } from "@/hooks/useStudentProgress";
+import {
+  useLogPractice,
+  usePracticeLogs,
+  useSongProgress,
+  songWithStudentProgress,
+  CHECK_IN_LABEL,
+  CHECK_IN_EMOJI,
+  type CheckIn,
+} from "@/hooks/useStudentProgress";
 import { useTuner, useLowG } from "@/hooks/useTuner";
 import { SONG_AUDIO } from "@/data/audio";
 import type { SongTab as TabKey } from "@/lib/types";
 import SongHeader from "@/components/shared/song/SongHeader";
-import WarmupTab from "@/components/shared/song/WarmupTab";
 import DrillsTab from "@/components/shared/song/DrillsTab";
 import SongTab from "@/components/shared/song/SongTab";
 import PlanTab from "@/components/shared/song/PlanTab";
@@ -54,9 +61,15 @@ interface SongDetailProps {
 const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
   const params = useParams<{ id: string }>();
   const id = songIdProp ?? params.id;
-  const { getSong, closeSong, logPlay } = useSongs();
-  const song = id ? getSong(id) : undefined;
-  const [tab, setTab] = useState<TabKey>("warmup");
+  const { getSong, closeSong } = useSongs();
+  const catalogSong = id ? getSong(id) : undefined;
+  const { data: practiceLogs = [] } = usePracticeLogs();
+  const { data: progress = [] } = useSongProgress();
+  const song = useMemo(
+    () => catalogSong ? songWithStudentProgress(catalogSong, practiceLogs, progress) : undefined,
+    [catalogSong, practiceLogs, progress],
+  );
+  const [tab, setTab] = useState<TabKey>("song");
   const [phase, setPhase] = useState<Phase>("intro");
   const [tuningChecked, setTuningChecked] = useState(false);
   const [inlineTunerOpen, setInlineTunerOpen] = useState(false);
@@ -65,7 +78,7 @@ const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
   const planSessionId = (location.state as { planSessionId?: string } | null)?.planSessionId;
   const { data: weekPlan = [] } = useWeeklyPlan();
   const planSession = planSessionId ? weekPlan.find((s) => s.id === planSessionId) : undefined;
-  const completeSeg = useCompleteSegment();
+  const { finish: finishDay, isPending: finishingDay } = useFinishDay();
 
   const [prompt, setPrompt] = useState(false);
   const [duration, setDuration] = useState(10);
@@ -74,7 +87,7 @@ const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
   const [showRecorder, setShowRecorder] = useState(false);
   const logPractice = useLogPractice();
 
-  useEffect(() => { setTab("warmup"); setPhase("intro"); setTuningChecked(false); }, [id]);
+  useEffect(() => { setTab("song"); setPhase("intro"); setTuningChecked(false); }, [id]);
 
   if (!song) return <Navigate to="/student" replace />;
 
@@ -88,13 +101,10 @@ const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
   };
 
   const handleLogPlay = (sid: string) => {
-    logPlay(sid);
     // Start from the minutes the session actually planned, so most students
     // never touch the number field.
     if (planSession) {
-      setDuration(
-        planSession.warmup_target_min + planSession.focus_target_min + planSession.bonus_target_min,
-      );
+      setDuration(planSession.target_min);
     }
     setPrompt(true);
     setBadge(null);
@@ -189,27 +199,27 @@ const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
               )}
               <SongVideos songId={song.id} />
               {planSession ? (
-                <SegmentedPracticeView
-                  session={planSession}
-                  focusContent={<SongTab song={song} />}
-                  onAllDone={() => {
-                    // Completion and the log ride along with the segment.
-                    completeSeg.mutate({ id: planSession.id, segment: "focus" });
+                <PracticeSessionView
+                  instruction={planSession.instruction}
+                  minutes={planSession.target_min}
+                  content={<SongTab song={song} />}
+                  saving={finishingDay}
+                  onDone={async () => {
+                    await finishDay(planSession.id);
                     handleLogPlay(song.id);
                   }}
                 />
               ) : (
                 <>
                   <div className="bam-tabs">
-                    {(["warmup", "drills", "song", "plan"] as TabKey[]).map((t) => (
+                    {(["drills", "song", "plan"] as TabKey[]).map((t) => (
                       <div key={t} className={`bam-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
-                        <span className="ic">{ { warmup: "🎯", drills: "🔁", song: "🎵", plan: "📅" }[t] }</span>
-                        {{ warmup: "Warm Up", drills: "Drills", song: "Song", plan: "Plan" }[t]}
+                        <span className="ic">{ { drills: "🔁", song: "🎵", plan: "📅" }[t] }</span>
+                        {{ drills: "Drills", song: "Song", plan: "Plan" }[t]}
                       </div>
                     ))}
                   </div>
                   <div className="bam-content bam-content--page">
-                    {tab === "warmup" && <WarmupTab song={song} setTab={setTab} />}
                     {tab === "drills" && <DrillsTab song={song} />}
                     {tab === "song" && <SongTab song={song} />}
                     {tab === "plan" && <PlanTab song={song} logPlay={handleLogPlay} />}

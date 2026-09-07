@@ -5,8 +5,8 @@ import { todayLocalIso } from "@/lib/date";
 /**
  * The student home on a practice day.
  *
- * The day used to be split into warm-up, focus and bonus — three numbered
- * boxes, each with its own "mark done". The page now shows what the admin
+ * The day used to be split into several numbered boxes, each with its own
+ * "mark done". The page now shows what the admin
  * planned for the day and one way to say it was practised.
  */
 
@@ -64,14 +64,10 @@ const session = (over: Record<string, unknown> = {}) => ({
   id: "sess1",
   scheduled_date: today,
   session_type: "build",
-  focus_song_id: "song1",
-  focus_instruction: "Slow C to F changes, ten clean ones.",
-  warmup_target_min: 5,
-  focus_target_min: 20,
-  bonus_target_min: 5,
-  warmup_completed: false,
-  focus_completed: false,
-  bonus_completed: false,
+  song_id: "song1",
+  instruction: "Slow C to F changes, ten clean ones.",
+  target_min: 30,
+  completed: false,
   completed_at: null,
   ...over,
 });
@@ -91,12 +87,9 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("student home on a practice day", () => {
-  it("shows the day without splitting it into warm-up, focus and bonus", () => {
+  it("shows the day as one continuous session", () => {
     render(<Home />);
 
-    expect(screen.queryByText(/warm-up/i)).toBeNull();
-    expect(screen.queryByText(/^bonus$/i)).toBeNull();
-    expect(screen.queryByText(/mark focus done/i)).toBeNull();
     // The clips carry their own titles, so the day isn't headed by a song name.
     expect(screen.queryByText("You Are My Sunshine")).toBeNull();
     expect(screen.getByText(/slow c to f changes/i)).toBeTruthy();
@@ -111,7 +104,7 @@ describe("student home on a practice day", () => {
   });
 
   it("stays on the page once it is done, and says so", () => {
-    st.session = session({ warmup_completed: true, focus_completed: true, bonus_completed: true });
+    st.session = session({ completed: true });
 
     render(<Home />);
 

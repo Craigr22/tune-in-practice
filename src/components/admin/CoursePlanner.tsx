@@ -34,7 +34,7 @@ import { toast } from "sonner";
 const NO_SONG = "__none__";
 const DAY_LABELS = ["Day 1", "Day 2", "Day 3"];
 
-/** Editor for one practice day: song, three instructions, and its videos. */
+/** Editor for one practice day: song, instruction, and its videos. */
 function DayEditor({
   instrument,
   weekNumber,
@@ -77,10 +77,8 @@ function DayEditor({
   const save = useSaveCoursePlanDay(instrument);
 
   const [draft, setDraft] = useState({
-    focus_song_id: day?.focus_song_id ?? "",
-    warmup_instruction: day?.warmup_instruction ?? "",
-    focus_instruction: day?.focus_instruction ?? "",
-    bonus_instruction: day?.bonus_instruction ?? "",
+    song_id: day?.song_id ?? "",
+    instruction: day?.instruction ?? "",
     video_ids: day?.video_ids ?? ([] as string[]),
     video_notes: day?.video_notes ?? ({} as Record<string, VideoNote>),
   });
@@ -89,15 +87,13 @@ function DayEditor({
   // Re-sync when the row loads or changes underneath us.
   useEffect(() => {
     setDraft({
-      focus_song_id: day?.focus_song_id ?? "",
-      warmup_instruction: day?.warmup_instruction ?? "",
-      focus_instruction: day?.focus_instruction ?? "",
-      bonus_instruction: day?.bonus_instruction ?? "",
+      song_id: day?.song_id ?? "",
+      instruction: day?.instruction ?? "",
       video_ids: day?.video_ids ?? [],
       video_notes: day?.video_notes ?? {},
     });
     setDirty(false);
-  }, [day?.id, day?.updated_at]);
+  }, [day?.id, day?.updated_at, day?.song_id, day?.instruction, day?.video_ids, day?.video_notes]);
 
   const set = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) => {
     setDraft((d) => ({ ...d, [k]: v }));
@@ -129,10 +125,8 @@ function DayEditor({
       await save.mutateAsync({
         week_number: weekNumber,
         day_number: dayNumber,
-        focus_song_id: draft.focus_song_id || null,
-        warmup_instruction: draft.warmup_instruction,
-        focus_instruction: draft.focus_instruction,
-        bonus_instruction: draft.bonus_instruction,
+        song_id: draft.song_id || null,
+        instruction: draft.instruction,
         video_ids: draft.video_ids,
         video_notes: draft.video_notes,
       });
@@ -156,10 +150,10 @@ function DayEditor({
       </div>
 
       <div>
-        <Label className="text-xs">Focus song</Label>
+        <Label className="text-xs">Song</Label>
         <Select
-          value={draft.focus_song_id || NO_SONG}
-          onValueChange={(v) => set("focus_song_id", v === NO_SONG ? "" : v)}
+          value={draft.song_id || NO_SONG}
+          onValueChange={(v) => set("song_id", v === NO_SONG ? "" : v)}
         >
           <SelectTrigger className="h-9"><SelectValue placeholder="Pick a song" /></SelectTrigger>
           <SelectContent>
@@ -171,34 +165,14 @@ function DayEditor({
         </Select>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <div>
-          <Label className="text-xs">♪ Warm-up</Label>
-          <Textarea
-            rows={3}
-            value={draft.warmup_instruction}
-            onChange={(e) => set("warmup_instruction", e.target.value)}
-            placeholder="Tune up, then…"
-          />
-        </div>
-        <div>
-          <Label className="text-xs">🎯 Focus</Label>
-          <Textarea
-            rows={3}
-            value={draft.focus_instruction}
-            onChange={(e) => set("focus_instruction", e.target.value)}
-            placeholder="What they practise today"
-          />
-        </div>
-        <div>
-          <Label className="text-xs">🎁 Bonus</Label>
-          <Textarea
-            rows={3}
-            value={draft.bonus_instruction}
-            onChange={(e) => set("bonus_instruction", e.target.value)}
-            placeholder="Something fun to finish"
-          />
-        </div>
+      <div>
+        <Label className="text-xs">Instructions</Label>
+        <Textarea
+          rows={3}
+          value={draft.instruction}
+          onChange={(e) => set("instruction", e.target.value)}
+          placeholder="What they practise today"
+        />
       </div>
 
       <div>
@@ -356,7 +330,7 @@ function WeekBlock({
 
   // Summary shown while the week is collapsed, so the plan reads at a glance.
   const lessonCount = days.reduce((n, d) => n + (d.video_ids?.length ?? 0), 0);
-  const plannedDays = days.filter((d) => d.focus_instruction?.trim()).length;
+  const plannedDays = days.filter((d) => d.instruction?.trim()).length;
 
   const saveTopic = async () => {
     try {

@@ -18,10 +18,8 @@ export interface CoursePlanDay {
   week_number: number;
   day_number: number;
   class_topic: string | null;
-  focus_song_id: string | null;
-  warmup_instruction: string;
-  focus_instruction: string;
-  bonus_instruction: string;
+  song_id: string | null;
+  instruction: string;
   video_ids: string[];
   /** Per-clip notes for this day, keyed by video id. */
   video_notes: Record<string, VideoNote>;
@@ -51,6 +49,8 @@ export function useCoursePlanDays(instrument: Instrument) {
       if (error) throw error;
       return (data ?? []).map((d: any) => ({
         ...d,
+        song_id: d.focus_song_id ?? null,
+        instruction: d.focus_instruction ?? "",
         video_ids: d.video_ids ?? [],
         video_notes: (d.video_notes ?? {}) as Record<string, VideoNote>,
         tier: (d.tier ?? "beginner") as TierKey,
@@ -83,6 +83,12 @@ export function useSaveCoursePlanDay(instrument: Instrument) {
   return useMutation({
     mutationFn: async (day: Partial<CoursePlanDay> & { week_number: number; day_number: number }) => {
       const { id, ...rest } = day;
+      const { song_id, instruction, ...unchanged } = rest;
+      const stored = {
+        ...unchanged,
+        ...(song_id !== undefined ? { focus_song_id: song_id } : {}),
+        ...(instruction !== undefined ? { focus_instruction: instruction } : {}),
+      };
       const write = (row: Record<string, unknown>) =>
         (supabase as any)
           .from("course_plan_days")
@@ -91,13 +97,13 @@ export function useSaveCoursePlanDay(instrument: Instrument) {
             { onConflict: "instrument,week_number,day_number" },
           );
 
-      const { error } = await write(rest);
+      const { error } = await write(stored);
       if (!error) return;
 
       // The per-clip notes are a column added by migration. Until it lands,
       // save everything else rather than losing the whole day's edits.
       if (/video_notes/.test(error.message ?? "")) {
-        const { video_notes, ...withoutNotes } = rest as Record<string, unknown>;
+        const { video_notes, ...withoutNotes } = stored as Record<string, unknown>;
         const retry = await write(withoutNotes);
         if (retry.error) throw retry.error;
         return;
@@ -226,9 +232,9 @@ function plannedStops(days: CoursePlanDay[]): CourseStop[] {
     (a, b) => a.week_number - b.week_number || a.day_number - b.day_number,
   );
   for (const d of inOrder) {
-    if (!d.focus_song_id || seen.has(d.focus_song_id)) continue;
-    seen.add(d.focus_song_id);
-    stops.push({ songId: d.focus_song_id, week: d.week_number, tier: d.tier, planned: true });
+    if (!d.song_id || seen.has(d.song_id)) continue;
+    seen.add(d.song_id);
+    stops.push({ songId: d.song_id, week: d.week_number, tier: d.tier, planned: true });
   }
   return stops;
 }

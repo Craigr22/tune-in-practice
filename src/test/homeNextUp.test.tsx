@@ -102,7 +102,7 @@ describe("student home on a rest day", () => {
   };
 
   it("shows no lesson material at all on a rest day", () => {
-    st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
+    st.nextSession = { scheduled_date: addDaysIso(today, 2), song_id: "song1", session_index: 0 };
     st.batch = classTomorrow();
     withLessons();
 
@@ -116,7 +116,7 @@ describe("student home on a rest day", () => {
   });
 
   it("still says when the next thing is, without showing what it is", () => {
-    st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1", session_index: 0 };
+    st.nextSession = { scheduled_date: addDaysIso(today, 2), song_id: "song1", session_index: 0 };
     st.batch = classTomorrow();
     withLessons();
 
@@ -127,7 +127,7 @@ describe("student home on a rest day", () => {
   });
 
   it("says what's next in the header, not in a card of its own", () => {
-    st.nextSession = { scheduled_date: addDaysIso(today, 2), focus_song_id: "song1" };
+    st.nextSession = { scheduled_date: addDaysIso(today, 2), song_id: "song1" };
     st.batch = classTomorrow();
 
     const { container } = render(<Home />);
@@ -146,7 +146,7 @@ describe("student home on a rest day", () => {
       start_time: "15:00:00",
       semester_start: "2026-09-06",
     };
-    st.nextSession = { scheduled_date: addDaysIso(today, 1), focus_song_id: "song1" };
+    st.nextSession = { scheduled_date: addDaysIso(today, 1), song_id: "song1" };
 
     render(<Home />);
 
@@ -154,7 +154,7 @@ describe("student home on a rest day", () => {
   });
 
   it("names the nearer of the two, with its time", () => {
-    st.nextSession = { scheduled_date: addDaysIso(today, 3), focus_song_id: "song1" };
+    st.nextSession = { scheduled_date: addDaysIso(today, 3), song_id: "song1" };
     st.batch = classTomorrow();
 
     render(<Home />);
@@ -163,7 +163,7 @@ describe("student home on a rest day", () => {
   });
 
   it("names practice when practice comes first", () => {
-    st.nextSession = { scheduled_date: addDaysIso(today, 1), focus_song_id: "song1" };
+    st.nextSession = { scheduled_date: addDaysIso(today, 1), song_id: "song1" };
     st.batch = { ...classTomorrow(), day_of_week: new Date(`${addDaysIso(today, 4)}T00:00:00`).getDay() };
 
     render(<Home />);

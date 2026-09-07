@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SongsProvider } from "@/hooks/useSongs";
 import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
@@ -24,6 +24,11 @@ const TopNav = () => {
   const go = (to: string) => {
     setMenuOpen(false);
     navigate(to);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  };
+
+  const onNav = () => {
+    setMenuOpen(false);
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
@@ -68,16 +73,22 @@ const TopNav = () => {
   };
 
   return (
-    <nav className="topnav">
-      <div className="brand text-center">
-        <span className="dot"></span>bam <span className="uku">​</span>
-      </div>
+    <nav className="topnav" aria-label="Primary navigation">
+      <Link to="/" className="brand text-center" onClick={onNav} aria-label="BAM home">
+        <span className="dot" aria-hidden></span>bam <span className="uku" aria-hidden></span>
+      </Link>
       <div className="nav-spacer"></div>
       <div className="nav-links">
         {links.map((l) => (
-          <a key={l.to} className={`nav-link ${l.active ? "active" : ""}`} onClick={() => go(l.to)}>
+          <NavLink
+            key={l.to}
+            to={l.to}
+            className={`nav-link ${l.active ? "active" : ""}`}
+            aria-current={l.active ? "page" : undefined}
+            onClick={onNav}
+          >
             {l.label}
-          </a>
+          </NavLink>
         ))}
       </div>
       {role === "student" && <div className="streak-chip">🔥 keep it up</div>}
@@ -87,6 +98,7 @@ const TopNav = () => {
       {actualRole === "admin" && (
         <div className="role-toggle" title="See the app as someone else">
           <select
+            aria-label="View the app as another account"
             className="role-btn"
             style={{ padding: "4px 8px", fontSize: 12, maxWidth: 190 }}
             value={viewAs ? `${viewAs.role}:${viewAs.id}` : ""}
@@ -135,13 +147,15 @@ const TopNav = () => {
       {menuOpen && (
         <div className="nav-sheet">
           {links.map((l) => (
-            <button
+            <NavLink
               key={l.to}
+              to={l.to}
               className={`nav-sheet-link ${l.active ? "active" : ""}`}
-              onClick={() => go(l.to)}
+              aria-current={l.active ? "page" : undefined}
+              onClick={onNav}
             >
               {l.label}
-            </button>
+            </NavLink>
           ))}
 
           {actualRole === "admin" && (
@@ -182,8 +196,9 @@ const AppShell = () => {
   const showFloatingTuner = role !== "teacher" && location.pathname.startsWith("/student");
   return (
     <SongsProvider>
+      <a className="skip-link" href="#app">Skip to main content</a>
       <TopNav />
-      <main id="app">
+      <main id="app" tabIndex={-1}>
         {/* Keyed by path so navigating away clears a failed page instead of
             leaving the user stuck on the error card. */}
         <ErrorBoundary key={location.pathname} label="This page">

@@ -2,9 +2,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
-import { useBatchPlanShifts, totalShiftWeeks, type BatchPlanShift } from "@/hooks/useBatchPlanShift";
-
-const EMPTY_SHIFTS: BatchPlanShift[] = [];
+import { useBatchShiftWeeks } from "@/hooks/useBatchPlanShift";
 import { useCatalogSongs, type CatalogSong, type Instrument } from "@/hooks/useSongCatalog";
 
 export const DEFAULT_SONGS_PER_SESSION = 3;
@@ -182,12 +180,12 @@ export function useStudentClassConfig(): StudentClassConfig {
   // Stable empty default — see the note in useCatalogSongs.
   const { data: rows = EMPTY_ROWS } = useBatchCourseworkRows(batchId);
   const { data: settings } = useBatchSettings(batchId);
-  // Weeks the class is behind the calendar because lessons didn't happen.
-  const { data: shifts = EMPTY_SHIFTS } = useBatchPlanShifts(batchId);
+  // Students receive only the total, not staff pause notes or creator details.
+  const { data: shiftWeeks = 0 } = useBatchShiftWeeks(batchId);
 
   return {
     batchId: enrollment?.batchId ?? null,
-    shiftWeeks: totalShiftWeeks(shifts),
+    shiftWeeks,
     instrument: enrollment?.instrument ?? "ukulele",
     dayOfWeek: enrollment?.dayOfWeek ?? null,
     songsPerSession: settings?.songs_per_session ?? DEFAULT_SONGS_PER_SESSION,
