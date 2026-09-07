@@ -5,6 +5,8 @@ import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useSongs } from "@/hooks/useSongs";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { toLocalIso } from "@/lib/date";
+import { useDayLessons } from "@/hooks/useDayLessons";
+import LessonVideo from "@/components/student/LessonVideo";
 
 /** Indexed by JS day (0=Sun..6=Sat) — the week starts at the class, not Monday. */
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -117,6 +119,21 @@ export default function WeeklyCalendarStrip({
     onSelectDay?.(s ? { scheduled_date: s.scheduled_date, session_index: s.session_index } : null);
   };
   const selected = days.find((d) => d.iso === selectedIso);
+  /**
+   * A day that has been and gone is worth reopening.
+   *
+   * Today's material is already on the page below, and a day still ahead is
+   * not theirs yet — but a lesson that has passed took its videos and the
+   * teacher's notes with it, and there was nowhere left to find them. The
+   * class day is the one that stings: a student who wants to go back over
+   * what was covered had a red dot and one line of text.
+   */
+  const lookingBack = selected && selected.session && selected.iso < todayIso ? selected.session : null;
+  const past = useDayLessons(
+    lookingBack
+      ? { scheduled_date: lookingBack.scheduled_date, session_index: lookingBack.session_index }
+      : null,
+  );
   const selectedSong = selected?.session ? songs.find((s) => s.id === selected.session!.focus_song_id) : null;
   const selectedTpl = selected?.session ? SESSION_TEMPLATES[selected.session.session_type] : null;
 
@@ -249,6 +266,22 @@ export default function WeeklyCalendarStrip({
               <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
             )}
           </div>
+
+          {past.videos.length > 0 && (
+            <div className="mt-3 pt-3 border-t flex flex-col gap-6" style={{ borderColor: "var(--border)" }}>
+              {past.videos.map((v) => (
+                <LessonVideo
+                  key={v.id}
+                  src={past.urls[v.storage_path]}
+                  path={v.storage_path}
+                  title={v.title}
+                  above={past.notes[v.id]?.above}
+                  below={past.notes[v.id]?.below}
+                  maxHeight={200}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </section>
