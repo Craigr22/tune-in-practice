@@ -62,6 +62,19 @@ export function isStudentLoginEmail(email: string | null | undefined): boolean {
   return !!email && email.endsWith(`@${STUDENT_EMAIL_DOMAIN}`);
 }
 
+/**
+ * How an account is named back to the person signed in.
+ *
+ * A student's account sits on an address that can never receive mail, so
+ * showing it names their login with something they must not type. The
+ * username is the part that is theirs. Anyone signing in with a real address
+ * sees that address.
+ */
+export function displayLogin(email: string | null | undefined): string {
+  if (!email) return "";
+  return isStudentLoginEmail(email) ? email.slice(0, email.lastIndexOf("@")) : email;
+}
+
 /** A short password that's easy to read out to a child. */
 export function suggestPassword(): string {
   const words = ["uku", "strum", "chord", "tune", "song", "beat"];

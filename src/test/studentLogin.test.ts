@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toUsername, loginCandidates, toLoginEmail, STUDENT_EMAIL_DOMAIN } from "@/lib/studentLogin";
+import { toUsername, loginCandidates, toLoginEmail, displayLogin, STUDENT_EMAIL_DOMAIN } from "@/lib/studentLogin";
 
 /**
  * What a student types, and what the app tries to sign them in with.
@@ -64,5 +64,20 @@ describe("toLoginEmail", () => {
   it("is the first thing to try", () => {
     expect(toLoginEmail("Payal Malviya")).toBe(`payal.malviya${d}`);
     expect(toLoginEmail("jason@bam.test")).toBe("jason@bam.test");
+  });
+});
+
+describe("displayLogin", () => {
+  it("names a student by their username, never the synthetic address", () => {
+    expect(displayLogin(`payal.malviya${d}`)).toBe("payal.malviya");
+  });
+
+  it("leaves a real address alone", () => {
+    expect(displayLogin("jason@bam.test")).toBe("jason@bam.test");
+  });
+
+  it("has nothing to show for no account", () => {
+    expect(displayLogin(null)).toBe("");
+    expect(displayLogin(undefined)).toBe("");
   });
 });

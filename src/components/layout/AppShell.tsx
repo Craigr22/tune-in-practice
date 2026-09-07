@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import FloatingTuner from "@/components/shared/FloatingTuner";
 import ErrorBoundary from "@/components/shared/ErrorBoundary";
 import { useViewAs, setViewAs, useViewableAccounts } from "@/hooks/useViewAs";
+import { displayLogin } from "@/lib/studentLogin";
 
 const TopNav = () => {
   const location = useLocation();
@@ -26,7 +27,17 @@ const TopNav = () => {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
-  const initials = (user?.email || "?").slice(0, 2).toUpperCase();
+  /**
+   * How this account is named back to the person signed in.
+   *
+   * A student's account sits on a synthetic address that never receives mail
+   * — showing them "payal.malviya@students.bam.invalid" names their login
+   * with something they must not type and could not be sent anything at. The
+   * username is the part that is theirs.
+   */
+  const signedInAs = displayLogin(user?.email);
+
+  const initials = (signedInAs || "?").slice(0, 2).toUpperCase();
 
   /** One source for the nav, so the header and the phone menu can't drift. */
   const links =
@@ -105,7 +116,7 @@ const TopNav = () => {
         </div>
       )}
 
-      <div className="role-toggle" title={user?.email ?? ""}>
+      <div className="role-toggle" title={signedInAs}>
         <span className="role-btn active" style={{ pointerEvents: "none" }}>{initials}</span>
         <button className="role-btn" onClick={signOut}>Sign out</button>
       </div>
@@ -156,7 +167,7 @@ const TopNav = () => {
           )}
 
           <div className="nav-sheet-foot">
-            <span className="nav-sheet-email">{user?.email}</span>
+            <span className="nav-sheet-email">{signedInAs}</span>
             <button className="nav-sheet-signout" onClick={signOut}>Sign out</button>
           </div>
         </div>
