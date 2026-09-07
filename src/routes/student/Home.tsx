@@ -3,7 +3,7 @@ import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useFinishDay, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
-import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
+
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import { useDayLessons } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
