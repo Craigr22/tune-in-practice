@@ -20,11 +20,13 @@ function supportsPush() {
   );
 }
 
-function applicationServerKey(value: string): Uint8Array {
+function applicationServerKey(value: string): ArrayBuffer {
   const padded = value.padEnd(value.length + ((4 - (value.length % 4)) % 4), "=");
   const base64 = padded.replace(/-/g, "+").replace(/_/g, "/");
   const raw = window.atob(base64);
-  return Uint8Array.from(raw, (character) => character.charCodeAt(0));
+  const bytes = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+  return bytes.buffer;
 }
 
 function currentTimeZone() {

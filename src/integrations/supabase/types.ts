@@ -597,6 +597,87 @@ export type Database = {
           },
         ]
       }
+      practice_notification_deliveries: {
+        Row: {
+          id: string
+          kind: string
+          local_date: string
+          sent_at: string
+          session_id: string
+          subscription_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          local_date: string
+          sent_at?: string
+          session_id: string
+          subscription_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          local_date?: string
+          sent_at?: string
+          session_id?: string
+          subscription_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_notification_deliveries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_plan_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_notification_deliveries_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "push_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          enabled: boolean
+          endpoint: string
+          id: string
+          p256dh: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          enabled?: boolean
+          endpoint: string
+          id?: string
+          p256dh: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          enabled?: boolean
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           batch_id: string
@@ -1067,6 +1148,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invoke_practice_notification_sender: { Args: never; Returns: number }
       is_student_in_batch: {
         Args: { _batch_id: string; _user_id: string }
         Returns: boolean
