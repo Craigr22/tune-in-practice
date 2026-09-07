@@ -146,21 +146,6 @@ const Home = () => {
                   : "No practice today · enjoy the day off"}
               </p>
             </div>
-            <div
-              className="shrink-0 text-center"
-              title={
-                streak === 0
-                  ? "Practise on your next practice day to start a streak"
-                  : `${streak} practice ${streak === 1 ? "session" : "sessions"} in a row`
-              }
-            >
-              <div className="text-2xl font-bold leading-none" style={{ color: "var(--ink)" }}>
-                <span className="bounce-soft">🔥</span> {streak}
-              </div>
-              <div className="text-[10px] uppercase tracking-wider mt-1" style={{ color: "var(--ink-faint)" }}>
-                {streak === 1 ? "session" : "sessions"}
-              </div>
-            </div>
           </div>
 
           <div className="px-4 pb-4 pt-3 md:px-5">
