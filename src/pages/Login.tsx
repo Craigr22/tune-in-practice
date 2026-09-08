@@ -14,7 +14,7 @@ function isBadCredentials(error: unknown): boolean {
  */
 function signInMessage(error: unknown): string {
   if (isBadCredentials(error)) {
-    return "That doesn't match an account. Students sign in with a username — usually first.last, like payal.malviya — not an email. Ask your teacher if you're not sure.";
+    return "That doesn't match an account. Students sign in with a username — usually first.last, like payal.malviya — not an email. Ask your BAM administrator if you're not sure.";
   }
   // Anything else — rate limited, network down, account disabled — says what
   // it says; swallowing it into "Authentication failed" hides the one detail
@@ -64,7 +64,7 @@ const Login = () => {
   const forgotPassword = async () => {
     if (!email) { setErr("Enter your email first, then tap this again."); return; }
     if (!email.includes("@")) {
-      setErr("Usernames can't be reset by email — ask your teacher to set a new password for you.");
+      setErr("Student passwords are reset by your BAM administrator.");
       return;
     }
     setErr(null); setMsg(null); setBusy(true);
@@ -80,6 +80,10 @@ const Login = () => {
       setBusy(false);
     }
   };
+
+  // Student accounts deliberately have no working inbox. Recovery actions
+  // only make sense once the person has entered a real email address.
+  const emailAccount = email.trim().includes("@");
 
   const magic = async () => {
     if (!email) { setErr("Enter your email first."); return; }
@@ -130,7 +134,7 @@ const Login = () => {
           autoCorrect="off"
           spellCheck={false}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { setEmail(e.target.value); setErr(null); setMsg(null); }}
           placeholder="your username, or your email"
           style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--border-strong)", borderRadius: 8, marginBottom: 12, fontSize: 14 }}
         />
@@ -153,14 +157,22 @@ const Login = () => {
         <button type="submit" disabled={busy} className="bam-cta" style={{ width: "100%", marginBottom: 8 }}>
           {busy ? "…" : "Sign in"}
         </button>
-        <button type="button" onClick={magic} disabled={busy} className="bam-cta bam-cta-gold" style={{ width: "100%", marginBottom: 12 }}>
-          Email me a magic link
-        </button>
+        {emailAccount ? (
+          <>
+            <button type="button" onClick={magic} disabled={busy} className="bam-cta bam-cta-gold" style={{ width: "100%", marginBottom: 12 }}>
+              Email me a magic link
+            </button>
 
-        <button type="button" onClick={forgotPassword} disabled={busy}
-          style={{ background: "none", border: 0, color: "var(--navy)", fontSize: 12, cursor: "pointer", width: "100%", marginBottom: 8, textDecoration: "underline" }}>
-          Forgot your password?
-        </button>
+            <button type="button" onClick={forgotPassword} disabled={busy}
+              style={{ background: "none", border: 0, color: "var(--navy)", fontSize: 12, cursor: "pointer", width: "100%", marginBottom: 8, textDecoration: "underline" }}>
+              Forgot your password?
+            </button>
+          </>
+        ) : (
+          <p style={{ fontSize: 11, color: "var(--ink-soft)", margin: "4px 0 8px", lineHeight: 1.5, textAlign: "center" }}>
+            Student password forgotten? Ask your BAM administrator to reset it.
+          </p>
+        )}
 
         <p style={{ fontSize: 11, color: "var(--ink-faint)", marginTop: 14, lineHeight: 1.5, textAlign: "center" }}>
           Need an account? Ask your BAM administrator.

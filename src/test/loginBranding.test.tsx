@@ -25,6 +25,6 @@ describe("login page branding", () => {
   it("is invite-only and does not offer public account creation", () => {
     render(<Login />);
     expect(screen.queryByText(/create account/i)).toBeNull();
-    expect(screen.getByText(/ask your bam administrator/i)).toBeTruthy();
+    expect(screen.getByText(/need an account\? ask your bam administrator/i)).toBeTruthy();
   });
 });

@@ -10,7 +10,11 @@ import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/re
  */
 
 const signIn = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/db", () => ({ supabase: { auth: { signInWithPassword: signIn } } }));
+const resetPassword = vi.hoisted(() => vi.fn());
+const signInWithOtp = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/db", () => ({
+  supabase: { auth: { signInWithPassword: signIn, resetPasswordForEmail: resetPassword, signInWithOtp } },
+}));
 
 import Login from "@/pages/Login";
 
@@ -22,7 +26,11 @@ const fillAndSubmit = (id: string) => {
   fireEvent.click(screen.getByRole("button", { name: /^sign in$/i }));
 };
 
-beforeEach(() => signIn.mockReset());
+beforeEach(() => {
+  signIn.mockReset();
+  resetPassword.mockReset().mockResolvedValue({ error: null });
+  signInWithOtp.mockReset().mockResolvedValue({ error: null });
+});
 afterEach(cleanup);
 
 describe("signing in", () => {
@@ -77,5 +85,31 @@ describe("signing in", () => {
 
     await waitFor(() => expect(screen.getByText(/students sign in with a username/i)).toBeTruthy());
     expect(screen.queryByText(/^invalid login credentials$/i)).toBeNull();
+  });
+
+  it("gives student accounts an administrator reset route instead of email recovery", () => {
+    render(<Login />);
+    fireEvent.change(screen.getByLabelText(/username or email/i), { target: { value: "payal.malviya" } });
+
+    expect(screen.getByText(/ask your bam administrator to reset it/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /magic link/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /forgot your password/i })).toBeNull();
+  });
+
+  it("offers both email recovery choices for teachers and administrators", async () => {
+    render(<Login />);
+    fireEvent.change(screen.getByLabelText(/username or email/i), { target: { value: "teacher@bam.test" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /magic link/i }));
+    await waitFor(() => expect(signInWithOtp).toHaveBeenCalledWith({
+      email: "teacher@bam.test",
+      options: { emailRedirectTo: window.location.origin },
+    }));
+
+    fireEvent.click(screen.getByRole("button", { name: /forgot your password/i }));
+    await waitFor(() => expect(resetPassword).toHaveBeenCalledWith(
+      "teacher@bam.test",
+      { redirectTo: `${window.location.origin}/reset-password` },
+    ));
   });
 });
