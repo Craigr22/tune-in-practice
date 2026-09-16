@@ -23,7 +23,12 @@ export function useClassBoard() {
     queryKey: ["class-board", student?.id],
     enabled: !!student?.id,
     queryFn: async (): Promise<ClassBoardRow[] | null> => {
-      const { data, error } = await (supabase as any).rpc("class_session_counts");
+      // Asked for by student, so that an admin looking through "view as" — and
+      // a teacher opening a student — get that student's board rather than an
+      // empty one. The database checks they are entitled to it.
+      const { data, error } = await (supabase as any).rpc("class_session_counts", {
+        _student_id: student!.id,
+      });
       // The function arrives by migration. Until then the board simply isn't
       // there, rather than the page showing an error a student can do nothing
       // about. Real failures still surface.
