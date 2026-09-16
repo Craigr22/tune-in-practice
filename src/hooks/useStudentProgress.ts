@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
-import { toLocalIso, addDaysIso } from "@/lib/date";
-import { sessionDatesUpTo, type PracticeSchedule } from "@/lib/practiceWeek";
+import { toLocalIso } from "@/lib/date";
 import type { Song } from "@/lib/types";
 
 export type CheckIn = "nailed" | "got_through" | "need_help";
@@ -129,35 +128,22 @@ export function tuningRate(logs: PracticeLog[]): { tuned: number; total: number;
 /* ----- helpers ----- */
 
 /**
- * How many sessions in a row a student has kept.
+ * How many sessions a student has ticked off.
  *
- * This used to count consecutive calendar days, which a three-day-a-week plan
- * can never satisfy: sessions fall two days apart, so the day in between
- * always broke the run and the streak could never read higher than 1. It now
- * counts the days the student was asked to turn up — the lesson, and the two
- * practice days after it — so keeping to the plan keeps the streak.
+ * This began as a run of consecutive days, which a three-day-a-week plan can
+ * never satisfy — the rest day between sessions always broke it. Counting the
+ * run of *sessions* fixed that but kept the cruelty: one missed lesson wiped
+ * the number back to nothing.
  *
- * Today never breaks a run: an unfinished session is still ahead of them.
- * Without a schedule (the class hasn't loaded yet) it falls back to counting
- * calendar days, which is right for a student with no class at all.
+ * It is a plain total now. Every session a student finishes adds one and
+ * nothing ever takes it away, so the number only goes up and a bad week costs
+ * progress rather than erasing it.
+ *
+ * Counted over distinct dates: a session belongs to its day, and the log is
+ * written once when the day is finished.
  */
-export function computeStreak(logs: PracticeLog[], schedule?: PracticeSchedule | null): number {
-  if (!logs.length) return 0;
-  const days = new Set(logs.map((l) => l.played_on));
-  const today = toLocalIso();
-
-  const expected = schedule
-    ? sessionDatesUpTo(today, schedule)
-    : // Every day back from today, in the same newest-first order.
-      Array.from({ length: 365 }, (_, i) => addDaysIso(today, -i));
-
-  let streak = 0;
-  for (const date of expected) {
-    if (days.has(date)) streak += 1;
-    // A session still open today hasn't been missed yet.
-    else if (date !== today) break;
-  }
-  return streak;
+export function sessionsDone(logs: PracticeLog[]): number {
+  return new Set(logs.map((l) => l.played_on)).size;
 }
 
 export function minutesThisWeek(logs: PracticeLog[]): number {

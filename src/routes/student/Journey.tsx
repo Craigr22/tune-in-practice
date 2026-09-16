@@ -15,6 +15,7 @@ import { getBadge, nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
 import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ClassBoard from "@/components/student/ClassBoard";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
@@ -208,6 +209,11 @@ const Journey = () => {
             </div>
           </section>
         )}
+
+        {/* Where they stand among the people they sit next to on a Sunday. */}
+        <div className="mb-6">
+          <ClassBoard />
+        </div>
 
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-xl font-bold" style={{ color: "var(--ink)" }}>Song map</h2>

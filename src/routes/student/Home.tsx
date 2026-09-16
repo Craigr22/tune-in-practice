@@ -3,7 +3,7 @@ import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useFinishDay, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
-import { usePracticeLogs, computeStreak } from "@/hooks/useStudentProgress";
+import { usePracticeLogs, sessionsDone } from "@/hooks/useStudentProgress";
 
 import WeeklyCalendarStrip from "@/components/student/WeeklyCalendarStrip";
 import PracticeReminderCard from "@/components/student/PracticeReminderCard";
@@ -23,16 +23,8 @@ const Home = () => {
   const { finish: finishDay, isPending: saving } = useFinishDay();
   const { data: logs = [] } = usePracticeLogs();
   const { data: batch } = useStudentBatchDay();
-  // Counted over the days a student was asked to practise, not calendar days:
-  // the plan leaves a rest day between sessions, so a run of them is the streak.
-  const streak = useMemo(
-    () =>
-      computeStreak(
-        logs,
-        batch ? { classDayOfWeek: batch.day_of_week, courseStart: courseStartDate } : null,
-      ),
-    [logs, batch, courseStartDate],
-  );
+  // Every session finished counts, for good. Nothing takes the number away.
+  const done = useMemo(() => sessionsDone(logs), [logs]);
 
   useEnsureWeeklyPlan();
   // Also build the week after this one, so that on a rest day there is a "next
@@ -148,16 +140,16 @@ const Home = () => {
             <div
               className="shrink-0 text-center"
               title={
-                streak === 0
-                  ? "Practise on your next practice day to start a streak"
-                  : `${streak} practice ${streak === 1 ? "session" : "sessions"} in a row`
+                done === 0
+                  ? "Finish a session to get your first one on the board"
+                  : `${done} ${done === 1 ? "session" : "sessions"} finished`
               }
             >
               <div className="text-2xl font-bold leading-none" style={{ color: "var(--ink)" }}>
-                <span className="bounce-soft">🔥</span> {streak}
+                <span className="bounce-soft">🔥</span> {done}
               </div>
               <div className="text-[10px] uppercase tracking-wider mt-1" style={{ color: "var(--ink-faint)" }}>
-                {streak === 1 ? "session" : "sessions"}
+                {done === 1 ? "session" : "sessions"}
               </div>
             </div>
           </div>
@@ -205,7 +197,7 @@ const Home = () => {
             )}
 
             {/* Reviewing the lesson recap is the week's first session and
-                counts towards the streak, so it is completed like any other
+                counts like any other session, so it is completed the same
                 day without implying that this button records attendance. */}
             {dayDone ? (
               <div className="mt-5 text-sm font-bold" style={{ color: "#10b981" }}>

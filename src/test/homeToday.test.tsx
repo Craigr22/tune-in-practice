@@ -42,7 +42,7 @@ vi.mock("@/hooks/useCourseVideos", async () => {
 });
 vi.mock("@/hooks/useStudentProgress", () => ({
   usePracticeLogs: () => ({ data: [] }),
-  computeStreak: () => 0,
+  sessionsDone: () => 0,
 }));
 vi.mock("@/components/student/WeeklyCalendarStrip", () => ({ default: () => null }));
 
