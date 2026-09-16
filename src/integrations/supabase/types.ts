@@ -1086,6 +1086,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      class_session_counts: {
+        Args: never
+        Returns: {
+          display_name: string
+          is_me: boolean
+          sessions: number
+          student_id: string
+        }[]
+      }
       complete_practice_segment: {
         Args: { p_segment: string; p_session_id: string }
         Returns: {
