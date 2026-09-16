@@ -4,6 +4,20 @@ import { useClassBoard, withPlaces } from "@/hooks/useClassBoard";
 const MEDALS = ["🥇", "🥈", "🥉"];
 
 /**
+ * A medal has to mean someone is ahead.
+ *
+ * Ties share a place, so a class where everyone is level puts everyone first
+ * — six gold medals, which says nothing and looks broken. Worse on the day
+ * the board opens, when every count is nought: gold, all round, for nothing.
+ *
+ * So a medal needs a session behind it, and someone to be ahead of.
+ */
+function medalFor(place: number, sessions: number, everyoneLevel: boolean): string | null {
+  if (everyoneLevel || sessions < 1) return null;
+  return MEDALS[place - 1] ?? null;
+}
+
+/**
  * Where a student stands in their own class.
  *
  * Their class, not the school: six names they know, all of whom started the
@@ -21,6 +35,7 @@ export default function ClassBoard() {
   if (!data || data.length < 2) return null;
 
   const rows = withPlaces(data);
+  const everyoneLevel = rows.every((r) => r.sessions === rows[0].sessions);
 
   return (
     <section
@@ -51,7 +66,7 @@ export default function ClassBoard() {
               style={{ color: "var(--ink-soft)" }}
               aria-hidden
             >
-              {MEDALS[r.place - 1] ?? r.place}
+              {medalFor(r.place, r.sessions, everyoneLevel) ?? r.place}
             </span>
             <span
               className="flex-1 min-w-0 truncate text-sm"
@@ -72,7 +87,11 @@ export default function ClassBoard() {
       </ol>
 
       <p className="mt-3 text-[11px] leading-relaxed" style={{ color: "var(--ink-faint)" }}>
-        Every session you finish adds one, and it stays — miss a week and you keep what you've done.
+        {everyoneLevel
+          ? rows[0].sessions === 0
+            ? "Nobody has finished a session yet — the first one is there for the taking."
+            : `The whole class is level on ${rows[0].sessions}. Nobody's ahead.`
+          : "Every session you finish adds one, and it stays — miss a week and you keep what you've done."}
       </p>
     </section>
   );

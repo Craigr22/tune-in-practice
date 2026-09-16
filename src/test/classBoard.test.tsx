@@ -77,4 +77,34 @@ describe("ClassBoard", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByText(/amit a\./i)).toBeTruthy();
   });
+
+  it("gives nobody a medal when nobody is ahead", () => {
+    st.data = [row("Payal M.", 5), row("Amit A.", 5, true), row("Renuka", 5)];
+
+    render(<ClassBoard />);
+
+    // Ties share a place, so all three are first — and three gold medals says
+    // nothing. Plain numbers, and the footer explains.
+    expect(screen.queryByText("🥇")).toBeNull();
+    expect(screen.getByText(/the whole class is level on 5/i)).toBeTruthy();
+  });
+
+  it("gives nobody a medal on the day the board opens", () => {
+    st.data = [row("Payal M.", 0), row("Amit A.", 0, true)];
+
+    render(<ClassBoard />);
+
+    expect(screen.queryByText("🥇")).toBeNull();
+    expect(screen.getByText(/nobody has finished a session yet/i)).toBeTruthy();
+  });
+
+  it("never medals a count of nothing, even below someone who has done some", () => {
+    // One ahead, the rest joint second on nought: second place, no silver.
+    st.data = [row("Payal M.", 3), row("Amit A.", 0, true), row("Renuka", 0)];
+
+    render(<ClassBoard />);
+
+    expect(screen.getByText("🥇")).toBeTruthy();
+    expect(screen.queryByText("🥈")).toBeNull();
+  });
 });
