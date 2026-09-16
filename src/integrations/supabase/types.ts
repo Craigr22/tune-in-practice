@@ -1087,7 +1087,7 @@ export type Database = {
     }
     Functions: {
       class_session_counts: {
-        Args: never
+        Args: { _student_id?: string }
         Returns: {
           display_name: string
           is_me: boolean
