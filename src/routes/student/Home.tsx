@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { LessonDay } from "@/hooks/useDayLessons";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useFinishDay, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
@@ -32,6 +33,14 @@ const Home = () => {
   useEnsureWeeklyPlan(batch ? addWeeks(classWeekStart(batch.day_of_week), 1) : undefined);
   const session = useTodaysSession();
   const nextSession = useNextSession();
+  /**
+   * Which day the student tapped in the week strip, if any.
+   *
+   * While another day is open, today's lesson card below is tucked away:
+   * leaving it up showed the 20th's videos under a panel about the 22nd,
+   * which read as every day holding the same material.
+   */
+  const [pickedDay, setPickedDay] = useState<LessonDay | null>(null);
 
   /**
    * Today's clips, and only today's.
@@ -155,13 +164,13 @@ const Home = () => {
           </div>
 
           <div className="px-4 pb-4 pt-3 md:px-5">
-            <WeeklyCalendarStrip embedded />
+            <WeeklyCalendarStrip embedded onSelectDay={setPickedDay} />
           </div>
         </section>
 
         <PracticeReminderCard />
 
-        {session && (
+        {session && !pickedDay && (
           /* The day itself: what the admin planned for it, in the order they
              put it in. A student reads the page and plays in one continuous
              session rather than working through separate labelled boxes. */
