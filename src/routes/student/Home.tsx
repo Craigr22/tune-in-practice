@@ -164,13 +164,13 @@ const Home = () => {
           </div>
 
           <div className="px-4 pb-4 pt-3 md:px-5">
-            <WeeklyCalendarStrip embedded />
+            <WeeklyCalendarStrip embedded onSelectDay={setPickedDay} />
           </div>
         </section>
 
         <PracticeReminderCard />
 
-        {session && (
+        {session && !pickedDay && (
           /* The day itself: what the admin planned for it, in the order they
              put it in. A student reads the page and plays in one continuous
              session rather than working through separate labelled boxes. */
