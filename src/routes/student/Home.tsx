@@ -170,7 +170,12 @@ const Home = () => {
 
         <PracticeReminderCard />
 
-        {session && !pickedDay && (
+        {/* The card tucks away only while looking back at a day gone by —
+            that panel carries its own videos, so showing today's underneath
+            would read as the same lesson twice. Tapping today or a day ahead
+            keeps today's card: the class still has to be marked, and "you'll
+            see it on the day" needs no room of its own. */}
+        {session && !(pickedDay && pickedDay.scheduled_date < todayLocalIso()) && (
           /* The day itself: what the admin planned for it, in the order they
              put it in. A student reads the page and plays in one continuous
              session rather than working through separate labelled boxes. */
