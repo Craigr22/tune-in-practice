@@ -33,6 +33,14 @@ const Home = () => {
   useEnsureWeeklyPlan(batch ? addWeeks(classWeekStart(batch.day_of_week), 1) : undefined);
   const session = useTodaysSession();
   const nextSession = useNextSession();
+  /**
+   * Which day the student tapped in the week strip, if any.
+   *
+   * While another day is open, today's lesson card below is tucked away:
+   * leaving it up showed the 20th's videos under a panel about the 22nd,
+   * which read as every day holding the same material.
+   */
+  const [pickedDay, setPickedDay] = useState<LessonDay | null>(null);
 
   /**
    * Today's clips, and only today's.
