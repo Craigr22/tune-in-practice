@@ -30,3 +30,11 @@ dist-ssr
 /test-results/
 /playwright-report/
 /e2e-results/
+
+# School finance workbooks and anything generated from them: student names,
+# fees and payments. Never committed — they'd sit in the repo's history for good.
+*.xlsx
+*.xls
+/26-27 Income BAM*.csv
+/scripts/import-income/out/
+/public/__import/
