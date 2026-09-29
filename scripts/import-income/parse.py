@@ -71,6 +71,8 @@ EXISTING = {
         "payal malviya": "15843720-fb24-490d-9f7b-6e9d59bc718a",
     },
 }
+# What a teacher teaches, where their sheet never says — told, not inferred.
+TEACHER_INSTRUMENT = {"Brendan": "violin"}
 DEFAULT_LOCATION = "Andheri Room 1"
 DEFAULT_CAPACITY = 6
 
@@ -347,6 +349,7 @@ def main(path):
             by_teacher[k[0]][c["instrument"]] += 1
     teacher_default = {t: cnt.most_common(1)[0][0] for t, cnt in by_teacher.items()}
     teacher_default.setdefault("Jason", "ukulele")
+    teacher_default.update(TEACHER_INSTRUMENT)
     for k, c in classes.items():
         if not c.get("instrument"):
             guess = teacher_default.get(k[0])

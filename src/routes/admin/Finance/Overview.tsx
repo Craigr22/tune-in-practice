@@ -80,6 +80,8 @@ export default function Overview() {
       dead: quarter.rows.filter(isDeadWeight).sort((a, b) => a.contribution - b.contribution),
       // "Covering its costs" is a claim; with nothing recorded it isn't one we can make.
       noData: quarter.rows.filter((r) => r.batch.isActive).every((r) => r.verdict === "no-data"),
+      // Revenue with nothing set against it makes every class look profitable.
+      noCosts: !quarter.rows.some((r) => r.teacherCost + r.roomCost > 0),
     };
   }, [data, fyStart, thisMonth, nextMonth, today]);
 
@@ -187,7 +189,9 @@ export default function Overview() {
             <p className="text-sm text-muted-foreground">
               {view?.noData
                 ? "Not enough to judge yet — no payments or completed classes in the last three months. Classes that lose money, or are half-empty and barely covering themselves, will show here."
-                : "Every class is covering its costs. Classes that lose money, or are half-empty and barely covering themselves, will show here."}
+                : view?.noCosts
+                  ? "No costs recorded yet, so every class looks profitable. Set teacher rates, mark classes complete and add office expenses, and the ones that don't pay for themselves will show here."
+                  : "Every class is covering its costs. Classes that lose money, or are half-empty and barely covering themselves, will show here."}
             </p>
           ) : (
             <ul className="text-sm divide-y">

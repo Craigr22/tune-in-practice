@@ -141,8 +141,9 @@ export default function Batches() {
         <div className="space-y-2 text-sm">
           {result.unattributedRevenue > 0 && (
             <Notice>
-              {formatINR(result.unattributedRevenue)} earned isn't tied to a class — payments from students in more than
-              one class, recorded before payments named their class. It's in the company total, not in any row below.
+              {formatINR(result.unattributedRevenue)} earned isn't tied to a class — mostly students who have since left
+              theirs, and any in more than one class whose payment didn't say which. It's in the company total, not in any
+              row below.
             </Notice>
           )}
           {result.unspreadPayments > 0 && (
