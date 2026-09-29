@@ -60,7 +60,7 @@ const TopNav = () => {
           { to: "/admin/schedule", label: "Schedule", active: isActive("/admin/schedule") },
           { to: "/admin/people", label: "People", active: isActive("/admin/people") },
           { to: "/admin/coursework", label: "Course work", active: isActive("/admin/coursework") },
-          // Finance hidden for now — routes still live at /admin/finance.
+          { to: "/admin/finance", label: "Finance", active: isActive("/admin/finance") },
         ];
 
   const onViewAsChange = (v: string) => {
