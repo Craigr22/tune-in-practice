@@ -14,8 +14,10 @@ export default function FinanceLayout() {
   );
   return (
     <div>
-      <div className="border-b px-6 py-3 flex gap-2">
+      <div className="border-b px-6 py-3 flex gap-2 overflow-x-auto">
         {tab("/admin/finance", "Overview", true)}
+        {tab("/admin/finance/renewals", "Renewals")}
+        {tab("/admin/finance/batches", "Batches")}
         {tab("/admin/finance/payments", "Payments")}
         {tab("/admin/finance/payouts", "Payouts")}
         {tab("/admin/finance/expenses", "Expenses")}

@@ -27,6 +27,8 @@ const FinancePayments = lazy(() => import("@/routes/admin/Finance/Payments"));
 const FinancePayouts = lazy(() => import("@/routes/admin/Finance/Payouts"));
 const FinanceExpenses = lazy(() => import("@/routes/admin/Finance/Expenses"));
 const FinancePnL = lazy(() => import("@/routes/admin/Finance/PnL"));
+const FinanceBatches = lazy(() => import("@/routes/admin/Finance/Batches"));
+const FinanceRenewals = lazy(() => import("@/routes/admin/Finance/Renewals"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -126,6 +128,8 @@ const App = () => (
                 <Route path="/admin/users" element={<Navigate to="/admin/people/access" replace />} />
                 <Route path="/admin/finance" element={<RequireRole role="admin"><FinanceLayout /></RequireRole>}>
                   <Route index element={<FinanceOverview />} />
+                  <Route path="renewals" element={<FinanceRenewals />} />
+                  <Route path="batches" element={<FinanceBatches />} />
                   <Route path="payments" element={<FinancePayments />} />
                   <Route path="payouts" element={<FinancePayouts />} />
                   <Route path="expenses" element={<FinanceExpenses />} />

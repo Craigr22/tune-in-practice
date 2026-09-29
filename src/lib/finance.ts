@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/db";
+import { toLocalIso } from "@/lib/date";
 
 export function monthBounds(d = new Date()) {
   const start = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -6,7 +7,15 @@ export function monthBounds(d = new Date()) {
   return { start, end, startISO: iso(start), endISO: iso(end) };
 }
 
-export function iso(d: Date) { return d.toISOString().slice(0, 10); }
+/**
+ * A calendar date as "YYYY-MM-DD", in local time.
+ *
+ * This used toISOString(), which converts to UTC first. East of UTC a local
+ * midnight is the previous evening there, so in India the 1st of every month
+ * came out as the last day of the one before — every month boundary in the
+ * P&L was a day early, and a payment on the 1st was counted in the wrong month.
+ */
+export function iso(d: Date) { return toLocalIso(d); }
 
 export function monthLabel(d: Date) {
   return d.toLocaleDateString(undefined, { month: "short", year: "2-digit" });
@@ -36,36 +45,6 @@ export async function calculateGrossRevenue(monthStart: Date, monthEnd: Date): P
     .gte("paid_on", iso(monthStart))
     .lt("paid_on", iso(monthEnd));
   return (data ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
-}
-
-export async function calculateOutstandingDues(monthStart: Date, monthEnd: Date): Promise<number> {
-  // Expected: sum of fee_amount for active enrollments whose batch overlaps the month.
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("student_id, status, students(fee_amount, fee_cycle, is_active)")
-    .eq("status", "active");
-  let expected = 0;
-  for (const e of (enrollments ?? []) as any[]) {
-    if (!e.students?.is_active) continue;
-    const fee = Number(e.students?.fee_amount ?? 0);
-    expected += e.students?.fee_cycle === "monthly" ? fee : fee / 3;
-  }
-  // Paid (booked period overlaps with month).
-  const { data: paid } = await supabase
-    .from("payments")
-    .select("amount, period_start, period_end, status")
-    .eq("status", "paid")
-    .or(`period_start.lt.${iso(monthEnd)},period_start.is.null`);
-  const monthStartISO = iso(monthStart);
-  const monthEndISO = iso(monthEnd);
-  const collected = ((paid ?? []) as any[]).reduce((s, p) => {
-    const ps = p.period_start ?? p.paid_on;
-    const pe = p.period_end ?? ps;
-    if (!ps) return s + Number(p.amount ?? 0);
-    if (pe >= monthStartISO && ps < monthEndISO) return s + Number(p.amount ?? 0);
-    return s;
-  }, 0);
-  return Math.max(0, expected - collected);
 }
 
 export interface TeacherPayoutResult {
@@ -105,72 +84,6 @@ export async function calculateTeacherPayout(
   else if (teacher.payment_type === "per_session") calculated = rate * sessionCount;
   else if (teacher.payment_type === "fixed_monthly") calculated = rate;
   return { sessions: sessionCount, hours, calculated };
-}
-
-export interface BatchUnitEconomics {
-  batchId: string;
-  fillPct: number;
-  enrolled: number;
-  capacity: number;
-  gross: number;
-  teacherCost: number;
-  margin: number;
-  marginPct: number;
-}
-
-export async function calculateBatchUnitEconomics(
-  batchId: string,
-  monthStart: Date,
-  monthEnd: Date
-): Promise<BatchUnitEconomics> {
-  const { data: batch } = await supabase
-    .from("batches")
-    .select("*, teachers(payment_type, rate)")
-    .eq("id", batchId)
-    .maybeSingle();
-  if (!batch) {
-    return { batchId, fillPct: 0, enrolled: 0, capacity: 0, gross: 0, teacherCost: 0, margin: 0, marginPct: 0 };
-  }
-  const { data: enrollments } = await supabase
-    .from("enrollments")
-    .select("students(fee_amount, fee_cycle, is_active)")
-    .eq("batch_id", batchId)
-    .eq("status", "active");
-  const activeEnrollments = ((enrollments ?? []) as any[]).filter((e) => e.students?.is_active);
-  const enrolled = activeEnrollments.length;
-  const capacity = batch.max_students ?? 0;
-  const gross = activeEnrollments.reduce((s, e: any) => {
-    const fee = Number(e.students?.fee_amount ?? 0);
-    return s + (e.students?.fee_cycle === "monthly" ? fee : fee / 3);
-  }, 0);
-
-  const { data: sessions } = await supabase
-    .from("sessions")
-    .select("id")
-    .eq("batch_id", batchId)
-    .eq("status", "completed")
-    .gte("scheduled_date", iso(monthStart))
-    .lt("scheduled_date", iso(monthEnd));
-  const sessionCount = (sessions ?? []).length;
-  const hours = (sessionCount * (batch.duration_min ?? 60)) / 60;
-  const rate = Number(batch.teachers?.rate ?? 0);
-  let teacherCost = 0;
-  if (batch.teachers?.payment_type === "per_hour") teacherCost = rate * hours;
-  else if (batch.teachers?.payment_type === "per_session") teacherCost = rate * sessionCount;
-  // fixed_monthly: allocate proportionally — handled at teacher level, skip here.
-
-  const margin = gross - teacherCost;
-  const marginPct = gross > 0 ? (margin / gross) * 100 : 0;
-  return {
-    batchId,
-    enrolled,
-    capacity,
-    fillPct: capacity > 0 ? (enrolled / capacity) * 100 : 0,
-    gross,
-    teacherCost,
-    margin,
-    marginPct,
-  };
 }
 
 export interface ExpenseBreakdown {
