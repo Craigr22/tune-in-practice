@@ -144,7 +144,12 @@ export default function Renewals() {
                   <td className="p-3">
                     <div className="font-medium">{r.student.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {formatINR(r.student.feeAmount)} {r.student.feeCycle}
+                      {r.student.feeAmount > 0 ? (
+                        `${formatINR(r.student.feeAmount)} ${r.student.feeCycle}`
+                      ) : (
+                        // Without a fee a renewal has no amount to suggest and nothing counts as at stake.
+                        <span className="text-amber-600">No fee set</span>
+                      )}
                     </div>
                   </td>
                   <td className="p-3 text-muted-foreground">

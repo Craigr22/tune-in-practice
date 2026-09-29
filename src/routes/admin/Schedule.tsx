@@ -72,8 +72,18 @@ export default function AdminSchedule() {
   // sessions as a scrollable list of days.
   const isPhone = useIsPhone();
   const [calView, setCalView] = useState<any>(isPhone ? Views.AGENDA : Views.WEEK);
-  const isAgenda = calView === Views.AGENDA;
   useEffect(() => { setCalView(isPhone ? Views.AGENDA : Views.WEEK); }, [isPhone]);
+  /**
+   * The views on offer change with the screen, but the chosen view only
+   * catches up in the effect above — after a render. In between, the calendar
+   * was asked for a view it had not been given (Week on a phone, Agenda on a
+   * desktop), looked it up, found nothing, and threw. It took the whole admin
+   * landing page with it whenever the width crossed the phone breakpoint,
+   * including on first load. So the view it is given is always one it has.
+   */
+  const calViews = isPhone ? [Views.AGENDA, Views.DAY, Views.MONTH] : [Views.WEEK, Views.MONTH, Views.DAY];
+  const shownView = calViews.includes(calView) ? calView : calViews[0];
+  const isAgenda = shownView === Views.AGENDA;
 
   const { role } = useAuth();
   const qc = useQueryClient();
@@ -268,10 +278,10 @@ export default function AdminSchedule() {
             onEventDrop={moveSession}
             onEventResize={moveSession}
             events={events}
-            view={calView}
+            view={shownView}
             onView={(v: any) => setCalView(v)}
             onRangeChange={(range: any) => setQueryRange(calendarQueryRange(range))}
-            views={isPhone ? [Views.AGENDA, Views.DAY, Views.MONTH] : [Views.WEEK, Views.MONTH, Views.DAY]}
+            views={calViews}
             length={30}
             formats={calendarFormats}
             min={new Date(0, 0, 0, 9, 0, 0)}

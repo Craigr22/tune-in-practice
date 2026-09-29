@@ -78,6 +78,8 @@ export default function Overview() {
       fyEarned: toDate.reduce((a, m) => a + m.earned, 0),
       renewals,
       dead: quarter.rows.filter(isDeadWeight).sort((a, b) => a.contribution - b.contribution),
+      // "Covering its costs" is a claim; with nothing recorded it isn't one we can make.
+      noData: quarter.rows.filter((r) => r.batch.isActive).every((r) => r.verdict === "no-data"),
     };
   }, [data, fyStart, thisMonth, nextMonth, today]);
 
@@ -154,6 +156,11 @@ export default function Overview() {
             <p className="text-sm">
               <strong>{formatINR(atStake)}</strong> in fees from students who have run out or are about to.
             </p>
+          ) : neverPaid.length > 0 ? (
+            // Nothing has run out only because nothing was ever recorded.
+            <p className="text-sm">
+              {neverPaid.length} student{neverPaid.length === 1 ? " is" : "s are"} in a class with no payment recorded.
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground">Everyone in a class is paid up.</p>
           )}
@@ -178,8 +185,9 @@ export default function Overview() {
           </div>
           {!view || view.dead.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Every class is covering its costs. Classes that lose money, or are half-empty and barely covering
-              themselves, will show here.
+              {view?.noData
+                ? "Not enough to judge yet — no payments or completed classes in the last three months. Classes that lose money, or are half-empty and barely covering themselves, will show here."
+                : "Every class is covering its costs. Classes that lose money, or are half-empty and barely covering themselves, will show here."}
             </p>
           ) : (
             <ul className="text-sm divide-y">
