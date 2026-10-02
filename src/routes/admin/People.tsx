@@ -6,6 +6,7 @@ import AdminUsers from "./Users";
 
 const TABS = [
   { value: "students", label: "Students" },
+  { value: "all", label: "All students" },
   { value: "teachers", label: "Teachers" },
   { value: "access", label: "Access" },
 ] as const;
@@ -38,7 +39,8 @@ export default function AdminPeople() {
         </div>
       </div>
 
-      {active === "students" && <AdminStudents />}
+      {active === "students" && <AdminStudents scope="current" />}
+      {active === "all" && <AdminStudents scope="all" />}
       {active === "teachers" && <AdminTeachers />}
       {active === "access" && <AdminUsers />}
     </div>

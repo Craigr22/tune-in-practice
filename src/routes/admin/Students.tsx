@@ -331,8 +331,13 @@ function exportStudentsCsv(rows: any[]) {
   URL.revokeObjectURL(url);
 }
 
-export default function AdminStudents() {
-  const { data: students = [], isLoading } = useStudents();
+export default function AdminStudents({ scope = "current" }: { scope?: "current" | "all" }) {
+  const { data: allStudents = [], isLoading } = useStudents();
+  // "Current" = students who have an app login; everyone else lives in the All students directory.
+  const students = useMemo(
+    () => (scope === "all" ? allStudents : allStudents.filter((s: any) => !!s.user_id)),
+    [allStudents, scope],
+  );
   const setActive = useSetStudentActive();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("active");
@@ -416,7 +421,7 @@ export default function AdminStudents() {
     <section className="p-6 max-w-6xl mx-auto">
       <header className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">My Students</h1>
+          <h1 className="text-2xl font-semibold">{scope === "all" ? "All students" : "Current students"}</h1>
           <p className="text-sm text-muted-foreground">{counts.all} total · {counts.active} active</p>
         </div>
         <div className="flex gap-2">
