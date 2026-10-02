@@ -22,6 +22,10 @@ export function useBatchList() {
         .select(
           "id, day_of_week, start_time, duration_min, max_students, is_active, semester_start, semester_end, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name), enrollments(count)",
         )
+        // Count the students actually in the class. Without this a paused or
+        // dropped enrolment still counted, so a class looked fuller than it is
+        // and could read as full with seats free.
+        .eq("enrollments.status", "active")
         .order("day_of_week")
         .order("start_time");
       if (error) throw error;

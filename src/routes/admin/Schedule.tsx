@@ -131,6 +131,12 @@ export default function AdminSchedule() {
     return map;
   }, [sessions]);
 
+  // Students in each class, from the class list this page already loads.
+  const headcount = useMemo(
+    () => new Map(classes.map((c: any) => [c.id, { enrolled: c.enrolled as number, cap: (c.max_students ?? 0) as number }])),
+    [classes],
+  );
+
   const events: Event[] = useMemo(() => sessions.map((s) => {
     const b = s.batches!;
     // A session may override its class's usual time and length (from dragging).
@@ -141,9 +147,15 @@ export default function AdminSchedule() {
     );
     const room = b.locations?.name;
     const code = (b as any).code ? `${(b as any).code} · ` : "";
-    const title = `${code}${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}${room ? ` · ${room}` : ""}`;
+    // Straight after the code: a week-view block is narrow, and how many are
+    // in the class is the first thing to read off it.
+    const hc = headcount.get(s.batch_id);
+    const students = hc
+      ? `${hc.enrolled}${hc.cap > 0 ? `/${hc.cap}` : ""} ${hc.enrolled === 1 && !hc.cap ? "student" : "students"} · `
+      : "";
+    const title = `${code}${students}${b.instruments?.name ?? "Class"} · ${b.teachers?.name ?? "TBA"}${room ? ` · ${room}` : ""}`;
     return { title, start, end, resource: s };
-  }), [sessions]);
+  }), [sessions, headcount]);
 
   /**
    * Dragging or resizing a session on the calendar. Writes the new date, and
