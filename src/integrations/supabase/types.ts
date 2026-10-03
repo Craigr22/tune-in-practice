@@ -177,6 +177,8 @@ export type Database = {
           is_active: boolean
           location_id: string
           max_students: number
+          photo_path: string | null
+          photo_taken_on: string | null
           semester_end: string | null
           semester_start: string | null
           start_time: string
@@ -191,6 +193,8 @@ export type Database = {
           is_active?: boolean
           location_id: string
           max_students?: number
+          photo_path?: string | null
+          photo_taken_on?: string | null
           semester_end?: string | null
           semester_start?: string | null
           start_time: string
@@ -205,6 +209,8 @@ export type Database = {
           is_active?: boolean
           location_id?: string
           max_students?: number
+          photo_path?: string | null
+          photo_taken_on?: string | null
           semester_end?: string | null
           semester_start?: string | null
           start_time?: string
@@ -1086,6 +1092,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      class_photo_batch: { Args: { _name: string }; Returns: string }
       class_session_counts: {
         Args: { _student_id?: string }
         Returns: {
@@ -1179,6 +1186,10 @@ export type Database = {
         Returns: boolean
       }
       mark_app_open: { Args: never; Returns: undefined }
+      set_class_photo: {
+        Args: { _batch_id: string; _path: string; _taken_on?: string }
+        Returns: undefined
+      }
       set_user_role: {
         Args: {
           p_role: Database["public"]["Enums"]["app_role"]
