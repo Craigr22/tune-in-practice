@@ -22,12 +22,12 @@ const log = (playedOn: string): PracticeLog => ({
   created_at: `${playedOn}T12:00:00Z`,
 });
 
-const progress = (teacherBadge: number | null): SongProgress => ({
+const progress = (selfBadge: number | null, teacherBadge: number | null = null): SongProgress => ({
   id: "progress-1",
   student_id: "student-1",
   song_id: SONGS[0].id,
   teacher_badge: teacherBadge,
-  self_badge: null,
+  self_badge: selfBadge,
   last_practiced: null,
   last_updated: "2026-09-10T12:00:00Z",
 });
@@ -52,8 +52,13 @@ describe("songWithStudentProgress", () => {
     expect(song.approvedDays).toBe(2);
   });
 
-  it("marks mastery only from the student's teacher badge", () => {
-    expect(songWithStudentProgress(SONGS[0], [], [progress(4)], today).state).toBe("in-progress");
+  it("marks mastery from the student's own grade, at 4 or 5", () => {
+    expect(songWithStudentProgress(SONGS[0], [], [progress(3)], today).state).toBe("in-progress");
+    expect(songWithStudentProgress(SONGS[0], [], [progress(4)], today).state).toBe("mastered");
     expect(songWithStudentProgress(SONGS[0], [], [progress(5)], today).state).toBe("mastered");
+  });
+
+  it("takes nothing from a teacher's old rating", () => {
+    expect(songWithStudentProgress(SONGS[0], [], [progress(null, 5)], today).state).toBe("next");
   });
 });

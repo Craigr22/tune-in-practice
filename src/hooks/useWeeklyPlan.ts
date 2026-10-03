@@ -1,4 +1,6 @@
 // Weekly plan orchestration. Builds three continuous sessions per week.
+import { isMastered, songGrade, songsToGrade } from "@/lib/grading";
+import { useGradePrompt } from "@/hooks/useGradePrompt";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
@@ -96,7 +98,7 @@ function pickPracticeSong(progress: SongProgress[], pool?: PracticePoolSong[]): 
     : ordered.slice().sort((a, b) => (Number(a.track) || 99) - (Number(b.track) || 99) || a.order - b.order);
   const inProgress = sorted.find((s) => {
     const p = progress.find((pp) => pp.song_id === s.id);
-    return (p?.teacher_badge ?? 0) > 0 && (p?.teacher_badge ?? 0) < 5;
+    return songGrade(p) != null && !isMastered(p);
   });
   return inProgress ?? sorted.find((s) => s.state === "in-progress" || s.state === "next") ?? sorted[0];
 }
@@ -325,9 +327,30 @@ function usePersistCompletion() {
  */
 export function useFinishDay() {
   const complete = usePersistCompletion();
+  const { raise } = useGradePrompt();
   const finish = async (sessionId: string) => {
     for (const segment of ["warmup", "focus", "bonus"] as const) {
       await complete.mutateAsync({ id: sessionId, segment });
+    }
+    // The last tick before the next class is when a student grades the
+    // week's songs. Asking is a nicety: if finding the week fails, the
+    // session is still done and nothing is said.
+    try {
+      const { data: mine } = await supabase
+        .from("weekly_plan_sessions")
+        .select("student_id, week_start")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (!mine) return;
+      const { data: week } = await supabase
+        .from("weekly_plan_sessions")
+        .select("*")
+        .eq("student_id", (mine as any).student_id)
+        .eq("week_start", (mine as any).week_start);
+      const songIds = songsToGrade((week ?? []).map(sessionFromStorage), sessionId);
+      if (songIds.length) raise({ weekStart: (mine as any).week_start, songIds });
+    } catch {
+      /* no prompt this time */
     }
   };
   return { finish, isPending: complete.isPending };

@@ -274,14 +274,13 @@ function StudentDetail({ student, onClose, onEdit }: { student: any | null; onCl
             <div className="border rounded-md divide-y">
               {SONGS.slice(0, 8).map((s) => {
                 const p: any = progressBySong.get(s.id);
-                const tb = getBadge(p?.teacher_badge);
                 const sb = getBadge(p?.self_badge);
                 return (
                   <div key={s.id} className="flex items-center justify-between px-3 py-2">
                     <div className="truncate">{s.title}</div>
-                    <div className="flex items-center gap-3 text-xs">
-                      <span>T: {tb ? `${tb.emoji} ${tb.name}` : "—"}</span>
-                      <span className="text-muted-foreground">S: {sb ? sb.emoji : "—"}</span>
+                    {/* The student's own grade — the only one there is now. */}
+                    <div className="text-xs text-muted-foreground">
+                      {sb ? `${sb.emoji} ${sb.name}` : "Not graded yet"}
                     </div>
                   </div>
                 );

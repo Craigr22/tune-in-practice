@@ -46,6 +46,7 @@ vi.mock("@/hooks/useStudentProgress", () => ({
   usePracticeLogs: () => ({ data: [] }),
   sessionsDone: () => 0,
 }));
+vi.mock("@/components/student/WeekGradeDialog", () => ({ default: () => null }));
 vi.mock("@/components/student/WeeklyCalendarStrip", () => ({ default: () => null }));
 vi.mock("@/hooks/useClassPhoto", () => ({ useClassPhoto: () => st.photo ?? null }));
 

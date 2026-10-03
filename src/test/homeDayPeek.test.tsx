@@ -61,6 +61,7 @@ vi.mock("@/hooks/useWeeklyPlan", async () => {
  * A stand-in strip that simply forwards taps, so the test can put any day
  * into Home's hands the way the real strip would.
  */
+vi.mock("@/components/student/WeekGradeDialog", () => ({ default: () => null }));
 vi.mock("@/components/student/WeeklyCalendarStrip", () => ({
   default: ({ onSelectDay }: any) => (
     <div>

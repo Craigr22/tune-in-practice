@@ -15,6 +15,7 @@ import { todayLocalIso, addDaysIso, onOrAfterDayOfWeek, dayLabel, timeLabel } fr
 import { useClassPhoto } from "@/hooks/useClassPhoto";
 import { ClassPhotoArrived, ClassPhotoThumb } from "@/components/student/ClassPhoto";
 import Chick from "@/components/student/Chick";
+import WeekGradeDialog from "@/components/student/WeekGradeDialog";
 import { useChickStage } from "@/hooks/useChickStage";
 
 /**
@@ -125,6 +126,8 @@ const Home = () => {
       <div className="home" style={{ paddingBottom: 60, maxWidth: 640, margin: "0 auto" }}>
         {/* The day the class photo arrives, and not again after it's been seen. */}
         {classPhoto && <ClassPhotoArrived photo={classPhoto} />}
+        {/* Asked on the last tick before the next class. */}
+        <WeekGradeDialog />
         {/* One header: who they are, where they are in the week, and how
             they're doing — these belong together, not stacked as separate
             cards. */}

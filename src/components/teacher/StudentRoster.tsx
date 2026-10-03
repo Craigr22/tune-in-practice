@@ -1,16 +1,12 @@
 import { useMemo } from "react";
 import { useStudentDetail } from "@/hooks/useTeacherStudents";
 import { computeRetention } from "@/lib/retention";
-import { getBadge, BADGE_LIST } from "@/lib/badges";
+import { getBadge } from "@/lib/badges";
 import { CHECK_IN_COLOR, type CheckIn } from "@/hooks/useStudentProgress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSongs } from "@/hooks/useSongs";
 import { useStudentCoursePlan } from "@/hooks/useCoursePlan";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/lib/db";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import WeeklyPlanEditor from "@/components/teacher/WeeklyPlanEditor";
 import { toLocalIso } from "@/lib/date";
 
@@ -56,7 +52,7 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
   const activeProgress = (data?.progress ?? [])
     .slice()
     .sort((a: any, b: any) => new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime())[0];
-  const badge = getBadge(activeProgress?.teacher_badge);
+  const badge = getBadge(activeProgress?.self_badge);
   const flag = retention?.flag ?? null;
   const flagClass = isError || !flag
     ? "bg-muted-foreground/40"
@@ -82,9 +78,8 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
   );
 }
 
-/* ---------- songs tab with editable teacher badge ---------- */
-function SongsEditor({ studentId, progress }: { studentId: string; progress: any[] }) {
-  const qc = useQueryClient();
+/* ---------- songs tab: each song with the student's own grade ---------- */
+function SongsEditor({ progress }: { studentId: string; progress: any[] }) {
   const { songs } = useSongs();
   const { days: planDays } = useStudentCoursePlan("ukulele");
   const byId = new Map(progress.map((p) => [p.song_id, p]));
@@ -110,28 +105,6 @@ function SongsEditor({ studentId, progress }: { studentId: string; progress: any
     return inCourse.length ? inCourse : songs.filter((x) => !x.fingerstyle).slice(0, 12);
   }, [planDays, progress, songs]);
 
-  const setBadge = async (song_id: string, value: number | null) => {
-    const existing = byId.get(song_id);
-    const payload: any = {
-      student_id: studentId,
-      song_id,
-      teacher_badge: value,
-      last_updated: new Date().toISOString(),
-    };
-    if (existing) {
-      const { error } = await supabase
-        .from("song_progress")
-        .update({ teacher_badge: value, last_updated: payload.last_updated })
-        .eq("id", existing.id);
-      if (error) return toast.error(error.message);
-    } else {
-      const { error } = await supabase.from("song_progress").insert(payload);
-      if (error) return toast.error(error.message);
-    }
-    toast.success("Updated");
-    qc.invalidateQueries({ queryKey: ["student-detail", studentId] });
-  };
-
   return (
     <div className="border rounded-md divide-y">
       {semSongs.map((s) => {
@@ -140,20 +113,10 @@ function SongsEditor({ studentId, progress }: { studentId: string; progress: any
         return (
           <div key={s.id} className="flex items-center justify-between px-3 py-2 gap-2">
             <div className="truncate text-sm">{s.title}</div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-muted-foreground">S: {sb ? sb.emoji : "—"}</span>
-              <Select
-                value={p?.teacher_badge != null ? String(p.teacher_badge) : "0"}
-                onValueChange={(v) => setBadge(s.id, Number(v) || null)}
-              >
-                <SelectTrigger className="h-7 w-[140px] text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">— none</SelectItem>
-                  {BADGE_LIST.map((b) => (
-                    <SelectItem key={b.level} value={String(b.level)}>{b.emoji} {b.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* The student's own grade. Teachers no longer grade: this is
+                here to be read, and talked about in class if it looks off. */}
+            <div className="text-xs text-muted-foreground shrink-0">
+              {sb ? `${sb.emoji} ${sb.name}` : "Not graded yet"}
             </div>
           </div>
         );

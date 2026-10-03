@@ -19,6 +19,9 @@ import ClassBoard from "@/components/student/ClassBoard";
 import Chick from "@/components/student/Chick";
 import { useChickStage } from "@/hooks/useChickStage";
 import { CHICK_HEADING } from "@/lib/chick";
+import { isMastered, songGrade } from "@/lib/grading";
+import GradePicker from "@/components/student/GradePicker";
+import { useGradeSongs } from "@/hooks/useStudentProgress";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
@@ -36,7 +39,7 @@ interface MapNode {
   order: number;
   track: number | "fs";
   state: NodeState;
-  teacherBadge: number | null;
+  myGrade: number | null;
   selfBadge: number | null;
   sessions: number;
   totalMin: number;
@@ -108,12 +111,13 @@ const Journey = () => {
       if (!song) return [];
       const p = progress.find((x) => x.song_id === stop.songId);
       const songLogs = logs.filter((l) => l.song_id === stop.songId);
-      const tb = p?.teacher_badge ?? null;
+      // The grade is the student's own; see lib/grading.
+      const tb = songGrade(p);
 
-      // Mastery belongs to this student's persisted teacher assessment. The
-      // song catalog may contain curriculum defaults, never student progress.
+      // Mastery is the student's own latest grade. The song catalog may
+      // contain curriculum defaults, never student progress.
       let state: NodeState;
-      if ((tb ?? 0) >= 5) state = "mastered";
+      if (isMastered(p)) state = "mastered";
       else if (songLogs.length > 0 || (tb ?? 0) > 0) state = "current";
       // Further out than the next two weeks: still on the map, greyed.
       else if (stop.upcoming) state = "locked";
@@ -130,7 +134,7 @@ const Journey = () => {
         order: stop.week,
         track: song.track,
         state,
-        teacherBadge: tb,
+        myGrade: tb,
         selfBadge: p?.self_badge ?? null,
         sessions: songLogs.length,
         totalMin: songLogs.reduce((a, l) => a + (l.duration_min || 0), 0),
@@ -143,6 +147,7 @@ const Journey = () => {
   }, [visible, logs, progress, catalog]);
 
   const chick = useChickStage();
+  const saveGrade = useGradeSongs();
   const avg = avgCourseBadge(progress);
   const courseNext = nextBadge(avg);
   const masteredCount = nodes.filter((n) => n.state === "mastered").length;
@@ -346,8 +351,8 @@ const Journey = () => {
                           <div className="absolute top-0 right-0 w-1.5 h-8 rounded-bl-md" style={{ background: tier.accent, opacity: n.state === "locked" ? 0.4 : 1 }} />
 
                           <div className="flex justify-center mb-2 mt-1" style={{ minHeight: 56 }}>
-                            {n.state === "mastered" || (n.teacherBadge ?? 0) > 0 ? (
-                              <BadgeDisplay level={n.teacherBadge ?? (n.state === "mastered" ? 5 : null)} size="md" showLabel={false} />
+                            {n.state === "mastered" || (n.myGrade ?? 0) > 0 ? (
+                              <BadgeDisplay level={n.myGrade} size="md" showLabel={false} />
                             ) : n.state === "current" ? (
                               <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl animate-pulse" style={{ background: "hsl(var(--primary) / 0.1)" }}>⭐</div>
                             ) : n.state === "next" ? (
@@ -409,11 +414,28 @@ const Journey = () => {
                     : "Not started yet"}
                 </div>
               </div>
-              <BadgeDisplay level={selectedNode.teacherBadge} size="md" />
+              <BadgeDisplay level={selectedNode.myGrade} size="md" />
             </div>
 
             {/* The song's clips: tutorial and backing tracks. Nothing opens
                 out of here — what a student needs is the video itself. */}
+            {/* Their own grade, changeable any time — up or down. Only for a
+                song they have practised: an unplayed song has nothing to grade. */}
+            {(selectedNode.sessions > 0 || selectedNode.myGrade) && (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-xs font-semibold" style={{ color: "var(--navy)" }}>
+                  {selectedNode.myGrade ? "Change how this song is going" : "Say how this song is going"}
+                </summary>
+                <div className="mt-2">
+                  <GradePicker
+                    value={selectedNode.myGrade}
+                    disabled={saveGrade.isPending}
+                    onChange={(level) => saveGrade.mutate([{ songId: selectedNode.songId, grade: level }])}
+                  />
+                </div>
+              </details>
+            )}
+
             <SongVideos
               songId={selectedNode.songId}
               inset={false}

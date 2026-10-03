@@ -3,6 +3,7 @@ import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { toLocalIso } from "@/lib/date";
 import type { Song } from "@/lib/types";
+import { isMastered, songGrade } from "@/lib/grading";
 
 export type CheckIn = "nailed" | "got_through" | "need_help";
 
@@ -119,6 +120,29 @@ export function useLogPractice() {
   });
 }
 
+/**
+ * Save a student's own grades for some songs.
+ *
+ * The latest grade simply replaces the last one — up or down.
+ */
+export function useGradeSongs() {
+  const qc = useQueryClient();
+  const { data: student } = useStudentMe();
+  return useMutation({
+    mutationFn: async (grades: { songId: string; grade: number }[]) => {
+      if (!student?.id) throw new Error("Not linked to a student record yet");
+      if (!grades.length) return;
+      const now = new Date().toISOString();
+      const { error } = await supabase.from("song_progress").upsert(
+        grades.map((g) => ({ student_id: student.id, song_id: g.songId, self_badge: g.grade, last_updated: now })),
+        { onConflict: "student_id,song_id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["song-progress"] }),
+  });
+}
+
 export function tuningRate(logs: PracticeLog[]): { tuned: number; total: number; pct: number } {
   const total = logs.length;
   const tuned = logs.filter((l) => l.tuning_check_completed).length;
@@ -157,11 +181,11 @@ export function minutesThisWeek(logs: PracticeLog[]): number {
 }
 
 export function songsInProgress(progress: SongProgress[]): number {
-  return progress.filter((p) => (p.teacher_badge ?? 0) > 0 && (p.teacher_badge ?? 0) < 5).length;
+  return progress.filter((p) => songGrade(p) != null && !isMastered(p)).length;
 }
 
 export function avgCourseBadge(progress: SongProgress[]): number | null {
-  const levels = progress.map((p) => p.teacher_badge).filter((v): v is number => typeof v === "number" && v > 0);
+  const levels = progress.map(songGrade).filter((v): v is number => v != null);
   if (!levels.length) return null;
   return levels.reduce((a, b) => a + b, 0) / levels.length;
 }
@@ -187,8 +211,7 @@ export function songWithStudentProgress(
 
   const todayIso = toLocalIso(today);
   const approvedDays = [...countsByDay.values()].filter((count) => count >= target).length;
-  const teacherBadge = songProgress?.teacher_badge ?? 0;
-  const hasProgress = songLogs.length > 0 || teacherBadge > 0 || (songProgress?.self_badge ?? 0) > 0;
+  const hasProgress = songLogs.length > 0 || songGrade(songProgress) != null;
   const history = Array.from({ length: 14 }, (_, index) => {
     const day = new Date(today);
     day.setHours(0, 0, 0, 0);
@@ -198,7 +221,7 @@ export function songWithStudentProgress(
 
   return {
     ...song,
-    state: teacherBadge >= 5 ? "mastered" : hasProgress ? "in-progress" : "next",
+    state: isMastered(songProgress) ? "mastered" : hasProgress ? "in-progress" : "next",
     playsToday: countsByDay.get(todayIso) ?? 0,
     approvedDays,
     history,
