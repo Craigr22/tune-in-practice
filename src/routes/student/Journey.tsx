@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStudentSongs, useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useStudentCoursePlan, shiftedPlanWeek, courseOrder, withHorizon } from "@/hooks/useCoursePlan";
-import { BEGINNER_ORDER } from "@/data/courseOrder";
+import { BEGINNER_ORDER, hiddenExtras, isBeginnerExtra } from "@/data/courseOrder";
 import { classWeekStart, useStudentBatchDay, planWeekOneStart } from "@/hooks/useWeeklyPlan";
 import {
   usePracticeLogs,
@@ -42,6 +42,8 @@ interface MapNode {
   firstDate?: string;
   lastDate?: string;
   fingerstyle?: boolean;
+  /** A Beginner extra this class's teacher switched on. */
+  extra: boolean;
 }
 
 
@@ -54,7 +56,7 @@ const Journey = () => {
 
   // Where this student sits in the admin's course plan, expressed in the same
   // stages the song map below uses.
-  const { instrument, courseStartDate, shiftWeeks } = useStudentClassConfig();
+  const { instrument, courseStartDate, shiftWeeks, rows: classRows } = useStudentClassConfig();
   const { days: planDays } = useStudentCoursePlan(instrument);
   const { data: batch } = useStudentBatchDay();
   const classDow = batch?.day_of_week ?? 6;
@@ -85,14 +87,15 @@ const Journey = () => {
    * order now; BEGINNER_ORDER carries it on past the weeks that have been
    * planned.
    */
-  const stops = useMemo(
-    () =>
-      courseOrder(planDays, BEGINNER_ORDER, {
-        // Everything else in the catalogue still shows, just further out.
-        rest: catalog.map((c) => ({ songId: c.id, tier: tierForTrack(c.track) })),
-      }),
-    [planDays, catalog],
-  );
+  const stops = useMemo(() => {
+    // Everything else in the catalogue still shows, just further out.
+    const rest = catalog.map((c) => ({ songId: c.id, tier: tierForTrack(c.track) }));
+    const all = courseOrder(planDays, BEGINNER_ORDER, { rest });
+    // Beginner is three songs. The extras appear only for a class whose
+    // teacher has switched them on.
+    const skip = hiddenExtras(all, classRows);
+    return skip.size ? courseOrder(planDays, BEGINNER_ORDER, { rest, skip }) : all;
+  }, [planDays, catalog, classRows]);
   const visible = useMemo(() => withHorizon(stops, currentPlanWeek), [stops, currentPlanWeek]);
 
   const nodes: MapNode[] = useMemo(() => {
@@ -133,6 +136,7 @@ const Journey = () => {
         firstDate: dates[0],
         lastDate: dates[dates.length - 1],
         fingerstyle: song.fingerstyle,
+        extra: isBeginnerExtra(stop),
       }];
     });
   }, [visible, logs, progress, catalog]);
@@ -142,8 +146,10 @@ const Journey = () => {
   const course = getBadge(avg);
   const courseNext = nextBadge(avg);
   const masteredCount = nodes.filter((n) => n.state === "mastered").length;
-  const totalCount = nodes.length;
-  const overallPct = Math.round((masteredCount / Math.max(1, totalCount)) * 100);
+  // Extras count when they're mastered but aren't owed: a class that takes a
+  // fourth Beginner song reads 4/3, not 4/4.
+  const totalCount = nodes.filter((n) => !n.extra).length;
+  const overallPct = Math.min(100, Math.round((masteredCount / Math.max(1, totalCount)) * 100));
 
   const selectedNode = nodes.find((n) => n.songId === selected) || null;
 
@@ -250,9 +256,10 @@ const Journey = () => {
               const tierNodes = nodes.filter((n) => n.tier === tier.key);
               if (tierNodes.length === 0) return null;
               const tierMastered = tierNodes.filter((n) => n.state === "mastered").length;
-              const tierPct = Math.round((tierMastered / tierNodes.length) * 100);
+              const tierOwed = tierNodes.filter((n) => !n.extra).length || tierNodes.length;
+              const tierPct = Math.min(100, Math.round((tierMastered / tierOwed) * 100));
               const tierActive = tierNodes.some((n) => n.state === "current" || n.state === "next");
-              const tierComplete = tierMastered === tierNodes.length;
+              const tierComplete = tierNodes.filter((n) => !n.extra).every((n) => n.state === "mastered");
               const tierLocked = !tierActive && !tierComplete && tierMastered === 0;
 
               return (
@@ -288,7 +295,7 @@ const Journey = () => {
                       <div className="text-xs mt-0.5" style={{ color: "var(--ink-soft)" }}>{tier.tagline}</div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-xs font-semibold" style={{ color: tier.accent }}>{tierMastered}/{tierNodes.length} mastered</div>
+                      <div className="text-xs font-semibold" style={{ color: tier.accent }}>{tierMastered}/{tierOwed} mastered</div>
                       <div className="w-28 h-1.5 mt-1 rounded-full overflow-hidden" style={{ background: tier.accentSoft }}>
                         <div className="h-full transition-all" style={{ width: `${tierPct}%`, background: tier.accent }} />
                       </div>
@@ -368,7 +375,10 @@ const Journey = () => {
                             )}
                           </div>
 
-                          {n.fingerstyle && n.state !== "locked" && (
+                          {n.extra && n.state !== "locked" && (
+                            <div className="absolute top-2 right-3 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: tier.accentSoft, color: "var(--ink)" }}>Bonus</div>
+                          )}
+                          {n.fingerstyle && !n.extra && n.state !== "locked" && (
                             <div className="absolute top-2 right-3 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--ink-soft)" }}>FS</div>
                           )}
                         </button>

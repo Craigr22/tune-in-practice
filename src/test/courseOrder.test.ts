@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { courseOrder, withHorizon, type CoursePlanDay } from "@/hooks/useCoursePlan";
-import { BEGINNER_ORDER } from "@/data/courseOrder";
+import { BEGINNER_ORDER, hiddenExtras, isBeginnerExtra } from "@/data/courseOrder";
 
 const day = (week: number, dayNo: number, songId: string | null, tier = "beginner"): CoursePlanDay =>
   ({
@@ -63,13 +63,13 @@ describe("withHorizon", () => {
     }
   });
 
-  it("greys out anything more than two weeks ahead", () => {
+  it("greys out anything beyond next week", () => {
     const upcoming = at(3).filter((s) => s.upcoming);
-    expect(upcoming.every((s) => s.week > 5)).toBe(true);
+    expect(upcoming.every((s) => s.week > 4)).toBe(true);
   });
 
-  it("has weeks 1 and 2 in reach before the course starts", () => {
-    expect(inReach(null)).toEqual(["sunshine", "piyu-bole"]);
+  it("has only week 1 in reach before the course starts", () => {
+    expect(inReach(null)).toEqual(["sunshine"]);
   });
 
   it("brings one more song into reach as each week passes", () => {
@@ -77,10 +77,10 @@ describe("withHorizon", () => {
     expect(inReach(2).length).toBeLessThan(inReach(3).length);
   });
 
-  it("never puts a song out of reach that is within two weeks", () => {
+  it("never puts a song out of reach that is due by next week", () => {
     for (let week = 0; week <= 12; week++) {
       for (const s of at(week)) {
-        expect(s.upcoming).toBe(s.week > week + 2);
+        expect(s.upcoming).toBe(s.week > week + 1);
       }
     }
   });
@@ -126,5 +126,38 @@ describe("hiding an upcoming song's name", () => {
 
   it("caps a long word so one title can't stretch the card", () => {
     expect(maskTitle("Supercalifragilistic")).toBe("▪".repeat(8));
+  });
+});
+
+describe("Beginner extras", () => {
+  const rest = [{ songId: "happy-birthday", tier: "casual" as const }];
+  const all = courseOrder([], BEGINNER_ORDER, { rest });
+
+  it("treats every Beginner song but the core three as an extra", () => {
+    expect(isBeginnerExtra({ songId: "sunshine", tier: "beginner" })).toBe(false);
+    expect(isBeginnerExtra({ songId: "im-yours", tier: "beginner" })).toBe(true);
+    expect(isBeginnerExtra({ songId: "im-yours", tier: "casual" })).toBe(false);
+  });
+
+  it("hides the extras until the teacher switches one on", () => {
+    const off = hiddenExtras(all, []);
+    expect(off.has("im-yours")).toBe(true);
+    expect(off.has("sunshine")).toBe(false);
+    expect(off.has("happy-birthday")).toBe(false);
+
+    const on = hiddenExtras(all, [{ song_id: "im-yours", is_unlocked: true }]);
+    expect(on.has("im-yours")).toBe(false);
+    expect(on.has("kaisi-paheli")).toBe(true);
+  });
+
+  it("doesn't count a row that switches a song off as switching it on", () => {
+    expect(hiddenExtras(all, [{ song_id: "im-yours", is_unlocked: false }]).has("im-yours")).toBe(true);
+  });
+
+  it("leaves no gap in the weeks where a hidden song would have been", () => {
+    const skip = hiddenExtras(all, []);
+    const shown = courseOrder([], BEGINNER_ORDER, { rest, skip });
+    expect(shown.map((s) => s.songId)).toEqual(["sunshine", "piyu-bole", "photograph", "happy-birthday"]);
+    expect(shown.map((s) => s.week)).toEqual([1, 2, 3, 4]);
   });
 });

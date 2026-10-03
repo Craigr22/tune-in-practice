@@ -255,10 +255,13 @@ export function courseOrder(
     fallbackTier?: TierKey;
     /** Everything else in the catalogue, so no song drops off the map. */
     rest?: { songId: string; tier: TierKey }[];
+    /** Songs this class isn't doing. Left out entirely, so nothing after
+     *  them is pushed a week later by a song nobody is learning. */
+    skip?: Set<string>;
   } = {},
 ): CourseStop[] {
-  const { fallbackTier = "beginner", rest = [] } = opts;
-  const planned = plannedStops(days);
+  const { fallbackTier = "beginner", rest = [], skip } = opts;
+  const planned = plannedStops(days).filter((s) => !skip?.has(s.songId));
   const seen = new Set(planned.map((s) => s.songId));
   let week = planned.reduce((n, s) => Math.max(n, s.week), 0);
 
@@ -268,27 +271,27 @@ export function courseOrder(
   };
 
   const afterPlan = Object.entries(fallback)
-    .filter(([songId]) => !seen.has(songId))
+    .filter(([songId]) => !seen.has(songId) && !skip?.has(songId))
     .sort((a, b) => a[1] - b[1])
     .map(([songId]) => next(songId, fallbackTier));
 
   const remainder = rest
-    .filter((r) => !seen.has(r.songId))
+    .filter((r) => !seen.has(r.songId) && !skip?.has(r.songId))
     .map((r) => next(r.songId, r.tier));
 
   return [...planned, ...afterPlan, ...remainder];
 }
 
 /** How far ahead of the current week the map shows. */
-export const WEEKS_AHEAD = 2;
+export const WEEKS_AHEAD = 1;
 
 /**
  * Mark how much of the course is in reach.
  *
  * The whole map stays on screen — a student can see where the course goes —
- * but anything more than two weeks out is greyed, so what to work on now is
- * obvious without the rest being hidden. Before the course starts, weeks 1
- * and 2 are the ones in reach.
+ * but anything beyond next week is greyed, so what to work on now is obvious
+ * without the rest being hidden: one song is "up next", not two. Before the
+ * course starts, week 1 is the one in reach.
  */
 export function withHorizon(
   stops: CourseStop[],

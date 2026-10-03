@@ -11,6 +11,7 @@ import { useBatchPlanShifts, totalShiftWeeks } from "@/hooks/useBatchPlanShift";
 import PausePlanCard from "@/components/teacher/PausePlanCard";
 import { classWeekStart, planWeekOneStart } from "@/hooks/useWeeklyPlan";
 import ClassPhotoCard from "@/components/teacher/ClassPhotoCard";
+import ExtraSongsCard from "@/components/teacher/ExtraSongsCard";
 
 /**
  * What this class is working through — read-only.
@@ -162,6 +163,7 @@ export default function ClassDetail() {
 
           <TabsContent value="coursework" className="pt-4 space-y-4">
             <ClassPhotoCard batch={batch} />
+            <ExtraSongsCard batchId={batch.id} instrument={toInstrument(batch.instruments?.name)} />
             <CoursePanel batchId={batch.id} startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
           </TabsContent>
 
