@@ -10,7 +10,7 @@ export interface BadgeMeta {
 export const BADGES: Record<BadgeLevel, BadgeMeta> = {
   1: { level: 1, emoji: "🦥", name: "Sloth",    blurb: "Learning chord shapes" },
   2: { level: 2, emoji: "🐢", name: "Tortoise", blurb: "Plays through with stops" },
-  3: { level: 3, emoji: "🐬", name: "Dolphin",  blurb: "Smooth transitions, decent tempo" },
+  3: { level: 3, emoji: "🐱", name: "Cat",      blurb: "Smooth transitions, decent tempo" },
   4: { level: 4, emoji: "🐆", name: "Cheetah",  blurb: "Full speed, clean strumming" },
   5: { level: 5, emoji: "🦅", name: "Eagle",    blurb: "Performance-ready" },
 };
