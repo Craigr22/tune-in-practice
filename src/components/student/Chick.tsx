@@ -1,27 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 import { CHICK_EMOJI, CHICK_LABEL, type ChickStage } from "@/lib/chick";
 
-/** Each stage's animation is fetched only when it is the one on screen. */
-const ANIMATIONS: Record<ChickStage, () => Promise<{ default: unknown }>> = {
+type Loader = () => Promise<{ default: unknown }>;
+
+/**
+ * Two sets of the same five characters. Each is a shaded picture that sways,
+ * so its weight is the picture: the large set is drawn for the Journey
+ * header, the small one is the same art at icon size — a tenth of the
+ * download, and framed to fill a 40px slot. Each is fetched only when it is
+ * the one on screen.
+ */
+const LARGE: Record<ChickStage, Loader> = {
   egg: () => import("@/assets/chick/egg.json"),
   cracked: () => import("@/assets/chick/cracked.json"),
   hatching: () => import("@/assets/chick/hatching.json"),
   chick: () => import("@/assets/chick/chick.json"),
   graduate: () => import("@/assets/chick/graduate.json"),
 };
-
-/**
- * The part of each 512-square drawing that has anything in it. The art sits
- * small in the middle of its canvas; cropping to it is what lets a 40px chick
- * on the home page still read as a chick.
- */
-const FRAME: Record<ChickStage, string> = {
-  egg: "126 138 260 260",
-  cracked: "126 138 260 260",
-  hatching: "51 66 410 410",
-  chick: "51 66 410 410",
-  graduate: "51 66 410 410",
+const SMALL: Record<ChickStage, Loader> = {
+  egg: () => import("@/assets/chick/home/egg.json"),
+  cracked: () => import("@/assets/chick/home/cracked.json"),
+  hatching: () => import("@/assets/chick/home/hatching.json"),
+  chick: () => import("@/assets/chick/home/chick.json"),
+  graduate: () => import("@/assets/chick/home/graduate.json"),
 };
+
+/** Above this many pixels the icon-sized art starts to look soft. */
+const SMALL_UP_TO = 64;
 
 /**
  * The chick, animated.
@@ -31,9 +36,9 @@ const FRAME: Record<ChickStage, string> = {
  * holds the space, so nothing jumps and nothing is ever blank. Anyone who has
  * asked their device for less motion gets the first frame, still.
  *
- * The files in assets/chick are the designer's pack with its shapes regrouped:
- * as delivered, every shape shared one list with the fills, which a Lottie
- * player reads as "paint everything the first colour, back to front".
+ * The large files are the designer's with one change: each came carrying the
+ * whole five-character sheet and hiding four of them, so each has been cut
+ * down to the one character it shows.
  */
 export default function Chick({ stage, size = 96 }: { stage: ChickStage; size?: number }) {
   const box = useRef<HTMLSpanElement>(null);
@@ -47,7 +52,7 @@ export default function Chick({ stage, size = 96 }: { stage: ChickStage; size?: 
       try {
         const [{ default: lottie }, { default: animationData }] = await Promise.all([
           import("lottie-web/build/player/lottie_light"),
-          ANIMATIONS[stage](),
+          (size <= SMALL_UP_TO ? SMALL : LARGE)[stage](),
         ]);
         if (!live || !box.current) return;
         const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -57,7 +62,6 @@ export default function Chick({ stage, size = 96 }: { stage: ChickStage; size?: 
           loop: !still,
           autoplay: !still,
           animationData,
-          rendererSettings: { viewBoxSize: FRAME[stage] },
         });
         setReady(true);
       } catch {
@@ -68,7 +72,7 @@ export default function Chick({ stage, size = 96 }: { stage: ChickStage; size?: 
       live = false;
       anim?.destroy();
     };
-  }, [stage]);
+  }, [stage, size]);
 
   return (
     <span
