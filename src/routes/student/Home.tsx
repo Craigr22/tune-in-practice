@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import type { LessonDay } from "@/hooks/useDayLessons";
 import { useStudentMe } from "@/hooks/useStudentMe";
-import { useStudentClassConfig } from "@/hooks/useBatchCoursework";
 import { useEnsureWeeklyPlan, useTodaysSession, useNextSession, useStudentBatchDay, useFinishDay, classWeekStart, addWeeks } from "@/hooks/useWeeklyPlan";
 import { toast } from "sonner";
 import { usePracticeLogs, sessionsDone } from "@/hooks/useStudentProgress";
@@ -25,7 +24,6 @@ import { useChickStage } from "@/hooks/useChickStage";
  */
 const Home = () => {
   const { data: student } = useStudentMe();
-  const { instrument, courseStartDate } = useStudentClassConfig();
   const { finish: finishDay, isPending: saving } = useFinishDay();
   const { data: logs = [] } = usePracticeLogs();
   const { data: batch } = useStudentBatchDay();

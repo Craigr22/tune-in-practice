@@ -66,7 +66,6 @@ const sessionToStorage = (row: any) => ({
 });
 
 /* ----- date helpers (local dates — see src/lib/date.ts) ----- */
-const addDays = addDaysIso;
 const todayIso = todayLocalIso;
 
 // Kept exported from here: the plan's callers reach for the week shape and the

@@ -4,6 +4,9 @@ import { supabase } from "@/lib/db";
 import { useStudentMe } from "@/hooks/useStudentMe";
 import { useBatchShiftWeeks } from "@/hooks/useBatchPlanShift";
 import { useCatalogSongs, type CatalogSong, type Instrument } from "@/hooks/useSongCatalog";
+import { useStudentCoursePlan, courseOrder } from "@/hooks/useCoursePlan";
+import { BEGINNER_ORDER, hiddenExtras } from "@/data/courseOrder";
+import { tierForTrack } from "@/lib/tiers";
 
 export const DEFAULT_SONGS_PER_SESSION = 3;
 
@@ -203,10 +206,15 @@ export function useStudentClassConfig(): StudentClassConfig {
 export function useStudentSongs(): ClassSong[] {
   const cfg = useStudentClassConfig();
   const catalog = useCatalogSongs(cfg.instrument);
-  return useMemo(
+  const { days } = useStudentCoursePlan(cfg.instrument);
+  return useMemo(() => {
     // FOR NOW: include teacher-locked songs too — everything is open during
     // the Course 1 launch. Drop showLocked to re-enable per-class locking.
-    () => effectiveClassSongs(catalog, cfg.rows, { showLocked: true }),
-    [catalog, cfg.rows],
-  );
+    const songs = effectiveClassSongs(catalog, cfg.rows, { showLocked: true });
+    // The Beginner extras a class isn't doing are not this student's songs:
+    // off the map, and never handed out as practice either.
+    const rest = catalog.map((c) => ({ songId: c.id, tier: tierForTrack(c.track) }));
+    const skip = hiddenExtras(courseOrder(days, BEGINNER_ORDER, { rest }), cfg.rows);
+    return skip.size ? songs.filter((s) => !skip.has(s.id)) : songs;
+  }, [catalog, cfg.rows, days]);
 }
