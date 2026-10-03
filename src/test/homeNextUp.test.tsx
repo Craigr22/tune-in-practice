@@ -20,6 +20,7 @@ const today = todayLocalIso();
 const st = vi.hoisted(() => ({
   nextSession: null as any,
   batch: null as any,
+  photo: null as any,
   courseVideos: [] as any[],
   planDays: [] as any[],
 }));
@@ -59,6 +60,7 @@ vi.mock("@/hooks/useStudentProgress", () => ({
 }));
 
 vi.mock("@/components/student/WeeklyCalendarStrip", () => ({ default: () => null }));
+vi.mock("@/hooks/useClassPhoto", () => ({ useClassPhoto: () => st.photo ?? null }));
 
 vi.mock("@/hooks/useWeeklyPlan", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/useWeeklyPlan")>("@/hooks/useWeeklyPlan");

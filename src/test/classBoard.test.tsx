@@ -10,7 +10,8 @@ import { withPlaces, type ClassBoardRow } from "@/hooks/useClassBoard";
  * to someone with nobody to be ranked against.
  */
 
-const st = vi.hoisted(() => ({ data: null as ClassBoardRow[] | null }));
+const st = vi.hoisted(() => ({ data: null as ClassBoardRow[] | null, photo: null as any }));
+vi.mock("@/hooks/useClassPhoto", () => ({ useClassPhoto: () => st.photo }));
 vi.mock("@/hooks/useClassBoard", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/useClassBoard")>("@/hooks/useClassBoard");
   return { ...actual, useClassBoard: () => ({ data: st.data }) };
@@ -25,7 +26,7 @@ const row = (display_name: string, sessions: number, is_me = false): ClassBoardR
   is_me,
 });
 
-beforeEach(() => { st.data = null; });
+beforeEach(() => { st.data = null; st.photo = null; });
 afterEach(cleanup);
 
 describe("withPlaces", () => {
@@ -106,5 +107,29 @@ describe("ClassBoard", () => {
 
     expect(screen.getByText("🥇")).toBeTruthy();
     expect(screen.queryByText("🥈")).toBeNull();
+  });
+
+  it("shows the class photo above the standings", () => {
+    st.data = [row("Payal M.", 9), row("Amit A.", 6, true)];
+    st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: "2026-09-06" };
+
+    const { container } = render(<ClassBoard />);
+
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("blob:photo");
+    expect(screen.getByText(/day one/i)).toBeTruthy();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("shows the photo on its own when there are no standings to show", () => {
+    // The board hides for a class of one, or before its function is migrated;
+    // the picture of day one is worth showing either way.
+    st.data = null;
+    st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: null };
+
+    const { container } = render(<ClassBoard />);
+
+    expect(container.querySelector("img")).toBeTruthy();
+    expect(screen.queryByRole("listitem")).toBeNull();
+    expect(screen.queryByText(/sessions finished/i)).toBeNull();
   });
 });

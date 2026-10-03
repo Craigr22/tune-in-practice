@@ -1,4 +1,6 @@
 import { useClassBoard, withPlaces } from "@/hooks/useClassBoard";
+import { useClassPhoto } from "@/hooks/useClassPhoto";
+import { ClassPhotoImage } from "@/components/student/ClassPhoto";
 
 /** A nod for the top three, and a plain number for everyone else. */
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -30,12 +32,16 @@ function medalFor(place: number, sessions: number, everyoneLevel: boolean): stri
  */
 export default function ClassBoard() {
   const { data } = useClassBoard();
+  const photo = useClassPhoto();
 
-  // Not migrated yet, or a viewer with no class of their own.
-  if (!data || data.length < 2) return null;
+  // A standing needs someone to stand against; a photo needs no one. So the
+  // card shows for either — the photo alone before the board has been
+  // migrated in, the board alone before day one's picture has been added.
+  const ranked = !!data && data.length >= 2;
+  if (!ranked && !photo) return null;
 
-  const rows = withPlaces(data);
-  const everyoneLevel = rows.every((r) => r.sessions === rows[0].sessions);
+  const rows = ranked ? withPlaces(data!) : [];
+  const everyoneLevel = ranked && rows.every((r) => r.sessions === rows[0].sessions);
 
   return (
     <section
@@ -46,11 +52,22 @@ export default function ClassBoard() {
         <h2 className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--gold-deep)" }}>
           Your class
         </h2>
-        <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
-          sessions finished
-        </span>
+        {ranked && (
+          <span className="text-[11px]" style={{ color: "var(--ink-faint)" }}>
+            sessions finished
+          </span>
+        )}
       </div>
 
+      {/* The people behind the names below. */}
+      {photo && (
+        <div className={ranked ? "mb-4" : ""}>
+          <ClassPhotoImage photo={photo} />
+        </div>
+      )}
+
+      {ranked && (
+      <>
       <ol className="flex flex-col gap-1">
         {rows.map((r) => (
           <li
@@ -93,6 +110,8 @@ export default function ClassBoard() {
             : `The whole class is level on ${rows[0].sessions}. Nobody's ahead.`
           : "Every session you finish adds one, and it stays — miss a week and you keep what you've done."}
       </p>
+      </>
+      )}
     </section>
   );
 }

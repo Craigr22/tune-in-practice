@@ -22,6 +22,7 @@ const st = vi.hoisted(() => ({
   batch: null as any,
 }));
 
+vi.mock("@/hooks/useClassPhoto", () => ({ useClassPhoto: () => null }));
 vi.mock("@/hooks/useStudentMe", () => ({
   useStudentMe: () => ({ data: { id: "s1", name: "Payal Malviya", joined_on: "2026-09-01" } }),
 }));

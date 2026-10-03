@@ -8,6 +8,8 @@ import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { toLocalIso } from "@/lib/date";
 import { useDayLessons } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
+import { useClassPhoto } from "@/hooks/useClassPhoto";
+import { ClassPhotoImage } from "@/components/student/ClassPhoto";
 
 /** Indexed by JS day (0=Sun..6=Sat) — the week starts at the class, not Monday. */
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -140,6 +142,7 @@ export default function WeeklyCalendarStrip({
     }
   };
 
+  const classPhoto = useClassPhoto();
   const past = useDayLessons(
     lookingBack
       ? { scheduled_date: lookingBack.scheduled_date, session_index: lookingBack.session_index }
@@ -274,6 +277,13 @@ export default function WeeklyCalendarStrip({
               <div className="text-sm" style={{ color: "var(--ink-soft)" }}>No session scheduled.</div>
             )}
           </div>
+
+          {/* The lesson the photo was taken at keeps it, as part of that day's record. */}
+          {classPhoto && selected.isClass && selected.iso === classPhoto.takenOn && (
+            <div className="mt-3">
+              <ClassPhotoImage photo={classPhoto} maxHeight={200} />
+            </div>
+          )}
 
           {past.videos.length > 0 && (
             <div className="mt-3 pt-3 border-t flex flex-col gap-6" style={{ borderColor: "var(--border)" }}>

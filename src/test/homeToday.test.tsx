@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { todayLocalIso } from "@/lib/date";
 
 /**
@@ -15,6 +16,7 @@ const today = todayLocalIso();
 const st = vi.hoisted(() => ({
   session: null as any,
   batch: null as any,
+  photo: null as any,
   finish: vi.fn(),
 }));
 
@@ -45,6 +47,7 @@ vi.mock("@/hooks/useStudentProgress", () => ({
   sessionsDone: () => 0,
 }));
 vi.mock("@/components/student/WeeklyCalendarStrip", () => ({ default: () => null }));
+vi.mock("@/hooks/useClassPhoto", () => ({ useClassPhoto: () => st.photo ?? null }));
 
 vi.mock("@/hooks/useWeeklyPlan", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/useWeeklyPlan")>("@/hooks/useWeeklyPlan");
@@ -82,6 +85,8 @@ const classToday = () => ({
 beforeEach(() => {
   st.session = session();
   st.batch = null;
+  st.photo = null;
+  window.localStorage.clear();
   st.finish = vi.fn().mockResolvedValue(undefined);
 });
 afterEach(cleanup);
@@ -137,5 +142,42 @@ describe("student home on a practice day", () => {
     fireEvent.click(screen.getByText(/i've completed the class recap/i));
 
     await waitFor(() => expect(st.finish).toHaveBeenCalledWith("sess1"));
+  });
+
+  it("puts the class photo beside the greeting on the day of the lesson, and not on a practice day", () => {
+    st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: "2026-09-06" };
+    window.localStorage.setItem("bam.classPhotoSeen:b1/1.jpg", "1"); // already seen: no arrival card
+
+    // A practice day: on their own, no faces.
+    const practice = render(<Home />);
+    expect(practice.container.querySelector("h1 img")).toBeNull();
+    practice.unmount();
+
+    st.batch = classToday();
+    const lesson = render(<Home />);
+    expect(lesson.container.querySelector("h1 img")).toBeTruthy();
+  });
+
+  it("announces a new class photo once, then steps aside", () => {
+    st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: "2026-09-06" };
+
+    const first = render(<MemoryRouter><Home /></MemoryRouter>);
+    expect(screen.getByText(/your class photo is in/i)).toBeTruthy();
+    fireEvent.click(screen.getByText(/got it/i));
+    expect(screen.queryByText(/your class photo is in/i)).toBeNull();
+    first.unmount();
+
+    // Next visit: seen, so the page is back to the day's work alone.
+    render(<MemoryRouter><Home /></MemoryRouter>);
+    expect(screen.queryByText(/your class photo is in/i)).toBeNull();
+  });
+
+  it("announces again when the teacher replaces the photo", () => {
+    window.localStorage.setItem("bam.classPhotoSeen:b1/1.jpg", "1");
+    st.photo = { batchId: "b1", path: "b1/2.jpg", url: "blob:new", takenOn: "2026-09-13" };
+
+    render(<MemoryRouter><Home /></MemoryRouter>);
+
+    expect(screen.getByText(/your class photo is in/i)).toBeTruthy();
   });
 });

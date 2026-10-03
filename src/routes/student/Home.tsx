@@ -12,6 +12,8 @@ import { useDayLessons } from "@/hooks/useDayLessons";
 import LessonVideo from "@/components/student/LessonVideo";
 import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { todayLocalIso, addDaysIso, onOrAfterDayOfWeek, dayLabel, timeLabel } from "@/lib/date";
+import { useClassPhoto } from "@/hooks/useClassPhoto";
+import { ClassPhotoArrived, ClassPhotoThumb } from "@/components/student/ClassPhoto";
 
 /**
  * Today, on one page, in the order a student needs it: where they are in the
@@ -24,6 +26,7 @@ const Home = () => {
   const { finish: finishDay, isPending: saving } = useFinishDay();
   const { data: logs = [] } = usePracticeLogs();
   const { data: batch } = useStudentBatchDay();
+  const classPhoto = useClassPhoto();
   // Every session finished counts, for good. Nothing takes the number away.
   const done = useMemo(() => sessionsDone(logs), [logs]);
 
@@ -117,6 +120,8 @@ const Home = () => {
   return (
     <section className="view view-home active">
       <div className="home" style={{ paddingBottom: 60, maxWidth: 640, margin: "0 auto" }}>
+        {/* The day the class photo arrives, and not again after it's been seen. */}
+        {classPhoto && <ClassPhotoArrived photo={classPhoto} />}
         {/* One header: who they are, where they are in the week, and how
             they're doing — these belong together, not stacked as separate
             cards. */}
@@ -129,7 +134,10 @@ const Home = () => {
               <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--gold-deep)" }}>
                 Today · {new Date().toLocaleDateString(undefined, { weekday: "long" })}
               </div>
-              <h1 className="mt-1 text-2xl md:text-3xl font-bold" style={{ color: "var(--ink)" }}>
+              <h1 className="mt-1 text-2xl md:text-3xl font-bold flex items-center gap-2.5" style={{ color: "var(--ink)" }}>
+                {/* On the day of the lesson: the people they're about to see.
+                    Not on practice days — practice is on their own. */}
+                {classToday && classPhoto && <ClassPhotoThumb photo={classPhoto} />}
                 Hi {firstName}
               </h1>
               {/* One status line, whatever the day holds: today's session, or

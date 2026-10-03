@@ -10,6 +10,7 @@ import { useStudentCoursePlan, shiftedPlanWeek, daysForWeek } from "@/hooks/useC
 import { useBatchPlanShifts, totalShiftWeeks } from "@/hooks/useBatchPlanShift";
 import PausePlanCard from "@/components/teacher/PausePlanCard";
 import { classWeekStart, planWeekOneStart } from "@/hooks/useWeeklyPlan";
+import ClassPhotoCard from "@/components/teacher/ClassPhotoCard";
 
 /**
  * What this class is working through — read-only.
@@ -159,7 +160,8 @@ export default function ClassDetail() {
             <TabsTrigger value="roster">Roster</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="coursework" className="pt-4">
+          <TabsContent value="coursework" className="pt-4 space-y-4">
+            <ClassPhotoCard batch={batch} />
             <CoursePanel batchId={batch.id} startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
           </TabsContent>
 
