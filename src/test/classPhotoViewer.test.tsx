@@ -53,6 +53,28 @@ describe("the class photo", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("zooms in when the open photo is tapped, and back out on the next tap", () => {
+    setShare(undefined);
+    render(<ClassPhotoImage photo={photo} />);
+    fireEvent.click(screen.getByLabelText(/open the class photo/i));
+    const big = screen.getByRole("dialog").querySelector("img")!;
+
+    // Full-screen alone barely enlarges it on an upright phone — it was
+    // already as wide as the screen.
+    expect(big.style.maxWidth).toBe("100%");
+    expect(screen.getByText(/tap the photo to zoom in/i)).toBeTruthy();
+
+    fireEvent.click(big);
+    expect(big.style.width).toBe("250%");
+    expect(screen.getByText(/drag to move around/i)).toBeTruthy();
+    // Zooming is not closing.
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    fireEvent.click(big);
+    expect(big.style.width).toBe("");
+    expect(big.style.maxWidth).toBe("100%");
+  });
+
   it("can be saved, under a name that says what it is", async () => {
     setShare(undefined);
     const clicked: string[] = [];

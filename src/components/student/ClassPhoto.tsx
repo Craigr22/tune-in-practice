@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -72,8 +72,38 @@ export function ClassPhotoImage({ photo }: { photo: Photo }) {
  * The file is fetched as the viewer opens rather than on the tap: a share
  * has to follow the tap immediately, and a download in between loses it.
  */
+/** How far a tap zooms in: enough to pick out a face in the back row. */
+const ZOOM = 2.5;
+
 function ClassPhotoViewer({ photo, onClose }: { photo: Photo; onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null);
+
+  /**
+   * Opening the photo full-screen barely enlarges it on a phone held upright
+   * — it was already as wide as the screen. So a tap zooms in on the spot
+   * that was tapped, the picture then moves under a finger like any other
+   * scrolling thing, and another tap zooms back out.
+   */
+  const [zoomed, setZoomed] = useState(false);
+  const frame = useRef<HTMLDivElement>(null);
+  const tapped = useRef({ x: 0.5, y: 0.5 });
+
+  const toggleZoom = (e: React.MouseEvent<HTMLImageElement>) => {
+    e.stopPropagation();
+    const box = e.currentTarget.getBoundingClientRect();
+    if (box.width && box.height) {
+      tapped.current = { x: (e.clientX - box.left) / box.width, y: (e.clientY - box.top) / box.height };
+    }
+    setZoomed((z) => !z);
+  };
+
+  // Once zoomed, bring the tapped spot to the middle of the screen.
+  useLayoutEffect(() => {
+    const el = frame.current;
+    if (!el || !zoomed) return;
+    el.scrollLeft = tapped.current.x * el.scrollWidth - el.clientWidth / 2;
+    el.scrollTop = tapped.current.y * el.scrollHeight - el.clientHeight / 2;
+  }, [zoomed]);
 
   useEffect(() => {
     let live = true;
@@ -124,16 +154,26 @@ function ClassPhotoViewer({ photo, onClose }: { photo: Photo; onClose: () => voi
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 flex items-center justify-center px-2">
+      <div
+        ref={frame}
+        className={zoomed ? "flex-1 min-h-0 overflow-auto" : "flex-1 min-h-0 flex items-center justify-center px-2"}
+      >
         <img
           src={photo.url}
           alt="Your class"
-          onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 8 }}
+          onClick={toggleZoom}
+          style={
+            zoomed
+              ? { width: `${ZOOM * 100}%`, maxWidth: "none", height: "auto", display: "block", cursor: "zoom-out" }
+              : { maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 8, cursor: "zoom-in" }
+          }
         />
       </div>
 
       <div className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+        <p className="mb-2.5 text-[11px]" style={{ color: "rgba(255,255,255,0.8)" }}>
+          {zoomed ? "Drag to move around · tap to zoom out" : "Tap the photo to zoom in"}
+        </p>
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={() => file && savePhoto(file)}
