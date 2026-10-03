@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useClassPhoto, useSetClassPhoto } from "@/hooks/useClassPhoto";
+import { ClassPhotoImage } from "@/components/student/ClassPhoto";
 
 /**
  * The class photo, from the teacher's side.
@@ -47,18 +48,15 @@ export default function ClassPhotoCard({ batch }: { batch: { id: string; day_of_
           <Camera className="w-4 h-4" /> Class photo
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          A group photo from the first lesson. Only this class, you and the admins can see it.
+          A group photo from the first lesson, shown to this class, you and the admins. They can save and share it,
+          so add one everyone is happy to see passed on.
         </p>
       </div>
 
       <div className="p-4 space-y-3">
-        {photo && (
-          <img
-            src={photo.url}
-            alt={`${batch.code ?? "Class"} group photo`}
-            className="w-full max-h-72 object-cover rounded-md border"
-          />
-        )}
+        {/* The same view the class gets — whole, and opening full-screen with
+            Save and Share — so the teacher sees exactly what they've put up. */}
+        {photo && <ClassPhotoImage photo={photo} />}
         {/* No `capture`: the teacher chooses between the camera and a photo already taken. */}
         <input
           ref={input}

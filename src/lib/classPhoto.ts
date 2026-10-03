@@ -26,7 +26,10 @@ export function classPhotoPath(batchId: string, now = Date.now()) {
 
 /** Shrink an image file to a JPEG no longer than CLASS_PHOTO_MAX_EDGE on its long side. */
 export async function shrinkImage(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
+  // "from-image": a phone stores a landscape shot as sideways sensor data plus
+  // a note saying which way up it goes. Without honouring that note the class
+  // would be uploaded lying on its side.
+  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
   const { width, height } = fitWithin(bitmap.width, bitmap.height);
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -63,3 +66,57 @@ export function markPhotoSeen(path: string) {
     /* private mode */
   }
 }
+
+/* ---------------- keeping and sharing ---------------- */
+
+/** "bam-class-2026-09-06.jpg" — a name that still means something in a camera roll. */
+export function photoFileName(takenOn: string | null) {
+  return `bam-class${takenOn ? `-${takenOn}` : ""}.jpg`;
+}
+
+/** The picture as a file, which is what saving and sharing both need. */
+export async function fetchPhotoFile(url: string, name: string): Promise<File> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Couldn't load the photo");
+  const blob = await res.blob();
+  return new File([blob], name, { type: blob.type || "image/jpeg" });
+}
+
+/**
+ * Whether this device can hand the picture to other apps.
+ *
+ * A web page can't post an image to Instagram, WhatsApp Status or LinkedIn
+ * itself — their web links take text or a public address, never a file, and
+ * this file is private. What does work is the phone's own share sheet, which
+ * lists all three. Desktop browsers mostly can't share files, so there the
+ * button is left out rather than shown and broken.
+ */
+export function canSharePhoto(file: File): boolean {
+  try {
+    return typeof navigator !== "undefined" && !!navigator.canShare && navigator.canShare({ files: [file] });
+  } catch {
+    return false;
+  }
+}
+
+export async function sharePhoto(file: File, text: string): Promise<void> {
+  try {
+    await navigator.share({ files: [file], title: "BAM Academy of Music", text });
+  } catch (e) {
+    // Closing the share sheet without choosing isn't a failure.
+    if ((e as Error)?.name !== "AbortError") throw e;
+  }
+}
+
+/** Save the picture to the device. */
+export function savePhoto(file: File) {
+  const href = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = file.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 10_000);
+}
+

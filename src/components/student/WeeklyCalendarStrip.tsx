@@ -281,7 +281,7 @@ export default function WeeklyCalendarStrip({
           {/* The lesson the photo was taken at keeps it, as part of that day's record. */}
           {classPhoto && selected.isClass && selected.iso === classPhoto.takenOn && (
             <div className="mt-3">
-              <ClassPhotoImage photo={classPhoto} maxHeight={200} />
+              <ClassPhotoImage photo={classPhoto} />
             </div>
           )}
 
