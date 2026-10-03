@@ -16,6 +16,8 @@ import SongVideos from "@/components/student/SongVideos";
 import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ClassBoard from "@/components/student/ClassBoard";
+import Chick from "@/components/student/Chick";
+import { useChickStage } from "@/hooks/useChickStage";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
@@ -135,6 +137,7 @@ const Journey = () => {
     });
   }, [visible, logs, progress, catalog]);
 
+  const chick = useChickStage();
   const avg = avgCourseBadge(progress);
   const course = getBadge(avg);
   const courseNext = nextBadge(avg);
@@ -154,7 +157,7 @@ const Journey = () => {
           className="rounded-3xl p-6 md:p-8 mb-6 flex items-center gap-6 flex-wrap"
           style={{ background: "linear-gradient(135deg, var(--gold-bg), #fff)", border: "1px solid var(--gold-soft)" }}
         >
-          <BadgeDisplay level={avg} size="hero" showLabel={false} animate />
+          <Chick stage={chick} size={132} />
           <div className="flex-1 min-w-[220px]">
             <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--gold-deep)" }}>Your quest</div>
             <h1 className="text-2xl md:text-3xl font-bold mt-1" style={{ color: "var(--ink)" }}>

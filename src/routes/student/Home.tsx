@@ -14,6 +14,8 @@ import { SESSION_TEMPLATES } from "@/lib/sessionTemplates";
 import { todayLocalIso, addDaysIso, onOrAfterDayOfWeek, dayLabel, timeLabel } from "@/lib/date";
 import { useClassPhoto } from "@/hooks/useClassPhoto";
 import { ClassPhotoArrived, ClassPhotoThumb } from "@/components/student/ClassPhoto";
+import Chick from "@/components/student/Chick";
+import { useChickStage } from "@/hooks/useChickStage";
 
 /**
  * Today, on one page, in the order a student needs it: where they are in the
@@ -27,6 +29,7 @@ const Home = () => {
   const { data: logs = [] } = usePracticeLogs();
   const { data: batch } = useStudentBatchDay();
   const classPhoto = useClassPhoto();
+  const chick = useChickStage();
   // Every session finished counts, for good. Nothing takes the number away.
   const done = useMemo(() => sessionsDone(logs), [logs]);
 
@@ -162,8 +165,8 @@ const Home = () => {
                   : `${done} ${done === 1 ? "session" : "sessions"} finished`
               }
             >
-              <div className="text-2xl font-bold leading-none" style={{ color: "var(--ink)" }}>
-                <span className="bounce-soft">🔥</span> {done}
+              <div className="flex items-center justify-center gap-1 text-2xl font-bold leading-none" style={{ color: "var(--ink)" }}>
+                <Chick stage={chick} size={40} /> {done}
               </div>
               <div className="text-[10px] uppercase tracking-wider mt-1" style={{ color: "var(--ink-faint)" }}>
                 {done === 1 ? "session" : "sessions"}
