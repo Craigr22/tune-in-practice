@@ -11,13 +11,14 @@ import {
   tuningRate,
 } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
-import { getBadge, nextBadge } from "@/lib/badges";
+import { nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
 import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import ClassBoard from "@/components/student/ClassBoard";
 import Chick from "@/components/student/Chick";
 import { useChickStage } from "@/hooks/useChickStage";
+import { CHICK_HEADING } from "@/lib/chick";
 
 type NodeState = "mastered" | "current" | "next" | "locked";
 
@@ -79,7 +80,7 @@ const Journey = () => {
   }, [planDays]);
 
   /**
-   * The map is the course in teaching order, cut off two weeks ahead.
+   * The map is the course in teaching order, cut off a week ahead.
    *
    * It used to sort by the song catalogue's own track/order, which had nothing
    * to do with what a class is taught — the plan opens with You Are My
@@ -143,7 +144,6 @@ const Journey = () => {
 
   const chick = useChickStage();
   const avg = avgCourseBadge(progress);
-  const course = getBadge(avg);
   const courseNext = nextBadge(avg);
   const masteredCount = nodes.filter((n) => n.state === "mastered").length;
   // Extras count when they're mastered but aren't owed: a class that takes a
@@ -167,7 +167,7 @@ const Journey = () => {
           <div className="flex-1 min-w-[220px]">
             <div className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--gold-deep)" }}>Your quest</div>
             <h1 className="text-2xl md:text-3xl font-bold mt-1" style={{ color: "var(--ink)" }}>
-              {course ? <>You're a <span style={{ color: "var(--gold-deep)" }}>{course.name} {course.emoji}</span></> : "Begin your journey"}
+              {CHICK_HEADING[chick]}
             </h1>
             <div className="mt-3 max-w-md">
               <div className="flex items-center justify-between text-xs mb-1" style={{ color: "var(--ink-soft)" }}>
