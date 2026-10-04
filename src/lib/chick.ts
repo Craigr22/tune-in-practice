@@ -76,7 +76,7 @@ export const CHICK_EMOJI: Record<ChickStage, string> = {
 export const CHICK_HEADING: Record<ChickStage, string> = {
   egg: "Your journey begins",
   cracked: "Something's stirring…",
-  hatching: "You've hatched!",
+  hatching: "You're making progress",
   chick: "You're finding your voice",
   graduate: "Almost a graduate",
 };
