@@ -74,9 +74,9 @@ export const CHICK_EMOJI: Record<ChickStage, string> = {
 
 /** The Journey heading for each stage. */
 export const CHICK_HEADING: Record<ChickStage, string> = {
-  egg: "Your journey begins",
-  cracked: "Something's stirring…",
+  egg: "Getting started",
+  cracked: "Your journey is underway",
   hatching: "You're making progress",
-  chick: "You're finding your voice",
-  graduate: "Almost a graduate",
+  chick: "Keep practising",
+  graduate: "The final stretch",
 };
