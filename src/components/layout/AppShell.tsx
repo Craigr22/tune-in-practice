@@ -54,7 +54,7 @@ const TopNav = () => {
       : role === "teacher"
       ? [
           { to: "/teacher/classes", label: "My Classes", active: isActive("/teacher/class") },
-          { to: "/teacher/schedule", label: "Schedule", active: isActive("/teacher/schedule") },
+          { to: "/teacher/schedule", label: "Calendar", active: isActive("/teacher/schedule") },
         ]
       : [
           { to: "/admin/schedule", label: "Schedule", active: isActive("/admin/schedule") },

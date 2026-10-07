@@ -11,7 +11,8 @@ import { supabase } from "@/lib/db";
 import { useTeacherMe } from "@/hooks/useTeacherMe";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import StartClassDialog from "@/components/teacher/StartClassDialog";
 import { calendarQueryRange, sessionDateTimes } from "@/lib/calendar";
 
@@ -32,6 +33,7 @@ type Row = {
   duration_min: number | null;
   batches: {
     id: string;
+    code?: string | null;
     start_time: string;
     duration_min: number;
     semester_start: string | null;
@@ -47,9 +49,9 @@ export default function TeacherSchedule() {
   // sessions as a scrollable list of days.
   const isPhone = useIsPhone();
   const [calView, setCalView] = useState<any>(isPhone ? Views.AGENDA : Views.WEEK);
-  const isAgenda = calView === Views.AGENDA;
   useEffect(() => { setCalView(isPhone ? Views.AGENDA : Views.WEEK); }, [isPhone]);
 
+  const navigate = useNavigate();
   const { data: teacher } = useTeacherMe();
   const teacherId = teacher?.id;
   const [selected, setSelected] = useState<Row | null>(null);
@@ -69,7 +71,7 @@ export default function TeacherSchedule() {
       if (!ids.length) return [] as Row[];
       const { data, error } = await supabase
         .from("sessions")
-        .select("id, batch_id, scheduled_date, status, start_time, duration_min, batches!inner(id, start_time, duration_min, semester_start, semester_end, teacher_id, instruments(name), locations(name))")
+        .select("id, batch_id, scheduled_date, status, start_time, duration_min, batches!inner(id, code, start_time, duration_min, semester_start, semester_end, teacher_id, instruments(name), locations(name))")
         .in("batch_id", ids)
         .gte("scheduled_date", queryRange.start)
         .lte("scheduled_date", queryRange.end)
@@ -86,7 +88,7 @@ export default function TeacherSchedule() {
       s.start_time ?? b.start_time,
       s.duration_min ?? b.duration_min,
     );
-    const title = `${b.instruments?.name ?? "Class"} · ${b.locations?.name ?? ""}`;
+    const title = [b.code, b.instruments?.name ?? "Class", b.locations?.name].filter(Boolean).join(" · ");
     return { title, start, end, resource: s };
   }), [sessions]);
 
@@ -94,8 +96,8 @@ export default function TeacherSchedule() {
     <section className="view view-teacher active">
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
         <header>
-          <h1 className="text-2xl font-semibold">Schedule</h1>
-          <div className="text-xs text-muted-foreground">Your active classes — click a session to take attendance</div>
+          <h1 className="text-2xl font-semibold">Calendar</h1>
+          <div className="text-xs text-muted-foreground">Tap a lesson to open its class or take attendance.</div>
         </header>
 
         {isLoading && <div className="text-sm">Loading…</div>}
@@ -137,21 +139,26 @@ export default function TeacherSchedule() {
             <DialogHeader><DialogTitle>Session</DialogTitle></DialogHeader>
             {selected && (
               <div className="space-y-2 text-sm">
-                <div className="font-medium">{selected.batches?.instruments?.name} · {selected.batches?.locations?.name}</div>
+                <div className="font-medium">
+                  {[selected.batches?.code, selected.batches?.instruments?.name, selected.batches?.locations?.name].filter(Boolean).join(" · ")}
+                </div>
                 <div className="text-muted-foreground">
                   {selected.scheduled_date} · {(selected.start_time ?? selected.batches?.start_time)?.slice(0, 5)} · {selected.duration_min ?? selected.batches?.duration_min}min
-                </div>
-                <div>Status: <span className="font-medium">{selected.status}</span></div>
-                <div className="text-xs text-muted-foreground pt-2">
-                  Course: {selected.batches?.semester_start ?? "—"} → {selected.batches?.semester_end ?? "ongoing"} (admin-managed)
+                  {selected.status !== "scheduled" && <> · <span className="font-medium text-foreground">{selected.status}</span></>}
                 </div>
               </div>
             )}
-            {selected && selected.status !== "cancelled" && (
-              <DialogFooter>
-                <Button onClick={() => { setWrapSession(selected); setSelected(null); }}>
-                  <ClipboardCheck className="w-4 h-4 mr-1" />
-                  {selected.status === "completed" ? "Update attendance" : "Take attendance"}
+            {selected && (
+              <DialogFooter className="gap-2 sm:gap-2">
+                {selected.status !== "cancelled" && (
+                  <Button variant="outline" onClick={() => { setWrapSession(selected); setSelected(null); }}>
+                    <ClipboardCheck className="w-4 h-4 mr-1" />
+                    {selected.status === "completed" ? "Update attendance" : "Take attendance"}
+                  </Button>
+                )}
+                {/* The same page "Open" leads to from My classes. */}
+                <Button onClick={() => navigate(`/teacher/class/${selected.batch_id}`)}>
+                  Open class <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </DialogFooter>
             )}
