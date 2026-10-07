@@ -39,7 +39,18 @@ function MiniBars({ values }: { values: number[] }) {
 }
 
 /* ---------- row ---------- */
-export function StudentRow({ student, onOpen }: { student: any; onOpen: () => void }) {
+export function StudentRow({
+  student,
+  place,
+  sessions,
+  onOpen,
+}: {
+  student: any;
+  place?: number;
+  /** Sessions finished; undefined while the count is loading. */
+  sessions?: number;
+  onOpen: () => void;
+}) {
   const { data, isError } = useStudentDetail(student.id);
   const bars = useMemo(() => (data ? dailyMinutes(data.practice, 14) : []), [data]);
   const retention = useMemo(
@@ -49,10 +60,6 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
   const totalAtt = data?.attendance.length ?? 0;
   const presents = (data?.attendance ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
   const attPct = totalAtt ? Math.round((presents / totalAtt) * 100) : 0;
-  const activeProgress = (data?.progress ?? [])
-    .slice()
-    .sort((a: any, b: any) => new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime())[0];
-  const badge = getBadge(activeProgress?.self_badge);
   const flag = retention?.flag ?? null;
   const flagClass = isError || !flag
     ? "bg-muted-foreground/40"
@@ -62,17 +69,13 @@ export function StudentRow({ student, onOpen }: { student: any; onOpen: () => vo
   return (
     <div
       onClick={onOpen}
-      className="grid grid-cols-[1.4fr_1fr_0.6fr_0.7fr_auto] items-center gap-4 px-4 py-3 border-b cursor-pointer hover:bg-muted/40"
+      className="grid grid-cols-[1.25rem_1fr_auto_auto] sm:grid-cols-[1.25rem_1.4fr_auto_1fr_auto_auto] items-center gap-3 sm:gap-4 px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/40"
     >
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-muted grid place-items-center text-sm font-semibold">
-          {student.name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase()}
-        </div>
-        <div className="font-medium truncate">{student.name}</div>
-      </div>
-      <MiniBars values={bars} />
-      <div className="text-sm tabular-nums">{attPct}%</div>
-      <div className="text-sm">{badge ? <span title={badge.name}>{badge.emoji}</span> : <span className="text-muted-foreground">—</span>}</div>
+      <div className="text-xs font-semibold tabular-nums text-muted-foreground text-center">{place ?? ""}</div>
+      <div className="font-medium truncate">{student.name}</div>
+      <div className="text-sm font-bold tabular-nums text-right w-8">{sessions ?? "–"}</div>
+      <div className="hidden sm:block"><MiniBars values={bars} /></div>
+      <div className="hidden sm:block text-sm tabular-nums text-muted-foreground w-10 text-right">{totalAtt ? `${attPct}%` : "—"}</div>
       <span className={`w-2.5 h-2.5 rounded-full ${flagClass}`} title={flagLabel} />
     </div>
   );
@@ -156,20 +159,14 @@ export function StudentDetail({ student, batch, onClose }: { student: any | null
             {student.phone && (
               <div>Phone: <a className="text-primary underline" href={`tel:${student.phone}`}>{student.phone}</a></div>
             )}
-            {batch && (
-              <div>
-                Course: <span className="text-foreground">{batch.semester_start ?? "—"} → {batch.semester_end ?? "ongoing"}</span>{" "}
-                <span className="opacity-60">(admin-managed)</span>
-              </div>
-            )}
           </div>
 
-          <Tabs defaultValue="plan">
+          <Tabs defaultValue="practice">
             <TabsList>
-              <TabsTrigger value="plan">Weekly plan</TabsTrigger>
-              <TabsTrigger value="songs">Coursework</TabsTrigger>
               <TabsTrigger value="practice">Practice</TabsTrigger>
+              <TabsTrigger value="songs">Songs</TabsTrigger>
               <TabsTrigger value="attendance">Attendance</TabsTrigger>
+              <TabsTrigger value="plan">Weekly plan</TabsTrigger>
             </TabsList>
 
             <TabsContent value="plan" className="pt-3">

@@ -1,32 +1,27 @@
-import { useTeacherStudents } from "@/hooks/useTeacherStudents";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Music, ChevronRight, Users, Clock } from "lucide-react";
+import { Music, ChevronRight } from "lucide-react";
+import { useTeacherStudents, useSessionCounts, standings } from "@/hooks/useTeacherStudents";
+import ClassStandings from "@/components/teacher/ClassStandings";
+import { classWhen } from "@/lib/classLabel";
 
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-/** "Saturday · 10:00 AM" — how a teacher actually identifies a class. */
-function whenLabel(batch: any): string {
-  const day = DAYS[batch?.day_of_week] ?? "";
-  const t = (batch?.start_time ?? "").slice(0, 5);
-  if (!t) return day;
-  const [h, m] = t.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${day} · ${hour12}:${String(m).padStart(2, "0")} ${suffix}`;
-}
-
+/**
+ * A teacher's first page: their classes, and in each one every student with
+ * the sessions they have finished. Who is keeping up is the thing a teacher
+ * wants before a lesson, so it is here without opening anything.
+ */
 export default function MyClasses() {
   const { data: groups = [], isLoading } = useTeacherStudents();
   const navigate = useNavigate();
+  const allIds = useMemo(() => groups.flatMap((g: any) => g.students.map((s: any) => s.id)), [groups]);
+  const { data: counts, isLoading: counting } = useSessionCounts(allIds);
 
   return (
     <section className="view view-teacher active">
-      <div className="teacher-view max-w-4xl mx-auto px-4 py-6">
+      <div className="teacher-view max-w-3xl mx-auto px-4 py-6">
         <header className="mb-4">
           <h1 className="text-2xl font-semibold">My classes</h1>
-          <p className="text-sm text-muted-foreground">
-            Open a class to manage its coursework, ordering, and weekly practice load.
-          </p>
+          <p className="text-sm text-muted-foreground">Practice sessions each student has finished so far.</p>
         </header>
 
         {isLoading && <div className="text-sm">Loading…</div>}
@@ -39,39 +34,43 @@ export default function MyClasses() {
           </div>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          {groups.map((g: any) => (
-            <button
-              key={g.batch.id}
-              onClick={() => navigate(`/teacher/class/${g.batch.id}`)}
-              className="text-left rounded-xl border bg-card p-4 hover:bg-muted/40 transition-colors flex items-start justify-between gap-3"
-            >
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {g.batch.code && (
-                    <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--navy)" }}>
-                      {g.batch.code}
-                    </span>
-                  )}
-                  <span className="font-semibold">
-                    {g.batch.locations?.name} · {g.batch.instruments?.name}
+        <div className="space-y-4">
+          {groups.map((g: any) => {
+            const open = (student?: string) =>
+              navigate(`/teacher/class/${g.batch.id}${student ? `?student=${student}` : ""}`);
+            return (
+              <div key={g.batch.id} className="rounded-xl border bg-card overflow-hidden">
+                <button
+                  onClick={() => open()}
+                  className="w-full text-left px-4 py-3 border-b bg-muted/30 hover:bg-muted/50 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {g.batch.code && (
+                        <span className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--navy)" }}>
+                          {g.batch.code}
+                        </span>
+                      )}
+                      <span className="font-semibold truncate">
+                        {g.batch.locations?.name} · {g.batch.instruments?.name}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {classWhen(g.batch)} · {g.students.length} student{g.students.length === 1 ? "" : "s"}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-xs font-medium flex items-center gap-0.5" style={{ color: "var(--navy)" }}>
+                    Open <ChevronRight className="w-4 h-4" />
                   </span>
-                </div>
-                <div className="text-xs font-medium mt-1 flex items-center gap-1" style={{ color: "var(--navy)" }}>
-                  <Clock className="w-3 h-3" />
-                  {whenLabel(g.batch)}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  {g.students.length} student{g.students.length === 1 ? "" : "s"}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {g.batch.semester_start ?? "—"} → {g.batch.semester_end ?? "ongoing"}
-                </div>
+                </button>
+                <ClassStandings
+                  rows={standings(g.students, counts ?? new Map())}
+                  loading={counting || !counts}
+                  onOpen={(id) => open(id)}
+                />
               </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-            </button>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

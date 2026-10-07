@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useTeacherStudents } from "@/hooks/useTeacherStudents";
+import { useMemo } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useTeacherStudents, useSessionCounts, standings } from "@/hooks/useTeacherStudents";
+import { classWhen } from "@/lib/classLabel";
 import { useCatalogSongs } from "@/hooks/useSongCatalog";
 import { toInstrument } from "@/hooks/useBatchCoursework";
 import { StudentRow, StudentDetail } from "@/components/teacher/StudentRoster";
@@ -69,8 +70,6 @@ function CoursePanel({
         )}
       </div>
 
-      <PausePlanCard batchId={batchId} />
-
       {thisWeek.length > 0 && (
         <div className="rounded-lg border">
           <div className="px-4 py-3 border-b bg-muted/30">
@@ -109,9 +108,16 @@ export default function ClassDetail() {
   const { batchId } = useParams();
   const navigate = useNavigate();
   const { data: groups = [], isLoading } = useTeacherStudents();
-  const [openStudent, setOpenStudent] = useState<any | null>(null);
+  // Which student's drawer is open lives in the address, so the first page
+  // can link straight to a student and Back closes the drawer.
+  const [params, setParams] = useSearchParams();
+  const openId = params.get("student");
+  const setOpenStudent = (id: string | null) =>
+    setParams(id ? { student: id } : {}, { replace: !id });
 
   const group = useMemo(() => groups.find((g: any) => g.batch.id === batchId), [groups, batchId]);
+  const ids = useMemo(() => (group?.students ?? []).map((s: any) => s.id), [group]);
+  const { data: counts } = useSessionCounts(ids);
 
   if (isLoading) {
     return (
@@ -135,6 +141,8 @@ export default function ClassDetail() {
   }
 
   const batch = group.batch;
+  const ranked = standings(group.students, counts ?? new Map());
+  const openStudent = group.students.find((s: any) => s.id === openId) ?? null;
 
   return (
     <section className="view view-teacher active">
@@ -150,40 +158,53 @@ export default function ClassDetail() {
             {batch.code ? `${batch.code} · ` : ""}{batch.locations?.name} · {batch.instruments?.name}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {group.students.length} student{group.students.length === 1 ? "" : "s"} ·{" "}
-            {batch.semester_start ?? "—"} → {batch.semester_end ?? "ongoing"}
+            {classWhen(batch)} · {group.students.length} student{group.students.length === 1 ? "" : "s"}
           </p>
         </header>
 
-        <Tabs defaultValue="coursework">
+        <Tabs defaultValue="students">
           <TabsList>
-            <TabsTrigger value="coursework">Course</TabsTrigger>
-            <TabsTrigger value="roster">Roster</TabsTrigger>
+            <TabsTrigger value="students">Students</TabsTrigger>
+            <TabsTrigger value="course">Course</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="coursework" className="pt-4 space-y-4">
-            <ClassPhotoCard batch={batch} />
-            <ExtraSongsCard batchId={batch.id} instrument={toInstrument(batch.instruments?.name)} />
-            <CoursePanel batchId={batch.id} startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
-          </TabsContent>
-
-          <TabsContent value="roster" className="pt-4">
-            <div className="rounded-xl border bg-card">
-              <div className="grid grid-cols-[1.4fr_1fr_0.6fr_0.7fr_auto] gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
-                <div>Student</div>
-                <div>Practice 14d</div>
-                <div>Attend</div>
-                <div>Badge</div>
+          {/* The class side by side, most sessions first. Tap a student for
+              their practice, songs and attendance. */}
+          <TabsContent value="students" className="pt-4">
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <div className="grid grid-cols-[1.25rem_1fr_auto_auto] sm:grid-cols-[1.25rem_1.4fr_auto_1fr_auto_auto] gap-3 sm:gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
                 <div></div>
+                <div>Student</div>
+                <div className="w-8 text-right">Sessions</div>
+                <div className="hidden sm:block">Last 14 days</div>
+                <div className="hidden sm:block w-10 text-right">Attend</div>
+                <div className="w-2.5"></div>
               </div>
-              {group.students.length === 0 ? (
+              {ranked.length === 0 ? (
                 <div className="px-4 py-4 text-sm text-muted-foreground">No students enrolled.</div>
               ) : (
-                group.students.map((s: any) => (
-                  <StudentRow key={s.id} student={s} onOpen={() => setOpenStudent(s)} />
+                ranked.map((r) => (
+                  <StudentRow
+                    key={r.id}
+                    student={group.students.find((s: any) => s.id === r.id)}
+                    place={counts ? r.place : undefined}
+                    sessions={counts ? r.sessions : undefined}
+                    onOpen={() => setOpenStudent(r.id)}
+                  />
                 ))
               )}
             </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Sessions are the days each student has ticked as done, class days included. The dot is how
+              settled they look: green, amber or red.
+            </p>
+          </TabsContent>
+
+          <TabsContent value="course" className="pt-4 space-y-4">
+            <CoursePanel batchId={batch.id} startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
+            <ExtraSongsCard batchId={batch.id} instrument={toInstrument(batch.instruments?.name)} />
+            <ClassPhotoCard batch={batch} />
+            <PausePlanCard batchId={batch.id} />
           </TabsContent>
         </Tabs>
       </div>

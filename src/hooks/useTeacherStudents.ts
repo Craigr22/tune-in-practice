@@ -77,3 +77,64 @@ export function useStudentDetail(studentId: string | undefined) {
     },
   });
 }
+
+/**
+ * Sessions finished, per student: the number a student sees beside their own
+ * chick. One distinct day of practice is one session, and nothing takes one
+ * away.
+ */
+export function sessionCounts(logs: { student_id: string; played_on: string }[]): Map<string, number> {
+  const days = new Map<string, Set<string>>();
+  for (const l of logs) {
+    if (!days.has(l.student_id)) days.set(l.student_id, new Set());
+    days.get(l.student_id)!.add(l.played_on);
+  }
+  return new Map([...days].map(([id, set]) => [id, set.size]));
+}
+
+export interface Standing {
+  id: string;
+  name: string;
+  sessions: number;
+  /** Ties share a place: two students on four are both second. */
+  place: number;
+}
+
+/** A class in order of sessions finished, most first; names break ties. */
+export function standings(students: { id: string; name: string }[], counts: Map<string, number>): Standing[] {
+  const rows = students
+    .map((s) => ({ id: s.id, name: s.name, sessions: counts.get(s.id) ?? 0 }))
+    .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
+  let place = 0;
+  let previous: number | null = null;
+  return rows.map((r, i) => {
+    if (previous === null || r.sessions !== previous) place = i + 1;
+    previous = r.sessions;
+    return { ...r, place };
+  });
+}
+
+/** Sessions finished by each of the given students, read in one go. */
+export function useSessionCounts(studentIds: string[]) {
+  const ids = [...studentIds].sort();
+  return useQuery({
+    queryKey: ["session-counts", ids],
+    enabled: ids.length > 0,
+    queryFn: async (): Promise<Map<string, number>> => {
+      const logs: { student_id: string; played_on: string }[] = [];
+      // The API hands back at most a thousand rows at a time.
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from("practice_logs")
+          .select("student_id, played_on")
+          .in("student_id", ids)
+          .order("id")
+          .range(from, from + 999);
+        if (error) throw error;
+        logs.push(...((data ?? []) as { student_id: string; played_on: string }[]));
+        if (!data || data.length < 1000) break;
+      }
+      return sessionCounts(logs);
+    },
+  });
+}
