@@ -1,7 +1,7 @@
 {
   "name": "BAM Music Portal",
   "short_name": "BAM",
-  "description": "The practice companion for BAM students — lesson videos, daily practice, and progress tracking.",
+  "description": "The practice companion for our students. Watch lesson videos, practise daily between classes, tune your instrument and track your progress.",
   "start_url": "/student",
   "display": "standalone",
   "background_color": "#f7f4ec",
