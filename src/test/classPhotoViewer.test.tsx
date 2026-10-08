@@ -75,21 +75,14 @@ describe("the class photo", () => {
     expect(big.style.maxWidth).toBe("100%");
   });
 
-  it("can be saved, under a name that says what it is", async () => {
+  it("offers no way to save it, and no link that would download it", async () => {
     setShare(undefined);
-    const clicked: string[] = [];
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
-      clicked.push(this.download);
-    });
     render(<ClassPhotoImage photo={photo} />);
     fireEvent.click(screen.getByLabelText(/open the class photo/i));
 
-    const save = screen.getByText(/save photo/i) as HTMLButtonElement;
-    await waitFor(() => expect(save.disabled).toBe(false));
-    fireEvent.click(save);
-
-    expect(clicked).toEqual(["bam-class-2026-09-06.jpg"]);
-    click.mockRestore();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(screen.queryByText(/save/i)).toBeNull();
+    expect(document.querySelector("a[download]")).toBeNull();
   });
 
   it("offers Share on a phone, handing the picture itself to the share sheet", async () => {
@@ -114,8 +107,7 @@ describe("the class photo", () => {
     render(<ClassPhotoImage photo={photo} />);
     fireEvent.click(screen.getByLabelText(/open the class photo/i));
 
-    const save = screen.getByText(/save photo/i) as HTMLButtonElement;
-    await waitFor(() => expect(save.disabled).toBe(false));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
     // A button that can't work is worse than no button.
     expect(screen.queryByText(/^share$/i)).toBeNull();
   });

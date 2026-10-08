@@ -9,7 +9,6 @@ import {
   hasSeenPhoto,
   markPhotoSeen,
   photoFileName,
-  savePhoto,
   sharePhoto,
 } from "@/lib/classPhoto";
 
@@ -63,11 +62,12 @@ export function ClassPhotoImage({ photo }: { photo: Photo }) {
 }
 
 /**
- * The photo full-screen, with a way to keep it and a way to pass it on.
+ * The photo full-screen, with a way to pass it on. There is no Save: nothing
+ * on the site is offered for download.
  *
  * Sharing goes through the phone's own share sheet — the one route by which a
  * web page can put a picture into Instagram, a WhatsApp status or LinkedIn.
- * Where a device can't share files (most desktops), only Save is offered.
+ * Where a device can't share files (most desktops), there is only the photo.
  *
  * The file is fetched as the viewer opens rather than on the tap: a share
  * has to follow the tap immediately, and a download in between loses it.
@@ -175,14 +175,6 @@ function ClassPhotoViewer({ photo, onClose }: { photo: Photo; onClose: () => voi
           {zoomed ? "Drag to move around · tap to zoom out" : "Tap the photo to zoom in"}
         </p>
         <div className="flex items-center justify-center gap-3">
-          <button
-            onClick={() => file && savePhoto(file)}
-            disabled={!file}
-            className={button}
-            style={{ background: "#fff", color: "#0b1530" }}
-          >
-            Save photo
-          </button>
           {shareable && (
             <button onClick={share} className={button} style={{ background: "var(--blue-bright, #3b82f6)", color: "#fff" }}>
               Share
@@ -192,7 +184,7 @@ function ClassPhotoViewer({ photo, onClose }: { photo: Photo; onClose: () => voi
         <p className="mt-2.5 text-[11px]" style={{ color: "rgba(255,255,255,0.65)" }}>
           {shareable
             ? "Share opens Instagram, WhatsApp, LinkedIn and your other apps."
-            : "On a phone, Share sends it to Instagram, WhatsApp or LinkedIn."}
+            : "On a phone you can share it to Instagram, WhatsApp or LinkedIn."}
         </p>
       </div>
     </div>,

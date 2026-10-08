@@ -1,3 +1,4 @@
+import { noSaveMedia } from "@/lib/noSave";
 import { useMemo, useRef, useState } from "react";
 import {
   useCourseVideos,
@@ -370,9 +371,10 @@ export default function VideoManager({
             urls[preview.storage_path] ? (
               // An mp3 has no picture to show, so it gets an audio player.
               isAudioPath(preview.storage_path) ? (
-                <audio src={urls[preview.storage_path]} controls autoPlay className="w-full" />
+                <audio {...noSaveMedia} src={urls[preview.storage_path]} controls autoPlay className="w-full" />
               ) : (
                 <video
+                  {...noSaveMedia}
                   src={urls[preview.storage_path]}
                   controls
                   autoPlay

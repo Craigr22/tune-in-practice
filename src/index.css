@@ -1779,3 +1779,14 @@ a { color: inherit; text-decoration: none; }
   /* The room colour arrives as a left edge on the event cell. */
   .rbc-agenda-view .rbc-agenda-event-cell { padding-left: 10px !important; }
 }
+
+/* ============================================================
+   Nothing to save
+   A long press on a picture or video on a phone offers "Save to
+   Photos". Lessons and class photos stay on the site; see
+   src/lib/noSave.ts for the rest of this and for what it can't do.
+   ============================================================ */
+img, video, audio, svg image {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}

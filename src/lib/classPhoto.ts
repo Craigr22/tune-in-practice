@@ -107,16 +107,3 @@ export async function sharePhoto(file: File, text: string): Promise<void> {
     if ((e as Error)?.name !== "AbortError") throw e;
   }
 }
-
-/** Save the picture to the device. */
-export function savePhoto(file: File) {
-  const href = URL.createObjectURL(file);
-  const a = document.createElement("a");
-  a.href = href;
-  a.download = file.name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(href), 10_000);
-}
-

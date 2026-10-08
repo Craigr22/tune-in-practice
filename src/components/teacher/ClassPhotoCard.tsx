@@ -48,14 +48,14 @@ export default function ClassPhotoCard({ batch }: { batch: { id: string; day_of_
           <Camera className="w-4 h-4" /> Class photo
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          A group photo from the first lesson, shown to this class, you and the admins. They can save and share it,
-          so add one everyone is happy to see passed on.
+          A group photo from the first lesson, shown to this class, you and the admins. Students can share it from
+          their phone, so add one everyone is happy to see passed on.
         </p>
       </div>
 
       <div className="p-4 space-y-3">
         {/* The same view the class gets — whole, and opening full-screen with
-            Save and Share — so the teacher sees exactly what they've put up. */}
+            Share — so the teacher sees exactly what they've put up. */}
         {photo && <ClassPhotoImage photo={photo} />}
         {/* No `capture`: the teacher chooses between the camera and a photo already taken. */}
         <input

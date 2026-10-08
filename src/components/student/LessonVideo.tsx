@@ -1,3 +1,4 @@
+import { noSaveMedia } from "@/lib/noSave";
 import { useRef, useState } from "react";
 import { isAudioPath } from "@/hooks/useCourseVideos";
 
@@ -125,6 +126,7 @@ export default function LessonVideo({
         >
           {src ? (
             <audio
+              {...noSaveMedia}
               ref={audioRef}
               src={src}
               controls
@@ -154,6 +156,10 @@ export default function LessonVideo({
       >
         {src && (
           <video
+            {...noSaveMedia}
+            // Picture-in-picture and casting hand the video to something
+            // outside the page; the lesson stays in the lesson.
+            disableRemotePlayback
             ref={ref}
             controls
             preload="metadata"

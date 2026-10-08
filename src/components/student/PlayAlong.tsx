@@ -1,3 +1,4 @@
+import { noSaveMedia } from "@/lib/noSave";
 import { useEffect, useRef, useState } from "react";
 
 /** Practice speeds. Slow to learn it, half speed to untangle a hard bar. */
@@ -204,6 +205,7 @@ export default function PlayAlong({
       )}
 
       <audio
+        {...noSaveMedia}
         ref={ref}
         src={src}
         preload="metadata"

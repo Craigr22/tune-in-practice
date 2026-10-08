@@ -1,3 +1,4 @@
+import { noSaveMedia } from "@/lib/noSave";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Navigate, useLocation } from "react-router-dom";
 import { useWeeklyPlan, useFinishDay } from "@/hooks/useWeeklyPlan";
@@ -186,13 +187,13 @@ const SongDetail = ({ songId: songIdProp, onClose }: SongDetailProps = {}) => {
                   <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: 0.5 }}>
                     Reference track
                   </div>
-                  <audio controls preload="none" style={{ width: "100%" }} src={SONG_AUDIO[song.id].src} />
+                  <audio {...noSaveMedia} controls preload="none" style={{ width: "100%" }} src={SONG_AUDIO[song.id].src} />
                   {SONG_AUDIO[song.id].fullSrc && (
                     <>
                       <div style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: 0.5 }}>
                         Full audio
                       </div>
-                      <audio controls preload="none" style={{ width: "100%" }} src={SONG_AUDIO[song.id].fullSrc} />
+                      <audio {...noSaveMedia} controls preload="none" style={{ width: "100%" }} src={SONG_AUDIO[song.id].fullSrc} />
                     </>
                   )}
                 </div>
