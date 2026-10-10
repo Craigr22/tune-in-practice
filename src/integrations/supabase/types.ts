@@ -350,6 +350,8 @@ export type Database = {
           batch_id: string
           enrolled_on: string
           id: string
+          leave_reason: string | null
+          left_on: string | null
           status: Database["public"]["Enums"]["enrollment_status"]
           student_id: string
         }
@@ -357,6 +359,8 @@ export type Database = {
           batch_id: string
           enrolled_on?: string
           id?: string
+          leave_reason?: string | null
+          left_on?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
           student_id: string
         }
@@ -364,6 +368,8 @@ export type Database = {
           batch_id?: string
           enrolled_on?: string
           id?: string
+          leave_reason?: string | null
+          left_on?: string | null
           status?: Database["public"]["Enums"]["enrollment_status"]
           student_id?: string
         }
