@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { Calendar, dateFnsLocalizer, Views, type Event } from "react-big-calendar";
 import { useIsPhone } from "@/hooks/useIsPhone";
@@ -13,6 +13,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useAuth } from "@/hooks/useAuth";
 import { useBatchList, useSetBatchActive } from "@/hooks/useBatches";
+import { useBatchStats, useBatchStudents } from "@/hooks/useBatchStats";
+import { BatchStatsLine } from "@/components/teacher/BatchStatsStrip";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Users, Archive, RotateCcw } from "lucide-react";
@@ -120,6 +122,14 @@ export default function AdminSchedule() {
   });
 
   const { data: classes = [] } = useBatchList();
+  // How each running class is doing — the same five percentages its teacher sees.
+  const activeIds = useMemo(() => classes.filter((b: any) => b.is_active).map((b: any) => b.id), [classes]);
+  const { data: classStudents } = useBatchStudents(view === "classes" ? activeIds : []);
+  const statBatches = useMemo(
+    () => classes.filter((b: any) => b.is_active).map((b: any) => ({ ...b, students: classStudents?.get(b.id) ?? [] })),
+    [classes, classStudents],
+  );
+  const { stats: classStats, loading: statsLoading } = useBatchStats(statBatches);
 
   // Assign each distinct room a stable color (sorted by name for determinism).
   const roomColors = useMemo(() => {
@@ -345,7 +355,8 @@ export default function AdminSchedule() {
                 const over = cap > 0 && b.enrolled > cap;
                 const pct = cap > 0 ? Math.min(100, Math.round((b.enrolled / cap) * 100)) : 0;
                 return (
-                  <tr key={b.id} className={`border-t ${!b.is_active ? "opacity-50" : ""}`}>
+                  <Fragment key={b.id}>
+                  <tr className={`border-t ${!b.is_active ? "opacity-50" : ""}`}>
                     <td className="p-3">
                       <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded" style={{ background: "var(--paper-cool)", color: "var(--navy)" }}>
                         {b.code ?? "—"}
@@ -393,10 +404,19 @@ export default function AdminSchedule() {
                       </div>
                     </td>
                   </tr>
+                  {b.is_active && b.enrolled > 0 && (
+                    <tr>
+                      <td></td>
+                      <td colSpan={6} className="px-3 pb-3 pt-0">
+                        <BatchStatsLine stats={classStats.get(b.id)} loading={statsLoading || !classStudents} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
               {classes.length === 0 && (
-                <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No classes yet.</td></tr>
+                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">No classes yet.</td></tr>
               )}
             </tbody>
           </table>

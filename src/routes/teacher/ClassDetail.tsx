@@ -10,6 +10,8 @@ import PausePlanCard from "@/components/teacher/PausePlanCard";
 import ClassPhotoCard from "@/components/teacher/ClassPhotoCard";
 import ExtraSongsCard from "@/components/teacher/ExtraSongsCard";
 import FullCourse from "@/components/teacher/FullCourse";
+import BatchStatsStrip from "@/components/teacher/BatchStatsStrip";
+import { useBatchStats } from "@/hooks/useBatchStats";
 import { useBatchWeek, weekLabel } from "@/hooks/useBatchWeek";
 
 /**
@@ -58,6 +60,8 @@ export default function ClassDetail() {
   const group = useMemo(() => groups.find((g: any) => g.batch.id === batchId), [groups, batchId]);
   const ids = useMemo(() => (group?.students ?? []).map((s: any) => s.id), [group]);
   const { data: counts } = useSessionCounts(ids);
+  const statBatches = useMemo(() => (group ? [{ ...group.batch, students: group.students }] : []), [group]);
+  const { stats, loading: statsLoading } = useBatchStats(statBatches);
 
   if (isLoading) {
     return (
@@ -102,6 +106,10 @@ export default function ClassDetail() {
             <BatchWeekLabel batch={batch} />
           </p>
         </header>
+
+        <div className="rounded-xl border overflow-hidden mb-4 [&>div]:border-b-0">
+          <BatchStatsStrip stats={stats.get(batch.id)} loading={statsLoading} />
+        </div>
 
         <Tabs defaultValue="students">
           <TabsList>

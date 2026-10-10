@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Music, ChevronRight } from "lucide-react";
 import { useTeacherStudents, useSessionCounts, standings } from "@/hooks/useTeacherStudents";
 import ClassStandings from "@/components/teacher/ClassStandings";
+import BatchStatsStrip from "@/components/teacher/BatchStatsStrip";
+import { useBatchStats } from "@/hooks/useBatchStats";
 import { classWhen } from "@/lib/classLabel";
 import { useBatchWeek, weekLabel } from "@/hooks/useBatchWeek";
 
@@ -26,13 +28,15 @@ export default function MyClasses() {
   const navigate = useNavigate();
   const allIds = useMemo(() => groups.flatMap((g: any) => g.students.map((s: any) => s.id)), [groups]);
   const { data: counts, isLoading: counting } = useSessionCounts(allIds);
+  const statBatches = useMemo(() => groups.map((g: any) => ({ ...g.batch, students: g.students })), [groups]);
+  const { stats, loading: statsLoading } = useBatchStats(statBatches);
 
   return (
     <section className="view view-teacher active">
       <div className="teacher-view max-w-3xl mx-auto px-4 py-6">
         <header className="mb-4">
           <h1 className="text-2xl font-semibold">My classes</h1>
-          <p className="text-sm text-muted-foreground">Practice sessions each student has finished so far.</p>
+          <p className="text-sm text-muted-foreground">How each class is doing, and the sessions each student has finished.</p>
         </header>
 
         {isLoading && <div className="text-sm">Loading…</div>}
@@ -75,6 +79,8 @@ export default function MyClasses() {
                     Open <ChevronRight className="w-4 h-4" />
                   </span>
                 </button>
+                {/* The class in five numbers, above the people in it. */}
+                <BatchStatsStrip stats={stats.get(g.batch.id)} loading={statsLoading} />
                 <ClassStandings
                   rows={standings(g.students, counts ?? new Map())}
                   loading={counting || !counts}

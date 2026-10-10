@@ -114,27 +114,64 @@ export function standings(students: { id: string; name: string }[], counts: Map<
   });
 }
 
-/** Sessions finished by each of the given students, read in one go. */
+export interface ClassLog {
+  student_id: string;
+  played_on: string;
+  created_at: string | null;
+}
+
+async function readLogs(ids: string[]): Promise<ClassLog[]> {
+  const logs: ClassLog[] = [];
+  // The API hands back at most a thousand rows at a time.
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from("practice_logs")
+      .select("student_id, played_on, created_at")
+      .in("student_id", ids)
+      .order("id")
+      .range(from, from + 999);
+    if (error) throw error;
+    logs.push(...((data ?? []) as ClassLog[]));
+    if (!data || data.length < 1000) break;
+  }
+  return logs;
+}
+
+/** Every practice log for the given students: one read, shared by all that need it. */
+export function useClassLogs(studentIds: string[]) {
+  const ids = [...studentIds].sort();
+  return useQuery({
+    queryKey: ["class-logs", ids],
+    enabled: ids.length > 0,
+    queryFn: () => readLogs(ids),
+  });
+}
+
+/** Sessions finished by each of the given students. */
 export function useSessionCounts(studentIds: string[]) {
   const ids = [...studentIds].sort();
   return useQuery({
-    queryKey: ["session-counts", ids],
+    queryKey: ["class-logs", ids],
     enabled: ids.length > 0,
-    queryFn: async (): Promise<Map<string, number>> => {
-      const logs: { student_id: string; played_on: string }[] = [];
-      // The API hands back at most a thousand rows at a time.
-      for (let from = 0; ; from += 1000) {
-        const { data, error } = await supabase
-          .from("practice_logs")
-          .select("student_id, played_on")
-          .in("student_id", ids)
-          .order("id")
-          .range(from, from + 999);
-        if (error) throw error;
-        logs.push(...((data ?? []) as { student_id: string; played_on: string }[]));
-        if (!data || data.length < 1000) break;
-      }
-      return sessionCounts(logs);
+    queryFn: () => readLogs(ids),
+    select: sessionCounts,
+  });
+}
+
+/** The given students' own song grades. */
+export function useClassGrades(studentIds: string[]) {
+  const ids = [...studentIds].sort();
+  return useQuery({
+    queryKey: ["class-grades", ids],
+    enabled: ids.length > 0,
+    queryFn: async (): Promise<{ student_id: string; self_badge: number | null }[]> => {
+      const { data, error } = await supabase
+        .from("song_progress")
+        .select("student_id, self_badge")
+        .in("student_id", ids)
+        .not("self_badge", "is", null);
+      if (error) throw error;
+      return (data ?? []) as { student_id: string; self_badge: number | null }[];
     },
   });
 }
