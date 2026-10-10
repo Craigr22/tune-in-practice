@@ -7,11 +7,8 @@ import { classWeekStart, useStudentBatchDay, planWeekOneStart } from "@/hooks/us
 import {
   usePracticeLogs,
   useSongProgress,
-  avgCourseBadge,
-  tuningRate,
 } from "@/hooks/useStudentProgress";
 import BadgeDisplay from "@/components/shared/BadgeDisplay";
-import { nextBadge } from "@/lib/badges";
 import SongVideos from "@/components/student/SongVideos";
 import { TIERS, getTier, tierForTrack, type TierKey } from "@/lib/tiers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -148,8 +145,6 @@ const Journey = () => {
 
   const chick = useChickStage();
   const saveGrade = useGradeSongs();
-  const avg = avgCourseBadge(progress);
-  const courseNext = nextBadge(avg);
   const masteredCount = nodes.filter((n) => n.state === "mastered").length;
   // Extras count when they're mastered but aren't owed: a class that takes a
   // fourth Beginner song reads 4/3, not 4/4.
@@ -183,10 +178,6 @@ const Journey = () => {
                 <div className="h-full transition-all" style={{ width: `${overallPct}%`, background: "var(--gold-deep)" }} />
               </div>
             </div>
-            <p className="mt-3 text-xs" style={{ color: "var(--ink-soft)" }}>
-              {courseNext && <>Next rank: <strong style={{ color: "var(--ink)" }}>{courseNext.name} {courseNext.emoji}</strong> · </>}
-              🎵 Tuned <strong style={{ color: "var(--ink)" }}>{tuningRate(logs).pct}%</strong> of practices
-            </p>
           </div>
         </section>
 
