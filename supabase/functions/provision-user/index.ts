@@ -1,9 +1,11 @@
 // Creates and resets logins for students, teachers and admins.
 //
-// Students have no inbox, so their username becomes
-// "<username>@students.bam.invalid" (.invalid is reserved by RFC 2606 and can
-// never receive mail). Teachers and admins use their real email address, so
-// they can also use magic links and password resets later.
+// Students and teachers are given a username and a password by an admin —
+// nothing is emailed and no address is needed. Underneath, the username
+// becomes "<username>@students.bam.invalid" (.invalid is reserved by RFC 2606
+// and can never receive mail); the domain says "students" for history's sake
+// and is shared so the sign-in page has one rule for a typed username.
+// Admins use their real email address.
 //
 // This runs server-side because creating users needs the service role key,
 // which must never reach the browser. Every call requires a signed-in admin.
@@ -95,36 +97,55 @@ Deno.serve(async (req) => {
     /* ---------- create ---------- */
     if (existingUserId) return json({ error: "This person already has a login" }, 400);
 
-    let loginEmail: string;
-    let username: string | null = null;
-
-    if (role === "student") {
-      const base = String(record?.name ?? "student")
+    const slug = (name: unknown, fallback: string) =>
+      String(name ?? fallback)
         .toLowerCase()
-        .normalize("NFD").replace(/[̀-ͯ]/g, "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, ".")
         .replace(/^\.+|\.+$/g, "")
-        .slice(0, 40) || "student";
-      username = base;
-      for (let n = 2; n < 50; n++) {
-        const { data: taken } = await admin
-          .from("students").select("id").eq("login_username", username).maybeSingle();
-        if (!taken) break;
-        username = `${base}${n}`;
+        .slice(0, 40) || fallback;
+
+    const makeUser = (email: string) =>
+      admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // set by an admin, so no confirmation round-trip
+        user_metadata: { provisioned: true, name: record?.name ?? null },
+      });
+
+    let loginEmail = "";
+    let username: string | null = null;
+    let created: Awaited<ReturnType<typeof makeUser>>["data"] | null = null;
+    let cErr: { message: string } | null = null;
+
+    if (role === "student" || role === "teacher") {
+      // A username made from their name. Students and teachers share one
+      // pool of usernames, so the account itself is the test of whether a
+      // name is free: if the address is taken, try the next number.
+      const base = slug(record?.name, role);
+      for (let n = 1; n < 50; n++) {
+        username = n === 1 ? base : `${base}${n}`;
+        if (role === "student") {
+          const { data: taken } = await admin
+            .from("students").select("id").eq("login_username", username).maybeSingle();
+          if (taken) continue;
+        }
+        loginEmail = `${username}@${STUDENT_EMAIL_DOMAIN}`;
+        const res = await makeUser(loginEmail);
+        created = res.data;
+        cErr = res.error;
+        if (cErr && /already|registered|exists/i.test(cErr.message)) { created = null; continue; }
+        break;
       }
-      loginEmail = `${username}@${STUDENT_EMAIL_DOMAIN}`;
     } else {
-      // Teachers and admins sign in with their real address.
+      // Admins sign in with their real address.
       loginEmail = String(record?.email ?? emailIn ?? "").trim().toLowerCase();
       if (!loginEmail) return json({ error: `This ${role} has no email address yet` }, 400);
+      const res = await makeUser(loginEmail);
+      created = res.data;
+      cErr = res.error;
     }
 
-    const { data: created, error: cErr } = await admin.auth.admin.createUser({
-      email: loginEmail,
-      password,
-      email_confirm: true, // set by an admin, so no confirmation round-trip
-      user_metadata: { provisioned: true, name: record?.name ?? null },
-    });
     if (cErr || !created?.user) {
       return json({ error: cErr?.message ?? "Could not create the login" }, 400);
     }

@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Mail, KeyRound } from "lucide-react";
 import LoginDialog, { type LoginTarget } from "@/components/admin/LoginDialog";
 import { toast } from "sonner";
+import { displayLogin, isStudentLoginEmail } from "@/lib/studentLogin";
 import { rpcError } from "@/lib/rpc";
 
 type AppRole = "admin" | "teacher" | "student";
@@ -145,10 +146,6 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
     }
 
     if (!form.name.trim()) return toast.error("Name required");
-    // Teachers sign in by email; only students get a username instead.
-    if (role === "teacher" && !form.email.trim()) {
-      return toast.error("Teachers sign in by email, so an email is required");
-    }
     setSaving(true);
     if (role === "student") {
       const { error } = await supabase.from("students").insert({
@@ -222,16 +219,16 @@ function AddUserDialog({ instrumentsMap }: { instrumentsMap: Map<string, string>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </div>
               <div className="space-y-1">
-                <Label>Email {role === "teacher" ? "*" : ""}</Label>
+                <Label>Email</Label>
                 <Input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder={role === "teacher" ? "they sign in with this" : "optional"}
+                  placeholder="optional"
                 />
                 <p className="text-xs text-muted-foreground">
                   {role === "teacher"
-                    ? "Teachers sign in with their email — we'll send them an invite link."
+                    ? "Optional, for your records. Add the teacher, then use Create login to give them a username and password."
                     : "Optional. Students sign in with a username and password instead."}
                 </p>
               </div>
@@ -425,7 +422,11 @@ export default function AdminUsers() {
           // and the reset dialog fell back to naming students.email. That is
           // an address no account answers to, handed over at exactly the
           // moment someone is trying to get a student back in.
-          login_username: s?.login_username ?? null,
+          login_username:
+            s?.login_username ??
+            // A teacher given a username has it only on their account, which
+            // the profile row carries.
+            (isStudentLoginEmail(profileByUser.get(r.user_id)?.email) ? displayLogin(profileByUser.get(r.user_id)?.email) : null),
         });
       });
 
@@ -588,8 +589,8 @@ export default function AdminUsers() {
                   )}
                 </td>
                 <td className="p-3">
-                  {/* Everyone can be given a password directly. Teachers and
-                      admins can also be sent an invite link instead. */}
+                  {/* Everyone can be given a password directly. An admin can
+                      also be sent an invite link instead. */}
                   <div className="flex items-center gap-2 flex-wrap">
                     {r.user_id && !r.login_username && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600">
@@ -614,7 +615,7 @@ export default function AdminUsers() {
                       <KeyRound className="w-3.5 h-3.5 mr-1" />
                       {r.user_id || r.login_username ? "Reset password" : "Create login"}
                     </Button>
-                    {r.role !== "student" && !r.user_id && r.email && (
+                    {r.role === "admin" && !r.user_id && r.email && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -638,10 +639,9 @@ export default function AdminUsers() {
       </div>
 
       <p className="text-xs text-muted-foreground max-w-3xl">
-        <strong>Create login</strong> sets a password you hand over. Students sign in with a username
-        (no email needed); teachers and admins sign in with their email. <strong>Invite</strong> is an
-        alternative for teachers and admins — it emails a sign-in link instead. Click any name, email
-        or phone to edit it.
+        <strong>Create login</strong> makes a username and a password you hand over — for students and
+        teachers alike, with no email needed and nothing sent. Admins sign in with their email;
+        <strong> Invite</strong> emails an admin a sign-in link instead. Click any name, email or phone to edit it.
       </p>
 
       <LoginDialog target={loginFor} onClose={() => setLoginFor(null)} />

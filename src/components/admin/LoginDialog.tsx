@@ -14,11 +14,11 @@ export interface LoginTarget {
   name: string;
   /** students/teachers: their record id. */
   recordId?: string | null;
-  /** teachers/admins: the address they'll sign in with. */
+  /** admins: the address they'll sign in with. */
   email?: string | null;
   /** Set when they already have an account. */
   userId?: string | null;
-  /** Students: their existing username, if provisioned. */
+  /** Students and teachers: their existing username, if provisioned. */
   username?: string | null;
 }
 
@@ -50,8 +50,10 @@ export default function LoginDialog({
   const submit = async () => {
     if (!target) return;
     if (password.trim().length < 6) return toast.error("Password must be at least 6 characters");
-    if (target.role !== "student" && !target.email) {
-      return toast.error(`This ${target.role} needs an email address first.`);
+    // Only an admin signs in with an address; students and teachers are
+    // given a username.
+    if (target.role === "admin" && !target.email) {
+      return toast.error("This admin needs an email address first.");
     }
     setBusy(true);
     const { data, error } = await supabase.functions.invoke("provision-user", {
@@ -91,7 +93,7 @@ export default function LoginDialog({
     toast.success("Copied");
   };
 
-  const label = target?.role === "student" ? "Username" : "Email";
+  const label = target?.role === "admin" ? "Email" : "Username";
 
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
@@ -122,8 +124,8 @@ export default function LoginDialog({
             <p className="text-sm text-muted-foreground">
               {hasLogin ? (
                 <>They keep signing in with <strong>{target?.username ?? target?.email}</strong>, using this new password.</>
-              ) : target?.role === "student" ? (
-                <>A username is made from their name. They sign in with that and this password — no email needed.</>
+              ) : target?.role !== "admin" ? (
+                <>A username is made from their name. They sign in with that and this password — no email needed, and nothing is sent to them.</>
               ) : (
                 <>They sign in with <strong>{target?.email}</strong> and this password straight away — no invite email required.</>
               )}

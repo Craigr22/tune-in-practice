@@ -100,7 +100,6 @@ function TeacherFormDialog({ open, teacher, onClose }: { open: boolean; teacher:
 
   const submit = () => {
     if (!form.name.trim()) return toast.error("Name is required");
-    if (!form.email?.trim()) return toast.error("Teachers sign in by email, so an email is required");
     save.mutate(
       {
         id: teacher?.id,
@@ -127,7 +126,7 @@ function TeacherFormDialog({ open, teacher, onClose }: { open: boolean; teacher:
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Email *</Label>
+              <Label>Email</Label>
               <Input value={form.email ?? ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
             <div className="space-y-1">
@@ -406,7 +405,7 @@ export default function AdminTeachers() {
                 <div className="font-medium truncate">{t.name}</div>
               </div>
               {/* Both lines: a phone-or-email fallback reads inconsistently
-                  across rows. Teachers always have an email. */}
+                  across rows. */}
               <div className="text-sm text-muted-foreground min-w-0">
                 <div className="truncate">{t.email || <span className="opacity-50">no email</span>}</div>
                 {t.phone && <div className="text-xs truncate opacity-80">{t.phone}</div>}
