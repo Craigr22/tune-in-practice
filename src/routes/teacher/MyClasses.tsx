@@ -4,6 +4,17 @@ import { Music, ChevronRight } from "lucide-react";
 import { useTeacherStudents, useSessionCounts, standings } from "@/hooks/useTeacherStudents";
 import ClassStandings from "@/components/teacher/ClassStandings";
 import { classWhen } from "@/lib/classLabel";
+import { useBatchWeek, weekLabel } from "@/hooks/useBatchWeek";
+
+/** Where the class is in its course, on the card. */
+function WeekChip({ batch }: { batch: any }) {
+  const label = weekLabel(useBatchWeek(batch));
+  return (
+    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary whitespace-nowrap">
+      {label}
+    </span>
+  );
+}
 
 /**
  * A teacher's first page: their classes, and in each one every student with
@@ -54,6 +65,7 @@ export default function MyClasses() {
                       <span className="font-semibold truncate">
                         {g.batch.locations?.name} · {g.batch.instruments?.name}
                       </span>
+                      <WeekChip batch={g.batch} />
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {classWhen(g.batch)} · {g.students.length} student{g.students.length === 1 ? "" : "s"}

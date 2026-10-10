@@ -2,117 +2,46 @@ import { useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useTeacherStudents, useSessionCounts, standings } from "@/hooks/useTeacherStudents";
 import { classWhen } from "@/lib/classLabel";
-import { useCatalogSongs } from "@/hooks/useSongCatalog";
 import { toInstrument } from "@/hooks/useBatchCoursework";
 import { StudentRow, StudentDetail } from "@/components/teacher/StudentRoster";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft } from "lucide-react";
-import { useStudentCoursePlan, shiftedPlanWeek, daysForWeek } from "@/hooks/useCoursePlan";
-import { useBatchPlanShifts, totalShiftWeeks } from "@/hooks/useBatchPlanShift";
 import PausePlanCard from "@/components/teacher/PausePlanCard";
-import { classWeekStart, planWeekOneStart } from "@/hooks/useWeeklyPlan";
 import ClassPhotoCard from "@/components/teacher/ClassPhotoCard";
 import ExtraSongsCard from "@/components/teacher/ExtraSongsCard";
 import FullCourse from "@/components/teacher/FullCourse";
+import { useBatchWeek, weekLabel } from "@/hooks/useBatchWeek";
 
 /**
- * What this class is working through — read-only.
+ * The course for this class: where it is, and the whole of it.
  *
- * The course itself (weeks, days, songs, videos, instructions) is owned by
- * admins in Course work, and a planned week is used verbatim, so editing it
- * per class here only created a second source of truth that the plan then
- * ignored. Teachers see the plan and grade against it.
+ * Read-only. The plan is written once by admins in Course work and every
+ * class follows it, so there is nothing to edit here — but all of it is open:
+ * every week, every note and every clip, with the week this class is on
+ * marked. Students get it a week at a time; their teacher shouldn't have to.
  */
-function CoursePanel({
-  batchId,
-  startDate,
-  dayOfWeek,
-  instrumentName,
-}: {
-  batchId: string;
-  startDate: string | null;
-  dayOfWeek: number | null;
-  instrumentName?: string;
-}) {
-  const instrument = toInstrument(instrumentName);
-  const catalog = useCatalogSongs(instrument, { showInactive: false });
-  const { days: planDays } = useStudentCoursePlan(instrument);
-
-  const start = startDate;
-  const { data: shifts = [] } = useBatchPlanShifts(batchId);
-  const behind = totalShiftWeeks(shifts);
-  const totalWeeks = new Set(planDays.map((d) => d.week_number)).size;
-  const classDow = dayOfWeek ?? 6;
-  const currentWeek = start
-    ? shiftedPlanWeek(planWeekOneStart(start, classDow), classWeekStart(classDow), behind)
-    : null;
-  const thisWeek = currentWeek ? daysForWeek(planDays, currentWeek) : [];
-  const songTitle = (id: string | null) => (id ? catalog.find((c) => c.id === id)?.title ?? id : null);
-
+function CoursePanel({ batch }: { batch: any }) {
+  const w = useBatchWeek(batch);
   return (
     <div className="space-y-4">
       <div className="rounded-lg border p-4">
-        <div className="font-medium text-sm">Course</div>
-        {!start ? (
-          <p className="text-sm text-muted-foreground mt-1">
-            This class hasn't been started on the course yet. An admin sets its start date on the
-            class in Schedule → Classes.
-          </p>
-        ) : currentWeek && currentWeek <= totalWeeks ? (
-          <p className="text-sm text-muted-foreground mt-1">
-            Week <strong className="text-foreground">{currentWeek}</strong> of {totalWeeks} · started {start}
-            {behind > 0 && ` · paused ${behind} week${behind === 1 ? "" : "s"}`}
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground mt-1">
-            {currentWeek ? `Past the ${totalWeeks}-week plan` : `Starts ${start}`} · students get
-            generated practice until the plan is extended.
-          </p>
-        )}
+        <div className="font-medium text-sm">{weekLabel(w)}</div>
+        <p className="text-sm text-muted-foreground mt-1">
+          {!w.start
+            ? "An admin sets this class's start date in Schedule → Classes."
+            : w.currentWeek && w.totalWeeks && w.currentWeek > w.totalWeeks
+            ? "Students get generated practice until the plan is extended."
+            : `Started ${w.start}${w.paused > 0 ? ` · paused ${w.paused} week${w.paused === 1 ? "" : "s"}` : ""}`}
+        </p>
       </div>
-
-      {thisWeek.length > 0 && (
-        <div className="rounded-lg border">
-          <div className="px-4 py-3 border-b bg-muted/30">
-            <div className="font-medium text-sm">This week's practice</div>
-            <p className="text-xs text-muted-foreground">
-              Set by admins in Course work — the same three days every student in this class sees.
-            </p>
-          </div>
-          <div className="divide-y">
-            {thisWeek.map((d) => (
-              <div key={d.id} className="px-4 py-3">
-                <div className="text-sm font-medium">
-                  Day {d.day_number}
-                  {songTitle(d.song_id) && (
-                    <span className="text-muted-foreground font-normal"> · {songTitle(d.song_id)}</span>
-                  )}
-                </div>
-                {d.instruction && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{d.instruction}</p>
-                )}
-                {(d.video_ids?.length ?? 0) > 0 && (
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    🎬 {d.video_ids.length} lesson{d.video_ids.length === 1 ? "" : "s"}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <FullCourse instrument={w.instrument} currentWeek={w.currentWeek} />
     </div>
   );
 }
 
-/** The whole course for this class, with the week it is on marked. */
-function FullCoursePanel({ batch }: { batch: any }) {
-  const { data: shifts = [] } = useBatchPlanShifts(batch.id);
-  const classDow = batch.day_of_week ?? 6;
-  const currentWeek = batch.semester_start
-    ? shiftedPlanWeek(planWeekOneStart(batch.semester_start, classDow), classWeekStart(classDow), totalShiftWeeks(shifts))
-    : null;
-  return <FullCourse instrument={toInstrument(batch.instruments?.name)} currentWeek={currentWeek} />;
+/** "Week 3 of 12" for a class, wherever it needs saying. */
+export function BatchWeekLabel({ batch }: { batch: any }) {
+  return <>{weekLabel(useBatchWeek(batch))}</>;
 }
 
 export default function ClassDetail() {
@@ -169,7 +98,8 @@ export default function ClassDetail() {
             {batch.code ? `${batch.code} · ` : ""}{batch.locations?.name} · {batch.instruments?.name}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {classWhen(batch)} · {group.students.length} student{group.students.length === 1 ? "" : "s"}
+            {classWhen(batch)} · {group.students.length} student{group.students.length === 1 ? "" : "s"} ·{" "}
+            <BatchWeekLabel batch={batch} />
           </p>
         </header>
 
@@ -177,7 +107,6 @@ export default function ClassDetail() {
           <TabsList>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="course">Course</TabsTrigger>
-            <TabsTrigger value="full">Full course</TabsTrigger>
           </TabsList>
 
           {/* The class side by side, most sessions first. Tap a student for
@@ -213,15 +142,10 @@ export default function ClassDetail() {
           </TabsContent>
 
           <TabsContent value="course" className="pt-4 space-y-4">
-            <CoursePanel batchId={batch.id} startDate={batch.semester_start ?? null} dayOfWeek={batch.day_of_week ?? null} instrumentName={batch.instruments?.name} />
+            <CoursePanel batch={batch} />
             <ExtraSongsCard batchId={batch.id} instrument={toInstrument(batch.instruments?.name)} />
             <ClassPhotoCard batch={batch} />
             <PausePlanCard batchId={batch.id} />
-          </TabsContent>
-
-          {/* What the students are shown, all of it, nothing held back. */}
-          <TabsContent value="full" className="pt-4">
-            <FullCoursePanel batch={batch} />
           </TabsContent>
         </Tabs>
       </div>
