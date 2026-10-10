@@ -15,6 +15,7 @@ const Home = lazy(() => import("@/routes/student/Home"));
 const Journey = lazy(() => import("@/routes/student/Journey"));
 const TunerRoute = lazy(() => import("@/routes/student/Tuner"));
 const SongDetail = lazy(() => import("@/routes/student/SongDetail"));
+import EnrolmentGate from "@/components/student/EnrolmentGate";
 const MyClasses = lazy(() => import("@/routes/teacher/MyClasses"));
 const ClassDetail = lazy(() => import("@/routes/teacher/ClassDetail"));
 const Schedule = lazy(() => import("@/routes/teacher/Schedule"));
@@ -103,11 +104,11 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route element={<AppShell />}>
                 <Route path="/" element={<RoleHome />} />
-                <Route path="/student" element={<RequireRole role="student"><Home /></RequireRole>} />
-                <Route path="/student/journey" element={<RequireRole role="student"><Journey /></RequireRole>} />
+                <Route path="/student" element={<RequireRole role="student"><EnrolmentGate><Home /></EnrolmentGate></RequireRole>} />
+                <Route path="/student/journey" element={<RequireRole role="student"><EnrolmentGate><Journey /></EnrolmentGate></RequireRole>} />
                 
                 <Route path="/student/tuner" element={<RequireRole role="student"><TunerRoute /></RequireRole>} />
-                <Route path="/student/song/:id" element={<RequireRole role="student"><SongDetail /></RequireRole>} />
+                <Route path="/student/song/:id" element={<RequireRole role="student"><EnrolmentGate><SongDetail /></EnrolmentGate></RequireRole>} />
                 <Route path="/teacher" element={<Navigate to="/teacher/classes" replace />} />
                 <Route path="/teacher/classes" element={<RequireRole role="teacher"><MyClasses /></RequireRole>} />
                 <Route path="/teacher/class/:batchId" element={<RequireRole role="teacher"><ClassDetail /></RequireRole>} />

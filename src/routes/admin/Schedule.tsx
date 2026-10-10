@@ -15,6 +15,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBatchList, useSetBatchActive } from "@/hooks/useBatches";
 import { useBatchStats, useBatchStudents } from "@/hooks/useBatchStats";
 import { BatchStatsLine } from "@/components/teacher/BatchStatsStrip";
+import { useEnrolmentHistory } from "@/hooks/useAttrition";
+import { attritionFor, attritionLine } from "@/lib/attrition";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Pencil, Users, Archive, RotateCcw } from "lucide-react";
@@ -130,6 +132,9 @@ export default function AdminSchedule() {
     [classes, classStudents],
   );
   const { stats: classStats, loading: statsLoading } = useBatchStats(statBatches);
+  // Who has left each class, for its attrition.
+  const allIds = useMemo(() => classes.map((b: any) => b.id), [classes]);
+  const { data: history } = useEnrolmentHistory(view === "classes" ? allIds : []);
 
   // Assign each distinct room a stable color (sorted by name for determinism).
   const roomColors = useMemo(() => {
@@ -404,14 +409,29 @@ export default function AdminSchedule() {
                       </div>
                     </td>
                   </tr>
-                  {b.is_active && b.enrolled > 0 && (
-                    <tr>
-                      <td></td>
-                      <td colSpan={6} className="px-3 pb-3 pt-0">
-                        <BatchStatsLine stats={classStats.get(b.id)} loading={statsLoading || !classStudents} />
-                      </td>
-                    </tr>
-                  )}
+                  {(() => {
+                    const attrition = history ? attritionFor(history, b) : null;
+                    const showStats = b.is_active && b.enrolled > 0;
+                    if (!showStats && !attrition?.left) return null;
+                    return (
+                      <tr className={!b.is_active ? "opacity-50" : ""}>
+                        <td></td>
+                        <td colSpan={6} className="px-3 pb-3 pt-0">
+                          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                            {showStats && <BatchStatsLine stats={classStats.get(b.id)} loading={statsLoading || !classStudents} />}
+                            {attrition && (
+                              <span className="text-xs whitespace-nowrap" title="Students de-registered, of everyone who has been in this class">
+                                <span className="text-muted-foreground">Attrition</span>{" "}
+                                <span className={`font-semibold ${attrition.left ? "text-red-600" : "text-emerald-600"}`}>
+                                  {attritionLine(attrition)}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })()}
                   </Fragment>
                 );
               })}
