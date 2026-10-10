@@ -107,6 +107,7 @@ export default function ClassDetail() {
           <TabsList>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="course">Course</TabsTrigger>
+            <TabsTrigger value="manage">Manage</TabsTrigger>
           </TabsList>
 
           {/* The class side by side, most sessions first. Tap a student for
@@ -141,11 +142,16 @@ export default function ClassDetail() {
             </p>
           </TabsContent>
 
-          <TabsContent value="course" className="pt-4 space-y-4">
+          <TabsContent value="course" className="pt-4">
             <CoursePanel batch={batch} />
-            <ExtraSongsCard batchId={batch.id} instrument={toInstrument(batch.instruments?.name)} />
+          </TabsContent>
+
+          {/* The things a teacher sets for this class, kept apart from the
+              course they read. */}
+          <TabsContent value="manage" className="pt-4 space-y-4">
             <ClassPhotoCard batch={batch} />
             <PausePlanCard batchId={batch.id} />
+            <ExtraSongsCard batchId={batch.id} instrument={toInstrument(batch.instruments?.name)} />
           </TabsContent>
         </Tabs>
       </div>
