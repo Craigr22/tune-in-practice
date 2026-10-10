@@ -111,15 +111,14 @@ export default function ClassDetail() {
           </TabsList>
 
           {/* The class side by side, most sessions first. Tap a student for
-              their practice, songs and attendance. */}
+              their practice and songs. */}
           <TabsContent value="students" className="pt-4">
             <div className="rounded-xl border bg-card overflow-hidden">
-              <div className="grid grid-cols-[1.25rem_1fr_auto_auto] sm:grid-cols-[1.25rem_1.4fr_auto_1fr_auto_auto] gap-3 sm:gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
+              <div className="grid grid-cols-[1.25rem_1fr_auto_auto] sm:grid-cols-[1.25rem_1.4fr_auto_1fr_auto] gap-3 sm:gap-4 px-4 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
                 <div></div>
                 <div>Student</div>
                 <div className="w-8 text-right">Sessions</div>
                 <div className="hidden sm:block">Last 14 days</div>
-                <div className="hidden sm:block w-10 text-right">Attend</div>
                 <div className="w-2.5"></div>
               </div>
               {ranked.length === 0 ? (

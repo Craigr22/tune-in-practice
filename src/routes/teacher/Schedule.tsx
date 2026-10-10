@@ -9,11 +9,7 @@ import "@/styles/calendar.css";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { useTeacherMe } from "@/hooks/useTeacherMe";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { ClipboardCheck, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import StartClassDialog from "@/components/teacher/StartClassDialog";
 import { calendarQueryRange, sessionDateTimes } from "@/lib/calendar";
 
 const calendarFormats = {
@@ -54,8 +50,6 @@ export default function TeacherSchedule() {
   const navigate = useNavigate();
   const { data: teacher } = useTeacherMe();
   const teacherId = teacher?.id;
-  const [selected, setSelected] = useState<Row | null>(null);
-  const [wrapSession, setWrapSession] = useState<Row | null>(null);
   const [queryRange, setQueryRange] = useState(() => calendarQueryRange(null));
 
   const { data: sessions = [], isLoading } = useQuery({
@@ -97,7 +91,7 @@ export default function TeacherSchedule() {
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-4">
         <header>
           <h1 className="text-2xl font-semibold">Calendar</h1>
-          <div className="text-xs text-muted-foreground">Tap a lesson to open its class or take attendance.</div>
+          <div className="text-xs text-muted-foreground">Tap a lesson to open its class.</div>
         </header>
 
         {isLoading && <div className="text-sm">Loading…</div>}
@@ -119,7 +113,8 @@ export default function TeacherSchedule() {
             timeslots={2}
             dayLayoutAlgorithm="no-overlap"
             popup
-            onSelectEvent={(ev) => setSelected((ev as any).resource)}
+            // A lesson opens its class — the same page as Open on My classes.
+            onSelectEvent={(ev) => navigate(`/teacher/class/${((ev as any).resource as Row).batch_id}`)}
             eventPropGetter={(ev) => {
               const s = (ev as any).resource as Row;
               if (s.status === "cancelled") {
@@ -133,47 +128,6 @@ export default function TeacherSchedule() {
             style={{ height: "100%" }}
           />
         </div>
-
-        <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Session</DialogTitle></DialogHeader>
-            {selected && (
-              <div className="space-y-2 text-sm">
-                <div className="font-medium">
-                  {[selected.batches?.code, selected.batches?.instruments?.name, selected.batches?.locations?.name].filter(Boolean).join(" · ")}
-                </div>
-                <div className="text-muted-foreground">
-                  {selected.scheduled_date} · {(selected.start_time ?? selected.batches?.start_time)?.slice(0, 5)} · {selected.duration_min ?? selected.batches?.duration_min}min
-                  {selected.status !== "scheduled" && <> · <span className="font-medium text-foreground">{selected.status}</span></>}
-                </div>
-              </div>
-            )}
-            {selected && (
-              <DialogFooter className="gap-2 sm:gap-2">
-                {selected.status !== "cancelled" && (
-                  <Button variant="outline" onClick={() => { setWrapSession(selected); setSelected(null); }}>
-                    <ClipboardCheck className="w-4 h-4 mr-1" />
-                    {selected.status === "completed" ? "Update attendance" : "Take attendance"}
-                  </Button>
-                )}
-                {/* The same page "Open" leads to from My classes. */}
-                <Button onClick={() => navigate(`/teacher/class/${selected.batch_id}`)}>
-                  Open class <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </DialogFooter>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {wrapSession && (
-          <StartClassDialog
-            open={!!wrapSession}
-            onOpenChange={(o) => !o && setWrapSession(null)}
-            batchId={wrapSession.batch_id}
-            sessionId={wrapSession.id}
-            scheduledDate={wrapSession.scheduled_date}
-          />
-        )}
       </div>
     </section>
   );

@@ -7,8 +7,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useSongs } from "@/hooks/useSongs";
 import { useStudentCoursePlan } from "@/hooks/useCoursePlan";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import WeeklyPlanEditor from "@/components/teacher/WeeklyPlanEditor";
-import { toLocalIso } from "@/lib/date";
 
 /* ---------- helpers ---------- */
 function dailyMinutes(practice: { played_on: string; duration_min: number }[], days: number) {
@@ -54,12 +52,9 @@ export function StudentRow({
   const { data, isError } = useStudentDetail(student.id);
   const bars = useMemo(() => (data ? dailyMinutes(data.practice, 14) : []), [data]);
   const retention = useMemo(
-    () => (data ? computeRetention(data.practice, data.attendance as any, data.lastSeenAt) : null),
+    () => (data ? computeRetention(data.practice, [], data.lastSeenAt) : null),
     [data]
   );
-  const totalAtt = data?.attendance.length ?? 0;
-  const presents = (data?.attendance ?? []).filter((a: any) => a.status === "present" || a.status === "late").length;
-  const attPct = totalAtt ? Math.round((presents / totalAtt) * 100) : 0;
   const flag = retention?.flag ?? null;
   const flagClass = isError || !flag
     ? "bg-muted-foreground/40"
@@ -69,13 +64,12 @@ export function StudentRow({
   return (
     <div
       onClick={onOpen}
-      className="grid grid-cols-[1.25rem_1fr_auto_auto] sm:grid-cols-[1.25rem_1.4fr_auto_1fr_auto_auto] items-center gap-3 sm:gap-4 px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/40"
+      className="grid grid-cols-[1.25rem_1fr_auto_auto] sm:grid-cols-[1.25rem_1.4fr_auto_1fr_auto] items-center gap-3 sm:gap-4 px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-muted/40"
     >
       <div className="text-xs font-semibold tabular-nums text-muted-foreground text-center">{place ?? ""}</div>
       <div className="font-medium truncate">{student.name}</div>
       <div className="text-sm font-bold tabular-nums text-right w-8">{sessions ?? "–"}</div>
       <div className="hidden sm:block"><MiniBars values={bars} /></div>
-      <div className="hidden sm:block text-sm tabular-nums text-muted-foreground w-10 text-right">{totalAtt ? `${attPct}%` : "—"}</div>
       <span className={`w-2.5 h-2.5 rounded-full ${flagClass}`} title={flagLabel} />
     </div>
   );
@@ -134,17 +128,6 @@ export function StudentDetail({ student, batch, onClose }: { student: any | null
   const { songs } = useSongs();
   if (!student) return null;
 
-  // 12-week dot grid
-  const weeks = 12;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const dayCells: { date: string; status: "present" | "late" | "absent" | null }[] = [];
-  for (let i = weeks * 7 - 1; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i);
-    const iso = toLocalIso(d);
-    const a = (data?.attendance ?? []).find((x: any) => x.session_date === iso);
-    dayCells.push({ date: iso, status: a?.status ?? null });
-  }
-
   const recentPractice = (data?.practice ?? []).slice().reverse().slice(0, 30);
 
   return (
@@ -165,13 +148,7 @@ export function StudentDetail({ student, batch, onClose }: { student: any | null
             <TabsList>
               <TabsTrigger value="practice">Practice</TabsTrigger>
               <TabsTrigger value="songs">Songs</TabsTrigger>
-              <TabsTrigger value="attendance">Attendance</TabsTrigger>
-              <TabsTrigger value="plan">Weekly plan</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="plan" className="pt-3">
-              <WeeklyPlanEditor studentId={student.id} classDayOfWeek={batch?.day_of_week ?? 0} />
-            </TabsContent>
 
             <TabsContent value="songs" className="pt-3">
               <SongsEditor studentId={student.id} progress={data?.progress ?? []} />
@@ -199,29 +176,6 @@ export function StudentDetail({ student, batch, onClose }: { student: any | null
                   })}
                 </div>
               )}
-            </TabsContent>
-
-            <TabsContent value="attendance" className="pt-3">
-              <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))` }}>
-                {Array.from({ length: weeks }).map((_, w) => (
-                  <div key={w} className="flex flex-col gap-1">
-                    {Array.from({ length: 7 }).map((_, d) => {
-                      const cell = dayCells[w * 7 + d];
-                      const cls =
-                        cell?.status === "present" ? "bg-emerald-500" :
-                        cell?.status === "late" ? "bg-amber-500" :
-                        cell?.status === "absent" ? "bg-red-500" :
-                        "bg-muted";
-                      return <span key={d} className={`block w-3 h-3 rounded-sm ${cls}`} title={cell?.date} />;
-                    })}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 flex gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> present</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500" /> late</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500" /> absent</span>
-              </div>
             </TabsContent>
           </Tabs>
         </div>
