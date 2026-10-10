@@ -13,6 +13,7 @@ import PausePlanCard from "@/components/teacher/PausePlanCard";
 import { classWeekStart, planWeekOneStart } from "@/hooks/useWeeklyPlan";
 import ClassPhotoCard from "@/components/teacher/ClassPhotoCard";
 import ExtraSongsCard from "@/components/teacher/ExtraSongsCard";
+import FullCourse from "@/components/teacher/FullCourse";
 
 /**
  * What this class is working through — read-only.
@@ -104,6 +105,16 @@ function CoursePanel({
   );
 }
 
+/** The whole course for this class, with the week it is on marked. */
+function FullCoursePanel({ batch }: { batch: any }) {
+  const { data: shifts = [] } = useBatchPlanShifts(batch.id);
+  const classDow = batch.day_of_week ?? 6;
+  const currentWeek = batch.semester_start
+    ? shiftedPlanWeek(planWeekOneStart(batch.semester_start, classDow), classWeekStart(classDow), totalShiftWeeks(shifts))
+    : null;
+  return <FullCourse instrument={toInstrument(batch.instruments?.name)} currentWeek={currentWeek} />;
+}
+
 export default function ClassDetail() {
   const { batchId } = useParams();
   const navigate = useNavigate();
@@ -166,6 +177,7 @@ export default function ClassDetail() {
           <TabsList>
             <TabsTrigger value="students">Students</TabsTrigger>
             <TabsTrigger value="course">Course</TabsTrigger>
+            <TabsTrigger value="full">Full course</TabsTrigger>
           </TabsList>
 
           {/* The class side by side, most sessions first. Tap a student for
@@ -205,6 +217,11 @@ export default function ClassDetail() {
             <ExtraSongsCard batchId={batch.id} instrument={toInstrument(batch.instruments?.name)} />
             <ClassPhotoCard batch={batch} />
             <PausePlanCard batchId={batch.id} />
+          </TabsContent>
+
+          {/* What the students are shown, all of it, nothing held back. */}
+          <TabsContent value="full" className="pt-4">
+            <FullCoursePanel batch={batch} />
           </TabsContent>
         </Tabs>
       </div>
