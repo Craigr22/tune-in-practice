@@ -2,3 +2,14 @@ project_id = "utjyntenlpopnxpjvwkh"
 
 [functions.send-practice-notifications]
 verify_jwt = false
+
+# The public website's booking: called by visitors who aren't signed in, and
+# by Razorpay, so none of them carries a portal login.
+[functions.website-checkout]
+verify_jwt = false
+
+[functions.website-confirm]
+verify_jwt = false
+
+[functions.website-razorpay-webhook]
+verify_jwt = false
