@@ -146,6 +146,7 @@ describe("student home on a practice day", () => {
 
   it("puts the class photo beside the greeting on the day of the lesson, and not on a practice day", () => {
     st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: "2026-09-06" };
+    window.localStorage.setItem("bam.classPhotoSeen:b1/1.jpg", "1"); // already seen: no arrival card
 
     // A practice day: on their own, no faces.
     const practice = render(<Home />);
@@ -157,12 +158,38 @@ describe("student home on a practice day", () => {
     expect(lesson.container.querySelector("h1 img")).toBeTruthy();
   });
 
-  it("never announces the class photo on Home, new or old", () => {
-    // A photo the student has never been shown. The card used to appear here
-    // the day it arrived, with a line saying the picture lived on Journey.
-    st.photo = { batchId: "b1", path: "b1/9.jpg", url: "blob:new", takenOn: "2026-09-27" };
+  it("announces a new class photo once, then steps aside", () => {
+    st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: "2026-09-06" };
+
+    const first = render(<Home />);
+    expect(screen.getByText(/your class photo is in/i)).toBeTruthy();
+    fireEvent.click(screen.getByText(/got it/i));
+    expect(screen.queryByText(/your class photo is in/i)).toBeNull();
+    first.unmount();
+
+    // Next visit: seen, so the page is back to the day's work alone.
     render(<Home />);
     expect(screen.queryByText(/your class photo is in/i)).toBeNull();
+  });
+
+  it("announces again when the teacher replaces the photo", () => {
+    window.localStorage.setItem("bam.classPhotoSeen:b1/1.jpg", "1");
+    st.photo = { batchId: "b1", path: "b1/2.jpg", url: "blob:new", takenOn: "2026-09-13" };
+
+    render(<Home />);
+
+    expect(screen.getByText(/your class photo is in/i)).toBeTruthy();
+  });
+
+  it("never sends the student to Journey for the photo", () => {
+    // The picture isn't on Journey any more, so the card must not point there.
+    st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: "2026-09-06" };
+
+    render(<Home />);
+
+    expect(screen.getByText(/your class photo is in/i)).toBeTruthy();
+    expect(screen.queryByText(/it lives on your journey/i)).toBeNull();
+    expect(screen.container ? null : document.querySelector('a[href="/student/journey"]')).toBeNull();
   });
 });
 
