@@ -189,7 +189,7 @@ describe("student home on a practice day", () => {
 
     expect(screen.getByText(/your class photo is in/i)).toBeTruthy();
     expect(screen.queryByText(/it lives on your journey/i)).toBeNull();
-    expect(screen.container ? null : document.querySelector('a[href="/student/journey"]')).toBeNull();
+    expect(document.querySelector('a[href="/student/journey"]')).toBeNull();
   });
 });
 
