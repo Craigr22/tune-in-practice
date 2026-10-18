@@ -43,29 +43,6 @@ export async function shrinkImage(file: File): Promise<Blob> {
   );
 }
 
-const SEEN_PREFIX = "bam.classPhotoSeen:";
-
-/**
- * Whether this student has already been shown that a photo arrived.
- *
- * Kept in the browser: it is only a convenience — worst case, on a new phone,
- * they are told once more about a photo of their own class.
- */
-export function hasSeenPhoto(path: string): boolean {
-  try {
-    return window.localStorage.getItem(SEEN_PREFIX + path) === "1";
-  } catch {
-    return true; // storage blocked: don't nag on every visit
-  }
-}
-
-export function markPhotoSeen(path: string) {
-  try {
-    window.localStorage.setItem(SEEN_PREFIX + path, "1");
-  } catch {
-    /* private mode */
-  }
-}
 
 /* ---------------- keeping and sharing ---------------- */
 
