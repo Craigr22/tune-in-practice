@@ -156,4 +156,13 @@ describe("student home on a practice day", () => {
     const lesson = render(<Home />);
     expect(lesson.container.querySelector("h1 img")).toBeTruthy();
   });
+
+  it("never announces the class photo on Home, new or old", () => {
+    // A photo the student has never been shown. The card used to appear here
+    // the day it arrived, with a line saying the picture lived on Journey.
+    st.photo = { batchId: "b1", path: "b1/9.jpg", url: "blob:new", takenOn: "2026-09-27" };
+    render(<Home />);
+    expect(screen.queryByText(/your class photo is in/i)).toBeNull();
+  });
 });
+
