@@ -5,6 +5,8 @@ import type { ClassPhoto as Photo } from "@/hooks/useClassPhoto";
 import {
   canSharePhoto,
   fetchPhotoFile,
+  hasSeenPhoto,
+  markPhotoSeen,
   photoFileName,
   sharePhoto,
 } from "@/lib/classPhoto";
@@ -189,6 +191,39 @@ function ClassPhotoViewer({ photo, onClose }: { photo: Photo; onClose: () => voi
   );
 }
 
+
+/**
+ * "Your class photo is in" — shown on the home page until it has been seen.
+ *
+ * This is only the moment it arrives: it appears the first time a student
+ * opens the app after their teacher adds a photo, and steps aside for good
+ * once they have looked. A replacement is a new arrival, so it comes back.
+ * It used to point at Journey, where the picture no longer appears.
+ */
+export function ClassPhotoArrived({ photo }: { photo: Photo }) {
+  const [seen, setSeen] = useState(() => hasSeenPhoto(photo.path));
+  if (seen) return null;
+  const dismiss = () => {
+    markPhotoSeen(photo.path);
+    setSeen(true);
+  };
+  return (
+    <section
+      className="rounded-2xl p-4 mb-4"
+      style={{ background: "var(--card)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+    >
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="text-sm font-bold" style={{ color: "var(--ink)" }}>
+          Your class photo is in 📸
+        </div>
+        <button onClick={dismiss} className="text-xs underline" style={{ color: "var(--ink-soft)" }}>
+          Got it
+        </button>
+      </div>
+      <ClassPhotoImage photo={photo} />
+    </section>
+  );
+}
 
 /** A small round cut of the photo, for beside "Class today". */
 export function ClassPhotoThumb({ photo }: { photo: Photo }) {
