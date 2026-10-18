@@ -109,27 +109,11 @@ describe("ClassBoard", () => {
     expect(screen.queryByText("🥈")).toBeNull();
   });
 
-  it("shows the class photo above the standings", () => {
+  it("never shows the class photo on the Journey board", () => {
     st.data = [row("Payal M.", 9), row("Amit A.", 6, true)];
     st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: "2026-09-06" };
-
     const { container } = render(<ClassBoard />);
-
-    expect(container.querySelector("img")?.getAttribute("src")).toBe("blob:photo");
-    expect(screen.getByText(/day one/i)).toBeTruthy();
+    expect(container.querySelector("img")).toBeNull();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
-  });
-
-  it("shows the photo on its own when there are no standings to show", () => {
-    // The board hides for a class of one, or before its function is migrated;
-    // the picture of day one is worth showing either way.
-    st.data = null;
-    st.photo = { batchId: "b1", path: "b1/1.jpg", url: "blob:photo", takenOn: null };
-
-    const { container } = render(<ClassBoard />);
-
-    expect(container.querySelector("img")).toBeTruthy();
-    expect(screen.queryByRole("listitem")).toBeNull();
-    expect(screen.queryByText(/sessions finished/i)).toBeNull();
   });
 });
