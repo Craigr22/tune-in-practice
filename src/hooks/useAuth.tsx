@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/db";
 import { useViewAs, setViewAs } from "@/hooks/useViewAs";
+import { createAppOpenMarker } from "@/lib/appOpen";
 
 export type AppRole = "admin" | "teacher" | "student";
 
@@ -50,13 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // "Last opened": on load, and again whenever the app returns to the screen.
+  useEffect(() => {
+    if (!session?.user) return;
+    const mark = createAppOpenMarker((fn) => (supabase as any).rpc(fn));
+    mark(true);
+    const onVisible = () => { if (document.visibilityState === "visible") mark(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [session?.user?.id]);
+
   useEffect(() => {
     if (!session?.user) return;
     let cancelled = false;
     (async () => {
-      // This is intentionally best-effort: auth must still work while a new
-      // migration is rolling out or if activity tracking is temporarily down.
-      void (supabase as any).rpc("mark_app_open");
 
       /**
        * A failed lookup is not "you have no role".
