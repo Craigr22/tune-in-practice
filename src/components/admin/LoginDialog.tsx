@@ -108,9 +108,9 @@ export default function LoginDialog({
 
   const label = target?.role === "admin" ? "Email" : "Username";
 
+  // Not closable while the login is being made: closing mid-way hid the new
+  // username and password, and invited a second "Create login".
   return (
-    {/* Not closable while the login is being made: closing mid-way hid the
-        new username and password, and invited a second "Create login". */}
     <Dialog open={!!target} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
