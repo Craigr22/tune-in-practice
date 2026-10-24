@@ -9,6 +9,7 @@ import { UserMinus, RotateCcw } from "lucide-react";
 import { LEAVE_REASONS } from "@/lib/attrition";
 import { useDeregister, useReenrol, useRemoveEnrolment } from "@/hooks/useAttrition";
 import { toLocalIso } from "@/lib/date";
+import { enrolCandidates, type EnrolmentRef } from "@/lib/enrolment";
 
 const DOW_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -60,22 +61,56 @@ export default function BatchDetailDialog({ batchId, onClose }: { batchId: strin
     },
   });
 
+  // Every enrolment, with whether its class is still running — so that
+  // students already in a class aren't offered here.
+  const { data: allEnrolments, isLoading: loadingEnrolments } = useQuery({
+    queryKey: ["enrolments-everywhere"],
+    enabled: !!batchId,
+    queryFn: async (): Promise<EnrolmentRef[]> => {
+      const rows: EnrolmentRef[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from("enrollments")
+          .select("student_id, batch_id, status, batches(is_active)")
+          .order("id")
+          .range(from, from + 999);
+        if (error) throw error;
+        for (const e of (data ?? []) as any[]) {
+          rows.push({ student_id: e.student_id, batch_id: e.batch_id, status: e.status, batch_active: !!e.batches?.is_active });
+        }
+        if (!data || data.length < 1000) break;
+      }
+      return rows;
+    },
+  });
+
   // In the class now, and those who have left it. A de-registered student
   // keeps their enrolment — that is the record of them having been here.
   const current = enrollments.filter((e: any) => e.status !== "dropped");
   const gone = enrollments.filter((e: any) => e.status === "dropped");
-  const enrolledIds = new Set(enrollments.map((e: any) => e.student_id));
-  const available = students.filter((s: any) => !enrolledIds.has(s.id));
+  const available = batchId
+    ? enrolCandidates(students as { id: string; name: string }[], [
+        ...(allEnrolments ?? []),
+        // This class's own list is the freshest; count it too.
+        ...enrollments.map((e: any) => ({ student_id: e.student_id, batch_id: batchId, status: e.status, batch_active: true })),
+      ], batchId)
+    : [];
+  const picked = available.find((s) => s.id === adding) ?? null;
 
   const cap = (batch as any)?.max_students ?? 0;
   const atCapacity = cap > 0 && current.length >= cap;
 
+  const [saving, setSaving] = useState(false);
+  // Picking a name only selects it; nothing is saved until "Add" is pressed.
   const enroll = async (studentId: string) => {
+    setSaving(true);
     const { error } = await supabase.from("enrollments").insert({ batch_id: batchId!, student_id: studentId });
+    setSaving(false);
     if (error) return toast.error(error.message);
     toast.success(atCapacity ? "Enrolled (class is now over capacity)" : "Student enrolled");
     setAdding("");
     qc.invalidateQueries({ queryKey: ["batch-enrollments", batchId] });
+    qc.invalidateQueries({ queryKey: ["enrolments-everywhere"] });
     qc.invalidateQueries({ queryKey: ["batch-list"] });
   };
 
@@ -226,14 +261,36 @@ export default function BatchDetailDialog({ batchId, onClose }: { batchId: strin
               </div>
             )}
             <div>
-              <div className="font-medium mb-2">Enroll student</div>
-              <Select value={adding} onValueChange={(v) => { setAdding(v); enroll(v); }}>
-                <SelectTrigger><SelectValue placeholder="Select student" /></SelectTrigger>
+              <div className="font-medium mb-1">Enroll student</div>
+              <p className="text-xs text-muted-foreground mb-2">
+                Students already in a running class aren't listed. To move someone, de-register them from
+                their class first.
+              </p>
+              <Select value={adding} onValueChange={setAdding} disabled={loadingEnrolments || saving}>
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingEnrolments ? "Loading…" : "Select student"} />
+                </SelectTrigger>
                 <SelectContent>
-                  {available.length === 0 && <div className="px-2 py-1 text-sm text-muted-foreground">All enrolled</div>}
+                  {available.length === 0 && <div className="px-2 py-1 text-sm text-muted-foreground">No students free to add</div>}
                   {available.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+
+              {picked && (
+                <div className="mt-2 rounded border p-3 space-y-2 bg-muted/30">
+                  <p className="text-sm">
+                    Add <strong>{picked.name}</strong> to{" "}
+                    <strong>{(batch as any).code ?? "this class"}</strong>?
+                    {atCapacity && <span className="block text-xs text-amber-600 mt-1">The class is full — this puts it over capacity.</span>}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" onClick={() => enroll(picked.id)} disabled={saving}>
+                      {saving ? "Adding…" : `Add ${picked.name.split(" ")[0]}`}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setAdding("")} disabled={saving}>Cancel</Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

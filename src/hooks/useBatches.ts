@@ -20,7 +20,7 @@ export function useBatchList() {
       const { data, error } = await supabase
         .from("batches")
         .select(
-          "id, day_of_week, start_time, duration_min, max_students, is_active, semester_start, semester_end, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name), enrollments(count)",
+          "id, code, day_of_week, start_time, duration_min, max_students, is_active, semester_start, semester_end, teacher_id, instrument_id, location_id, teachers(name), instruments(name), locations(name), enrollments(count)",
         )
         // Count the students actually in the class. Without this a paused or
         // dropped enrolment still counted, so a class looked fuller than it is
