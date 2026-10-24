@@ -24,7 +24,7 @@ export function useEnrolmentHistory(batchIds: string[]) {
 function useRefresh() {
   const qc = useQueryClient();
   return () => {
-    for (const key of ["batch-enrollments", "batch-list", "enrolment-history", "batch-students", "teacher-students", "student-class", "student-enrolment"]) {
+    for (const key of ["batch-enrollments", "batch-list", "enrolment-history", "batch-students", "teacher-students", "student-class", "student-enrolment", "enrolments-everywhere"]) {
       qc.invalidateQueries({ queryKey: [key] });
     }
   };
