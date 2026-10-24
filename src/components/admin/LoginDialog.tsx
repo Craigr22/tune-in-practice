@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { suggestPassword } from "@/lib/studentLogin";
+import { functionErrorMessage } from "@/lib/functionError";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,13 +67,25 @@ export default function LoginDialog({
         password: password.trim(),
       },
     });
+    const failure = await functionErrorMessage(error, data);
     setBusy(false);
-
-    const failure = error?.message ?? (data as any)?.error;
     if (failure) {
+      if (/already has a login/i.test(failure)) {
+        // The list was out of date — the login exists (perhaps from an
+        // earlier click that was still working). Refresh so the row offers
+        // Reset password instead.
+        qc.invalidateQueries({ queryKey: ["admin-users"] });
+        qc.invalidateQueries({ queryKey: ["students"] });
+        qc.invalidateQueries({ queryKey: ["teachers"] });
+        toast.error(
+          `${target.name} already has a login. Use Reset password on their row to give them a new password.`,
+        );
+        onClose();
+        return;
+      }
       toast.error(
-        /Failed to fetch|404|not found/i.test(failure)
-          ? "The provision-user function isn't deployed yet — ask Lovable to deploy it."
+        /^(Failed to fetch|Function not found)/i.test(failure)
+          ? "Couldn't reach the login service. Check your connection and try again."
           : failure,
       );
       return;
@@ -96,7 +109,9 @@ export default function LoginDialog({
   const label = target?.role === "admin" ? "Email" : "Username";
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
+    {/* Not closable while the login is being made: closing mid-way hid the
+        new username and password, and invited a second "Create login". */}
+    <Dialog open={!!target} onOpenChange={(o) => !o && !busy && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
