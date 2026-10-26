@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMicPitch, useLowG } from "@/hooks/useTuner";
+import MicStatus from "@/components/shared/MicStatus";
 import { HIGH_G, LOW_G, centsBetween, nearestString, type StringDef } from "@/lib/tuner";
 
 interface Props {
@@ -23,7 +24,8 @@ const INITIAL: StringState = { cents: null, lastInTune: null, done: false };
 const TuneCheck = ({ variant = "gate", onSubmit, onClose, doneLabel, active = true }: Props) => {
   const [lowG, setLowG] = useLowG();
   const strings: StringDef[] = lowG ? LOW_G : HIGH_G;
-  const { freq, running, error } = useMicPitch({ active });
+  const micState = useMicPitch({ active });
+  const { freq } = micState;
 
   const [stateByString, setStateByString] = useState<Record<string, StringState>>({
     G: INITIAL, C: INITIAL, E: INITIAL, A: INITIAL,
@@ -148,11 +150,12 @@ const TuneCheck = ({ variant = "gate", onSubmit, onClose, doneLabel, active = tr
             <input type="checkbox" checked={lowG} onChange={(e) => setLowG(e.target.checked)} />
             Low-G
           </label>
-          <span style={{ color: running ? "var(--olive)" : "var(--ink-faint)" }}>
-            {error ? error : running ? "🎙 Listening…" : "Mic off"}
-          </span>
+          <MicStatus {...micState} onWake={micState.wake} compact />
         </div>
       )}
+
+      {/* The small version still needs a way to wake the microphone. */}
+      {variant === "compact" && <MicStatus {...micState} onWake={micState.wake} />}
 
       {variant === "gate" && (
         <div className="mt-6 flex items-center justify-between gap-3">

@@ -1,93 +1,37 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  HIGH_G, LOW_G, autoCorrelate, centsBetween, nearestString,
+  HIGH_G, LOW_G, centsBetween, nearestString,
   type StringDef,
 } from "@/lib/tuner";
+import { mic, type MicState } from "@/lib/micEngine";
 
 /** Re-export the legacy Tuner page component (for /student/tuner & FAB). */
 export { default as Tuner } from "@/components/Tuner";
 
 /* ============================================================
-   useMicPitch — owns the mic + RAF loop, returns latest freq.
-   Designed to be cheap to mount/unmount via the `active` flag.
+   useMicPitch — listens through the shared microphone.
+   Mounting with `active` claims the microphone; unmounting lets it go.
 ============================================================ */
 
 export function useMicPitch({ active }: { active: boolean }) {
-  const [freq, setFreq] = useState<number | null>(null);
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const ctxRef = useRef<AudioContext | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const bufRef = useRef<Float32Array<ArrayBuffer> | null>(null);
-  const rafRef = useRef<number | null>(null);
-
-  const stop = useCallback(() => {
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    analyserRef.current?.disconnect();
-    analyserRef.current = null;
-    setRunning(false);
-    setFreq(null);
-  }, []);
-
-  const start = useCallback(async () => {
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
-      streamRef.current = stream;
-      let ctx = ctxRef.current;
-      if (!ctx) {
-        ctx = new (window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-        ctxRef.current = ctx;
-      }
-      if (ctx.state === "suspended") await ctx.resume();
-      const src = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 2048;
-      src.connect(analyser);
-      analyserRef.current = analyser;
-      bufRef.current = new Float32Array(new ArrayBuffer(analyser.fftSize * 4));
-      setRunning(true);
-
-      const loop = () => {
-        const a = analyserRef.current;
-        const b = bufRef.current;
-        const c = ctxRef.current;
-        if (!a || !b || !c) return;
-        a.getFloatTimeDomainData(b);
-        const f = autoCorrelate(b, c.sampleRate);
-        if (f > 0) setFreq(f);
-        rafRef.current = requestAnimationFrame(loop);
-      };
-      rafRef.current = requestAnimationFrame(loop);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Could not access microphone";
-      setError(
-        msg.includes("denied") || msg.includes("Permission")
-          ? "Microphone permission denied. Allow mic access and try again."
-          : msg
-      );
-      stop();
-    }
-  }, [stop]);
-
+  const [state, setState] = useState<MicState>(mic.state);
+  useEffect(() => mic.subscribe(setState), []);
   useEffect(() => {
-    if (active) start();
-    else stop();
-    return () => stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!active) return;
+    mic.acquire();
+    return () => mic.release();
   }, [active]);
-
-  useEffect(() => () => { ctxRef.current?.close(); }, []);
-
-  return { freq, running, error, start, stop };
+  return {
+    freq: state.freq,
+    running: state.status === "listening",
+    error: state.error,
+    status: state.status,
+    level: state.level,
+    quiet: state.quiet,
+    diag: state.diag,
+    /** For a tap: wake the audio and reopen the microphone if it has gone. */
+    wake: () => mic.wake(),
+  };
 }
 
 /* ============================================================

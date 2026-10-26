@@ -93,3 +93,124 @@ export function autoCorrelate(buf: Float32Array, sampleRate: number): number {
   if (freq < 50 || freq > 2000) return -1;
   return freq;
 }
+
+/* ============================================================
+   McLeod pitch method — the detector the tuner uses now.
+
+   Autocorrelation on its own picks whichever repeat is strongest, and on a
+   plucked string that is often the second or third harmonic, so the reading
+   jumped an octave or landed on the wrong string. The normalised version
+   below scores every candidate period from -1 to 1 regardless of how loud
+   the note is, and takes the first one that is nearly as good as the best —
+   the fundamental, not a harmonic. It also only searches the range a
+   ukulele can play, which makes it several times cheaper than before.
+============================================================ */
+
+export interface PitchReading {
+  freq: number;
+  /** 0–1: how sure the detector is that the sound has this pitch. */
+  clarity: number;
+}
+
+export function mpmPitch(
+  buf: Float32Array,
+  sampleRate: number,
+  { minHz = 80, maxHz = 1000, threshold = 0.9, minClarity = 0.75 } = {},
+): PitchReading | null {
+  const N = buf.length;
+  const minLag = Math.max(2, Math.floor(sampleRate / maxHz));
+  const maxLag = Math.min(N - 1, Math.ceil(sampleRate / minHz));
+  if (maxLag <= minLag + 2) return null;
+
+  // Normalised square difference for each candidate period.
+  const nsdf = new Float32Array(maxLag + 2);
+  for (let tau = 0; tau <= maxLag + 1; tau++) {
+    let acf = 0;
+    let m = 0;
+    for (let j = 0; j < N - tau; j++) {
+      const a = buf[j];
+      const b = buf[j + tau];
+      acf += a * b;
+      m += a * a + b * b;
+    }
+    nsdf[tau] = m > 0 ? (2 * acf) / m : 0;
+  }
+
+  // The highest point of each stretch where the score is above zero.
+  const peaks: number[] = [];
+  let tau = minLag;
+  while (tau < maxLag && nsdf[tau] > 0) tau++; // leave the zero-lag hump
+  while (tau < maxLag) {
+    while (tau < maxLag && nsdf[tau] <= 0) tau++;
+    let best = -1;
+    while (tau < maxLag && nsdf[tau] > 0) {
+      if (best < 0 || nsdf[tau] > nsdf[best]) best = tau;
+      tau++;
+    }
+    if (best > 0) peaks.push(best);
+  }
+  if (!peaks.length) return null;
+
+  const highest = Math.max(...peaks.map((p) => nsdf[p]));
+  if (highest < minClarity) return null;
+  const chosen = peaks.find((p) => nsdf[p] >= threshold * highest) ?? peaks[0];
+
+  // Between samples: fit a parabola through the peak and its neighbours.
+  const x1 = nsdf[chosen - 1];
+  const x2 = nsdf[chosen];
+  const x3 = nsdf[chosen + 1];
+  const denom = x1 - 2 * x2 + x3;
+  const shift = denom !== 0 ? (0.5 * (x1 - x3)) / denom : 0;
+  const period = chosen + Math.max(-1, Math.min(1, shift));
+  const freq = sampleRate / period;
+  if (freq < minHz || freq > maxHz) return null;
+  return { freq, clarity: x2 };
+}
+
+/** Root-mean-square level of a buffer: how loud it is, 0 for silence. */
+export function rms(buf: Float32Array): number {
+  let s = 0;
+  for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+  return Math.sqrt(s / buf.length);
+}
+
+/** The middle of a few recent readings: one stray jump doesn't move the needle. */
+export function median(values: number[]): number {
+  const v = [...values].sort((a, b) => a - b);
+  const mid = v.length >> 1;
+  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
+}
+
+/**
+ * Whether the page is inside an app's own browser — Instagram, Facebook,
+ * LinkedIn and the like — which usually won't hand a web page the
+ * microphone at all.
+ */
+export function inAppBrowser(ua: string = typeof navigator !== "undefined" ? navigator.userAgent : ""): string | null {
+  if (/Instagram/i.test(ua)) return "Instagram";
+  if (/FBAN|FBAV|FB_IAB|FBIOS/i.test(ua)) return "Facebook";
+  if (/LinkedInApp/i.test(ua)) return "LinkedIn";
+  if (/\bLine\//i.test(ua)) return "Line";
+  if (/Snapchat/i.test(ua)) return "Snapchat";
+  if (/WhatsApp/i.test(ua)) return "WhatsApp";
+  return null;
+}
+
+/** A microphone that isn't the phone's own: earbuds, a headset, a car. */
+export const isRemoteMic = (label: string) => /bluetooth|airpods|buds|headset|hands-?free|bt\b|car/i.test(label);
+
+/** What to tell a student when the browser won't give the tuner a microphone. */
+export function micErrorMessage(e: unknown, ua?: string): string {
+  const app = inAppBrowser(ua);
+  if (app) return `The tuner can't use the microphone inside ${app}. Open this page in Chrome or Safari instead.`;
+  const name = (e as { name?: string })?.name ?? "";
+  if (name === "NotAllowedError" || name === "SecurityError" || /denied|permission/i.test(String((e as Error)?.message ?? ""))) {
+    return "The microphone is blocked. Allow it for this site in your browser settings, then tap Start again.";
+  }
+  if (name === "NotFoundError" || name === "OverconstrainedError") return "No microphone was found on this device.";
+  if (name === "NotReadableError" || name === "AbortError") {
+    return "Another app is using the microphone. Close it (a call, a voice note, another tuner) and tap Start again.";
+  }
+  if (name === "Unsupported") return "This browser can't use the microphone. Open this page in Chrome or Safari.";
+  return "The tuner couldn't start the microphone. Tap Start to try again.";
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMicPitch, useLowG } from "@/hooks/useTuner";
+import MicStatus from "@/components/shared/MicStatus";
 import { HIGH_G, LOW_G, centsBetween, nearestString } from "@/lib/tuner";
 import { useMarkFoundationComplete, useFoundationProgress } from "@/hooks/useFoundationProgress";
 import { toast } from "@/hooks/use-toast";
@@ -12,7 +13,8 @@ const TuneCheckLesson = ({ onDone }: { onDone?: () => void }) => {
   const [stepIdx, setStepIdx] = useState(0);
   const [held, setHeld] = useState<number | null>(null);
   const [confirmed, setConfirmed] = useState(false);
-  const { freq, running, error } = useMicPitch({ active: !confirmed });
+  const micState = useMicPitch({ active: !confirmed });
+  const { freq } = micState;
   const mark = useMarkFoundationComplete();
   const { data: completed = [] } = useFoundationProgress();
   const alreadyDone = completed.some((c) => c.foundation_id === "tune");
@@ -103,9 +105,7 @@ const TuneCheckLesson = ({ onDone }: { onDone?: () => void }) => {
       </div>
 
       <div className="mt-4 flex items-center justify-between">
-        <span className="text-[11px]" style={{ color: running ? "var(--olive)" : "var(--ink-faint)" }}>
-          {error ? error : running ? "🎙 Listening…" : "Mic off"}
-        </span>
+        <MicStatus {...micState} onWake={micState.wake} compact />
         <button
           onClick={next}
           disabled={!readyToConfirm}

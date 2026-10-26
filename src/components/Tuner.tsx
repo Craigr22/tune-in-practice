@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import {
-  HIGH_G, LOW_G, autoCorrelate, nearestString,
-  type StringDef,
-} from "@/lib/tuner";
+import { HIGH_G, LOW_G, nearestString, type StringDef } from "@/lib/tuner";
+import { mic } from "@/lib/micEngine";
+import { useMicPitch } from "@/hooks/useTuner";
+import MicStatus from "@/components/shared/MicStatus";
 
 /* ============================================================
    BAM Tuner — standalone page (mic + reference tones).
@@ -30,16 +30,15 @@ export default function Tuner() {
   });
   const STRINGS = lowG ? LOW_G : HIGH_G;
 
-  const [running, setRunning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [freq, setFreq] = useState<number | null>(null);
+  // The microphone is shared with every other tuner on the page; this one
+  // only says whether it wants to listen.
+  const [micOn, setMicOn] = useState(false);
+  const micState = useMicPitch({ active: micOn });
+  const { freq, error } = micState;
+  const running = micOn && micState.status !== "off";
   const [tonePlaying, setTonePlaying] = useState<string | null>(null);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const bufRef = useRef<Float32Array<ArrayBuffer> | null>(null);
   const oscRef = useRef<{ osc: OscillatorNode; gain: GainNode } | null>(null);
 
   useEffect(() => {
@@ -62,12 +61,9 @@ export default function Tuner() {
 
   const playTone = useCallback((s: StringDef) => {
     stopTone();
-    let ctx = audioCtxRef.current;
-    if (!ctx) {
-      ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      audioCtxRef.current = ctx;
-    }
-    if (ctx.state === "suspended") ctx.resume();
+    mic.unlock();
+    const ctx = mic.context();
+    audioCtxRef.current = ctx;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "triangle";
@@ -81,61 +77,15 @@ export default function Tuner() {
     setTonePlaying(s.name);
   }, [stopTone]);
 
-  const stopMic = useCallback(() => {
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    analyserRef.current?.disconnect();
-    analyserRef.current = null;
-    setRunning(false);
-    setFreq(null);
-  }, []);
+  // Started from the tap itself, so an iPhone lets the audio run.
+  const startMic = () => {
+    mic.unlock();
+    setMicOn(true);
+    if (micOn) mic.wake();
+  };
+  const stopMic = () => setMicOn(false);
 
-  const startMic = useCallback(async () => {
-    setError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
-      streamRef.current = stream;
-      let ctx = audioCtxRef.current;
-      if (!ctx) {
-        ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-        audioCtxRef.current = ctx;
-      }
-      if (ctx.state === "suspended") await ctx.resume();
-      const src = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 2048;
-      src.connect(analyser);
-      analyserRef.current = analyser;
-      bufRef.current = new Float32Array(new ArrayBuffer(analyser.fftSize * 4));
-      setRunning(true);
-
-      const loop = () => {
-        const a = analyserRef.current;
-        const b = bufRef.current;
-        const c = audioCtxRef.current;
-        if (!a || !b || !c) return;
-        a.getFloatTimeDomainData(b);
-        const f = autoCorrelate(b as unknown as Float32Array<ArrayBuffer>, c.sampleRate);
-        if (f > 0) setFreq(f);
-        rafRef.current = requestAnimationFrame(loop);
-      };
-      rafRef.current = requestAnimationFrame(loop);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Could not access microphone";
-      setError(msg.includes("denied") || msg.includes("Permission") ? "Microphone permission denied. Please allow mic access and try again." : msg);
-      stopMic();
-    }
-  }, [stopMic]);
-
-  useEffect(() => () => {
-    stopMic();
-    stopTone();
-    audioCtxRef.current?.close();
-  }, [stopMic, stopTone]);
+  useEffect(() => () => stopTone(), [stopTone]);
 
   /**
    * A ukulele has four strings, so the reading is always about one of them.
@@ -213,7 +163,7 @@ export default function Tuner() {
           <div>
             <span className="bamt-hz">
               {freq && <span className="live-dot" />}
-              {freq ? `${freq.toFixed(2)} Hz` : running ? "Listening…" : "Mic off"}
+              {freq ? `${freq.toFixed(2)} Hz` : running ? "Pluck a string" : "Mic off"}
             </span>
           </div>
         </div>
@@ -284,7 +234,11 @@ export default function Tuner() {
           </label>
         </div>
 
-        {error && <div className="bamt-error">{error}</div>}
+        {micOn ? (
+          <MicStatus {...micState} onWake={() => mic.wake()} />
+        ) : (
+          error && <div className="bamt-error">{error}</div>
+        )}
 
         <p className="bamt-hint">Pluck one string at a time. Hold still and let the note ring.</p>
       </div>
