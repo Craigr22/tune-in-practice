@@ -88,6 +88,17 @@ describe("importing a spreadsheet", () => {
     expect(r.duplicates).toBe(1);
   });
 
+  it("gives every imported row a status, so a batch with one existing student isn't refused", () => {
+    const base = { course: null, category: null, kid_age: null, source: null, notes: null };
+    const rows = importRows(
+      [{ ...base, name: "Asha", phone: "9820517453" }, { ...base, name: "Ravi", phone: "+91 98200 12345" }],
+      [{ id: "s1", phone: "9820012345" }],
+    );
+    expect(rows[0]).toMatchObject({ status: "new", student_id: null });
+    expect(rows[1]).toMatchObject({ status: "joined", student_id: "s1" });
+    expect(Object.keys(rows[0]).sort()).toEqual(Object.keys(rows[1]).sort());
+  });
+
   it("needs a Name and a Phone column", () => {
     expect(() => rowsToEnquiries([["Course"], ["Guitar"]])).toThrow(/Name and a Phone/);
   });

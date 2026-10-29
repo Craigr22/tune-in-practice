@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/db";
 import { toLocalIso } from "@/lib/date";
-import { mergePeople, phoneKey, type EnquiryInput, type EnquiryRow, type EnquiryStatus, type StudentRow } from "@/lib/people";
+import { importRows, mergePeople, type EnquiryInput, type EnquiryRow, type EnquiryStatus, type StudentRow } from "@/lib/people";
 
 const PAGE = 1000;
 
@@ -143,11 +143,7 @@ export function useImportEnquiries() {
   const refresh = useRefresh();
   return useMutation({
     mutationFn: async ({ rows, students, onProgress }: { rows: EnquiryInput[]; students: StudentRow[]; onProgress?: (done: number) => void }) => {
-      const studentByPhone = new Map(students.map((s) => [phoneKey(s.phone), s.id] as const).filter(([k]) => !!k));
-      const payload = rows.map((r) => {
-        const sid = studentByPhone.get(phoneKey(r.phone));
-        return { ...r, ...(sid ? { student_id: sid, status: "joined" } : {}) };
-      });
+      const payload = importRows(rows, students);
       let done = 0;
       for (let i = 0; i < payload.length; i += 500) {
         const chunk = payload.slice(i, i + 500);
