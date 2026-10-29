@@ -59,6 +59,7 @@ const TopNav = () => {
       : [
           { to: "/admin/schedule", label: "Schedule", active: isActive("/admin/schedule") },
           { to: "/admin/people", label: "People", active: isActive("/admin/people") },
+          { to: "/admin/database", label: "Database", active: isActive("/admin/database") },
           { to: "/admin/coursework", label: "Course work", active: isActive("/admin/coursework") },
           { to: "/admin/finance", label: "Finance", active: isActive("/admin/finance") },
         ];

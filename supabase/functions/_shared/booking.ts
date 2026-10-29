@@ -134,6 +134,19 @@ export async function finalise(db: SupabaseClient, bookingId: string, paymentId:
     const { error: eErr } = await db.from("enrollments").insert({ student_id: student.id, batch_id: b.batch_id, status: "active" });
     if (eErr) throw eErr;
 
+    // Someone who enquired before booking: mark their enquiry as joined and
+    // link it, so the database shows one person rather than two. A failure
+    // here (no enquiries table yet, say) doesn't stop the booking.
+    const key = String(b.phone ?? "").replace(/\D/g, "").slice(-10);
+    if (key.length === 10) {
+      try {
+        await db.from("enquiries").update({ status: "joined", student_id: student.id, updated_at: new Date().toISOString() })
+          .eq("phone_key", key).is("student_id", null);
+      } catch {
+        /* not essential */
+      }
+    }
+
     const method = await paymentMethod(paymentId);
     const payment = {
       student_id: student.id,
