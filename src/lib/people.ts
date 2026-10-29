@@ -157,6 +157,24 @@ export interface EnquiryInput {
   notes: string | null;
 }
 
+/**
+ * Enquiries ready to save. Anyone whose number is already a student's is
+ * linked and marked joined; everyone else is new. Every row names its status
+ * and student explicitly: rows sent together are saved with the same columns,
+ * so a row left without a status would be saved with none and refused.
+ */
+export function importRows(rows: EnquiryInput[], students: { id: string; phone: string | null }[]) {
+  const studentByPhone = new Map<string, string>();
+  for (const s of students) {
+    const k = phoneKey(s.phone);
+    if (k) studentByPhone.set(k, s.id);
+  }
+  return rows.map((r) => {
+    const sid = studentByPhone.get(phoneKey(r.phone) ?? "") ?? null;
+    return { ...r, student_id: sid, status: (sid ? "joined" : "new") as EnquiryStatus };
+  });
+}
+
 const norm = (s: unknown) => String(s ?? "").trim().toLowerCase().replace(/[^a-z]/g, "");
 
 /** Which column is which, by header name, so the columns can be in any order. */

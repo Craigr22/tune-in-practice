@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergePeople, parseCsv, phoneKey, rowsToEnquiries, sheetXmlToRows, sharedStringsFromXml, whatsappLink, isDue, type EnquiryRow, type StudentRow } from "@/lib/people";
+import { importRows, mergePeople, parseCsv, phoneKey, rowsToEnquiries, sheetXmlToRows, sharedStringsFromXml, whatsappLink, isDue, type EnquiryRow, type StudentRow } from "@/lib/people";
 
 const student = (over: Partial<StudentRow> = {}): StudentRow => ({
   id: "s1", name: "Test Student", phone: "+91 98200 12345", email: null, parent_name: null, is_active: true, joined_on: "2026-09-01",
@@ -86,6 +86,17 @@ describe("importing a spreadsheet", () => {
     expect(r.ok).toHaveLength(1);
     expect(r.skipped).toBe(2);
     expect(r.duplicates).toBe(1);
+  });
+
+  it("gives every imported row a status, so a batch with one existing student isn't refused", () => {
+    const base = { course: null, category: null, kid_age: null, source: null, notes: null };
+    const rows = importRows(
+      [{ ...base, name: "Asha", phone: "9820517453" }, { ...base, name: "Ravi", phone: "+91 98200 12345" }],
+      [{ id: "s1", phone: "9820012345" }],
+    );
+    expect(rows[0]).toMatchObject({ status: "new", student_id: null });
+    expect(rows[1]).toMatchObject({ status: "joined", student_id: "s1" });
+    expect(Object.keys(rows[0]).sort()).toEqual(Object.keys(rows[1]).sort());
   });
 
   it("needs a Name and a Phone column", () => {
