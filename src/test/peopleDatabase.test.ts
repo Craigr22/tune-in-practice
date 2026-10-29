@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergePeople, parseCsv, phoneKey, rowsToEnquiries, sheetXmlToRows, sharedStringsFromXml, whatsappLink, isDue, type EnquiryRow, type StudentRow } from "@/lib/people";
+import { importRows, mergePeople, parseCsv, phoneKey, rowsToEnquiries, sheetXmlToRows, sharedStringsFromXml, whatsappLink, isDue, type EnquiryRow, type StudentRow } from "@/lib/people";
 
 const student = (over: Partial<StudentRow> = {}): StudentRow => ({
   id: "s1", name: "Test Student", phone: "+91 98200 12345", email: null, parent_name: null, is_active: true, joined_on: "2026-09-01",
