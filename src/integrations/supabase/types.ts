@@ -345,6 +345,103 @@ export type Database = {
         }
         Relationships: []
       }
+      enquiries: {
+        Row: {
+          category: string | null
+          course: string | null
+          created_at: string
+          follow_up_on: string | null
+          id: string
+          kid_age: number | null
+          last_contact_at: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          phone_key: string | null
+          source: string | null
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          course?: string | null
+          created_at?: string
+          follow_up_on?: string | null
+          id?: string
+          kid_age?: number | null
+          last_contact_at?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          phone_key?: string | null
+          source?: string | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          course?: string | null
+          created_at?: string
+          follow_up_on?: string | null
+          id?: string
+          kid_age?: number | null
+          last_contact_at?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          phone_key?: string | null
+          source?: string | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enquiries_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enquiry_activity: {
+        Row: {
+          at: string
+          body: string | null
+          by_user: string | null
+          enquiry_id: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          at?: string
+          body?: string | null
+          by_user?: string | null
+          enquiry_id: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          at?: string
+          body?: string | null
+          by_user?: string | null
+          enquiry_id?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enquiry_activity_enquiry_id_fkey"
+            columns: ["enquiry_id"]
+            isOneToOne: false
+            referencedRelation: "enquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           batch_id: string
