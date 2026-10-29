@@ -34,7 +34,7 @@ async function unzip(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
     const raw = bytes.subarray(start, start + size);
     if (method === 0) files.set(name, raw);
     else if (method === 8) {
-      const stream = new Response(raw).body!.pipeThrough(new DecompressionStream("deflate-raw"));
+      const stream = new Response(raw as BlobPart).body!.pipeThrough(new DecompressionStream("deflate-raw"));
       files.set(name, new Uint8Array(await new Response(stream).arrayBuffer()));
     }
   }
