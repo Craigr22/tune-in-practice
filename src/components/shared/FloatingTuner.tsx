@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import Tuner from "@/components/Tuner";
-import JamPad from "@/components/student/JamPad";
 
 const FloatingTuner = () => {
   const [open, setOpen] = useState(false);
@@ -37,9 +36,6 @@ const FloatingTuner = () => {
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <DialogTitle className="sr-only">BAM Tuner</DialogTitle>
-          {/* Tuner and jam pad share one panel: the tuner's own card provides
-              the top, the jam pad drops its card and continues below a rule,
-              so the two read as one tool rather than two stacked widgets. */}
           <div
             className="tuner-panel max-h-[85vh] overflow-y-auto mx-auto"
             style={{
@@ -51,9 +47,6 @@ const FloatingTuner = () => {
             }}
           >
             <Tuner />
-            <div style={{ borderTop: "1px solid var(--border)" }}>
-              <JamPad embedded />
-            </div>
           </div>
         </DialogContent>
       </Dialog>
