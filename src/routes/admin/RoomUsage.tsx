@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import BatchDetailDialog from "@/components/admin/BatchDetailDialog";
 import RoomUsageTrend from "@/components/admin/RoomUsageTrend";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBatchList } from "@/hooks/useBatches";
 import { useLocations } from "@/hooks/useLocations";
+import { useRoomPlanClasses } from "@/hooks/useRoomPlanClasses";
 import {
   CLASS_CAPACITY,
   CLOSE_HOUR,
@@ -28,7 +30,8 @@ const DAYS = [
 
 const HOUR_PX = 44;
 
-type Slot = UsageClass & { teacher: string; instrument: string };
+/** `names` is set only for workbook classes, which have no portal students. */
+type Slot = UsageClass & { teacher: string; instrument: string; names?: string[] };
 
 const pct = (share: number) => `${(share * 100).toFixed(1)}%`;
 const hours = (n: number) => n.toLocaleString("en-IN", { maximumFractionDigits: 1 });
@@ -66,7 +69,7 @@ function RoomWeek({
   usage: RoomUsage;
   slots: Slot[];
   overlaps: Set<string>;
-  onOpen: (id: string) => void;
+  onOpen: (slot: Slot) => void;
 }) {
   // Open hours set the grid, unless a class runs outside them.
   const from = Math.min(OPEN_HOUR, ...slots.map((s) => Math.floor(startMinutes(s.startTime) / 60)));
@@ -116,11 +119,12 @@ function RoomWeek({
                   <button
                     key={s.id}
                     type="button"
-                    onClick={() => onOpen(s.id)}
+                    onClick={() => onOpen(s)}
                     title={[
                       `${clock(start)} to ${clock(start + s.durationMin)}`,
                       `${s.teacher}, ${s.instrument}`,
                       `${s.enrolled} of ${CLASS_CAPACITY} seats`,
+                      s.names ? "From the class & teacher workbook" : "",
                       clash ? "Overlaps another class in this room" : "",
                     ].filter(Boolean).join("\n")}
                     className={`absolute inset-x-0.5 rounded px-1 overflow-hidden leading-tight text-left cursor-pointer focus-visible:ring-2 focus-visible:ring-ring ${fillClass(s.enrolled)} ${clash ? "outline-dashed outline-2 -outline-offset-2 outline-amber-600" : ""}`}
