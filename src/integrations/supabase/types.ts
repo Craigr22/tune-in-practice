@@ -787,39 +787,6 @@ export type Database = {
         }
         Relationships: []
       }
-      room_usage_months: {
-        Row: {
-          classes: number
-          month: string
-          room_name: string
-          saved_at: string
-          scope: string
-          seat_hours_filled: number
-          seat_hours_open: number
-          students: number
-        }
-        Insert: {
-          classes: number
-          month: string
-          room_name: string
-          saved_at?: string
-          scope: string
-          seat_hours_filled: number
-          seat_hours_open: number
-          students: number
-        }
-        Update: {
-          classes?: number
-          month?: string
-          room_name?: string
-          saved_at?: string
-          scope?: string
-          seat_hours_filled?: number
-          seat_hours_open?: number
-          students?: number
-        }
-        Relationships: []
-      }
       sessions: {
         Row: {
           batch_id: string
