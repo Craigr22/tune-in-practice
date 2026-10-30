@@ -787,6 +787,39 @@ export type Database = {
         }
         Relationships: []
       }
+      room_usage_months: {
+        Row: {
+          classes: number
+          month: string
+          room_name: string
+          saved_at: string
+          scope: string
+          seat_hours_filled: number
+          seat_hours_open: number
+          students: number
+        }
+        Insert: {
+          classes: number
+          month: string
+          room_name: string
+          saved_at?: string
+          scope: string
+          seat_hours_filled: number
+          seat_hours_open: number
+          students: number
+        }
+        Update: {
+          classes?: number
+          month?: string
+          room_name?: string
+          saved_at?: string
+          scope?: string
+          seat_hours_filled?: number
+          seat_hours_open?: number
+          students?: number
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           batch_id: string
@@ -1289,6 +1322,7 @@ export type Database = {
         Returns: boolean
       }
       mark_app_open: { Args: never; Returns: undefined }
+      save_room_usage_month: { Args: { p_month?: string }; Returns: undefined }
       set_class_photo: {
         Args: { _batch_id: string; _path: string; _taken_on?: string }
         Returns: undefined
