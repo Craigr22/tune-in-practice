@@ -149,15 +149,18 @@ function RoomWeek({
 /**
  * How much of BAM's room time and seats the weekly timetable uses. It reads
  * the running classes and their active students, so it moves as classes and
- * enrolments change in the portal.
+ * enrolments change in the portal, plus the workbook classes kept only for
+ * this page.
  */
 export default function RoomUsagePage() {
   const { data: batches = [], isLoading: loadingClasses, error: classError } = useBatchList();
   const { data: locations = [], isLoading: loadingRooms, error: roomError } = useLocations();
+  const { data: planClasses = [], isLoading: loadingPlan, error: planError } = useRoomPlanClasses();
   const [openClass, setOpenClass] = useState<string | null>(null);
+  const [openPlan, setOpenPlan] = useState<Slot | null>(null);
 
   const { slots, rooms, usage, overlaps } = useMemo(() => {
-    const slots: Slot[] = batches
+    const portal: Slot[] = batches
       .filter((b: any) => b.is_active)
       .map((b: any) => ({
         id: b.id,
@@ -169,16 +172,30 @@ export default function RoomUsagePage() {
         teacher: b.teachers?.name ?? "No teacher",
         instrument: b.instruments?.name ?? "Class",
       }));
+    const workbook: Slot[] = planClasses.map((p: any) => ({
+      id: p.id,
+      locationId: p.location_id,
+      dayOfWeek: p.day_of_week,
+      startTime: p.start_time,
+      durationMin: p.duration_min,
+      enrolled: p.student_names.length,
+      teacher: p.teacher_name,
+      instrument: p.instrument ?? "Class",
+      names: p.student_names,
+    }));
+    const slots = [...portal, ...workbook];
     const rooms = locations
       .filter((l: any) => l.is_active)
       .map((l: any) => ({ id: l.id, name: l.name }));
     return { slots, rooms, usage: computeRoomUsage(slots, rooms), overlaps: overlappingIds(slots) };
-  }, [batches, locations]);
+  }, [batches, locations, planClasses]);
 
-  if (classError || roomError) {
+  const open = (slot: Slot) => (slot.names ? setOpenPlan(slot) : setOpenClass(slot.id));
+
+  if (classError || roomError || planError) {
     return <div className="p-6 text-sm text-destructive">Couldn't load the timetable. Refresh to try again.</div>;
   }
-  if (loadingClasses || loadingRooms) {
+  if (loadingClasses || loadingRooms || loadingPlan) {
     return <div className="p-6 text-sm text-muted-foreground">Loading the timetable…</div>;
   }
 
@@ -232,13 +249,32 @@ export default function RoomUsagePage() {
           usage={room}
           slots={slots.filter((s) => s.locationId === room.room.id)}
           overlaps={overlaps}
-          onOpen={setOpenClass}
+          onOpen={open}
         />
       ))}
       {rooms.length === 0 && <p className="text-sm text-muted-foreground">No active rooms yet. Add one to see its week.</p>}
         </TabsContent>
       </Tabs>
       <BatchDetailDialog batchId={openClass} onClose={() => setOpenClass(null)} />
+      <Dialog open={!!openPlan} onOpenChange={(o) => !o && setOpenPlan(null)}>
+        <DialogContent>
+          {openPlan && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {openPlan.teacher}, {DAYS.find((d) => d.dow === openPlan.dayOfWeek)?.label} {clock(startMinutes(openPlan.startTime))}
+                </DialogTitle>
+                <DialogDescription>
+                  {openPlan.instrument}. From the class &amp; teacher workbook, so these students aren't in the portal.
+                </DialogDescription>
+              </DialogHeader>
+              <ul className="text-sm space-y-1">
+                {openPlan.names!.map((n) => <li key={n}>{n}</li>)}
+              </ul>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
