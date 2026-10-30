@@ -4,6 +4,7 @@
 - [ ] Set up custom SMTP sender for auth emails (admin invites, magic links, password resets). Waiting on: domain the user owns and DNS access.
 
 ## Done
+- [x] Room efficiency page filled from the class & teacher workbook (separate timetable, not portal students)
 - [x] Lovable Cloud backend enabled
 - [x] Schema + RLS for students, teachers, batches, coursework, schedule, finance, videos
 - [x] Auth with admin / teacher / student roles and view-as impersonation
