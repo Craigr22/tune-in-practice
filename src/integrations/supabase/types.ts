@@ -1322,6 +1322,7 @@ export type Database = {
         Returns: boolean
       }
       mark_app_open: { Args: never; Returns: undefined }
+      save_room_usage_month: { Args: { p_month?: string }; Returns: undefined }
       set_class_photo: {
         Args: { _batch_id: string; _path: string; _taken_on?: string }
         Returns: undefined
