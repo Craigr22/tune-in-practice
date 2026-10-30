@@ -787,6 +787,56 @@ export type Database = {
         }
         Relationships: []
       }
+      room_plan_classes: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          duration_min: number
+          id: string
+          instrument: string | null
+          is_active: boolean
+          location_id: string
+          source: string | null
+          start_time: string
+          student_names: string[]
+          teacher_name: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          duration_min?: number
+          id?: string
+          instrument?: string | null
+          is_active?: boolean
+          location_id: string
+          source?: string | null
+          start_time: string
+          student_names?: string[]
+          teacher_name: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          duration_min?: number
+          id?: string
+          instrument?: string | null
+          is_active?: boolean
+          location_id?: string
+          source?: string | null
+          start_time?: string
+          student_names?: string[]
+          teacher_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_plan_classes_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_usage_months: {
         Row: {
           classes: number
