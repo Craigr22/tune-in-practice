@@ -22,6 +22,7 @@ const Schedule = lazy(() => import("@/routes/teacher/Schedule"));
 const AdminPeople = lazy(() => import("@/routes/admin/People"));
 const AdminSchedule = lazy(() => import("@/routes/admin/Schedule"));
 const AdminCoursework = lazy(() => import("@/routes/admin/Coursework"));
+const AdminRoomUsage = lazy(() => import("@/routes/admin/RoomUsage"));
 const FinanceLayout = lazy(() => import("@/routes/admin/Finance/Layout"));
 const FinanceOverview = lazy(() => import("@/routes/admin/Finance/Overview"));
 const FinancePayments = lazy(() => import("@/routes/admin/Finance/Payments"));
@@ -125,6 +126,7 @@ const App = () => (
                 <Route path="/admin/people/:tab" element={<RequireRole role="admin"><AdminPeople /></RequireRole>} />
                 <Route path="/admin/schedule" element={<RequireRole role="admin"><AdminSchedule /></RequireRole>} />
                 <Route path="/admin/coursework" element={<RequireRole role="admin"><AdminCoursework /></RequireRole>} />
+                <Route path="/admin/rooms" element={<RequireRole role="admin"><AdminRoomUsage /></RequireRole>} />
                 {/* Legacy routes → consolidated People page */}
                 <Route path="/admin/students" element={<Navigate to="/admin/people/students" replace />} />
                 <Route path="/admin/teachers" element={<Navigate to="/admin/people/teachers" replace />} />
