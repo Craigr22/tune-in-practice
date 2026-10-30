@@ -4,10 +4,14 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 const st = vi.hoisted(() => ({
   batches: [] as any[],
   locations: [] as any[],
+  plan: [] as any[],
 }));
 
 vi.mock("@/hooks/useBatches", () => ({ useBatchList: () => ({ data: st.batches, isLoading: false, error: null }) }));
 vi.mock("@/hooks/useLocations", () => ({ useLocations: () => ({ data: st.locations, isLoading: false, error: null }) }));
+vi.mock("@/hooks/useRoomPlanClasses", () => ({
+  useRoomPlanClasses: () => ({ data: st.plan, isLoading: false, error: null }),
+}));
 
 vi.mock("@/hooks/useRoomUsageMonths", () => ({
   useRoomUsageMonths: () => ({
@@ -87,5 +91,28 @@ describe("room efficiency usage page", () => {
     st.batches = [];
     render(<RoomUsagePage />);
     expect(screen.getByText(/No active rooms yet/)).toBeTruthy();
+  });
+
+  it("counts workbook classes alongside portal classes and lists their students", () => {
+    st.locations = [{ id: "r1", name: "Room 205", is_active: true }];
+    st.batches = [batch("1")];
+    st.plan = [{
+      id: "p1",
+      location_id: "r1",
+      teacher_name: "Gaurangi",
+      instrument: "Violin",
+      day_of_week: 2,
+      start_time: "19:00:00",
+      duration_min: 60,
+      student_names: ["Sahil Desai", "Visharg Shah", "Archisha Sharma"],
+    }];
+    render(<RoomUsagePage />);
+    // 4 portal seat-hours + 3 workbook seat-hours, of 525 for one room.
+    expect(screen.getByText(/7 of 525 seat-hours/)).toBeTruthy();
+    expect(screen.getByText(/7 students in 2 weekly classes/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Gaurangi/ }));
+    expect(screen.getByText("Visharg Shah")).toBeTruthy();
+    expect(screen.queryByText("students of class p1")).toBeNull();
+    st.plan = [];
   });
 });
